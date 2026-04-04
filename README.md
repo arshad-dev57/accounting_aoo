@@ -1,4 +1,4 @@
-# accounting_app
+# LedgerPro_app
 
 A new Flutter project.
 

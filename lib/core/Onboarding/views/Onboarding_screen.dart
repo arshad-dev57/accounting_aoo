@@ -1,11 +1,9 @@
-import 'package:accounting_app/core/Register/Views/register_screen.dart';
-import 'package:accounting_app/core/dashboard/Screens/dashbaord_screen.dart';
+
+import 'package:LedgerPro_app/core/Register/Views/register_screen.dart';
+import 'package:LedgerPro_app/core/login/screen/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-
 import 'package:get/route_manager.dart';
-
-
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,10 +17,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   Timer? _timer;
 
-  final List<Map<String, dynamic>> _slides = [
-    {'type': 'slide1'},
-    {'type': 'slide2'},
-    {'type': 'slide3'},
+  // ✅ Slides data (image + text)
+  final List<Map<String, String>> _slides = [
+    {
+      'image': 'assets/onboard1.png',
+      'title': 'Boost productivity\non-the-go',
+      'subtitle': 'Get time back with speedy bank reconciliation',
+    },
+    {
+      'image': 'assets/onboard2.png',
+      'title': 'Track your finances easily',
+      'subtitle': 'Manage all your accounts in one place',
+    },
+    {
+      'image': 'assets/onboard3.png',
+      'title': 'Grow your business faster',
+      'subtitle': 'Smart insights to help you succeed',
+    },
   ];
 
   @override
@@ -35,11 +46,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_pageController.hasClients) {
         int nextPage = (_currentPage + 1) % _slides.length;
+
         _pageController.animateToPage(
           nextPage,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
+
+        setState(() {
+          _currentPage = nextPage;
+        });
       }
     });
   }
@@ -56,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Blue background (full screen)
+          // 🔵 Background
           Container(
             width: double.infinity,
             height: double.infinity,
@@ -72,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
-          // White bottom sheet with rounded top corners
+          // ⚪ Bottom White Sheet
           Positioned(
             bottom: 0,
             left: 0,
@@ -85,23 +101,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   topLeft: Radius.circular(50),
                   topRight: Radius.circular(50),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x22000000),
-                    blurRadius: 20,
-                    offset: Offset(0, -4),
-                  ),
-                ],
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 150),
-                    const Text(
-                      'Boost productivity\non-the-go',
-                      style: TextStyle(
+                    const SizedBox(height: 120),
+
+                    // ✅ Dynamic Title
+                    Text(
+                      _slides[_currentPage]['title']!,
+                      style: const TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF1A1A2E),
@@ -109,9 +120,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+
                     const SizedBox(height: 12),
+
+                    // ✅ Dynamic Subtitle
                     Text(
-                      'Get time back with speedy bank reconciliation',
+                      _slides[_currentPage]['subtitle']!,
                       style: TextStyle(
                         fontSize: 15,
                         color: Colors.grey[600],
@@ -119,8 +133,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
+
                     const Spacer(),
-                    // Create account button
+
+                    // 🔘 Create Account
                     SizedBox(
                       width: double.infinity,
                       height: 54,
@@ -131,9 +147,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1AB4F5),
                           foregroundColor: Colors.white,
-                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         child: const Text(
@@ -141,35 +156,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 16),
-                    // Log in button
+
+                    // 🔘 Login
                     SizedBox(
                       width: double.infinity,
                       height: 54,
                       child: TextButton(
                         onPressed: () {
-                          Get.to(DashboardScreen());
+                          Get.to(() => LoginScreen());
                         },
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF1AB4F5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
                         child: const Text(
                           'Log in',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: Color(0xFF1AB4F5),
                           ),
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -177,12 +189,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
-          // Blue top content (dots + carousel)
+          // 🔼 Top Content (Slider + Dots)
           SafeArea(
             child: Column(
               children: [
                 const SizedBox(height: 16),
-                // Page indicator dots
+
+                // 🔘 Dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -201,8 +214,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
-                // Carousel — takes remaining space above white sheet
+
+                // 🖼 Slider
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.46,
                   child: PageView.builder(
@@ -224,36 +239,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  // 🖼 Slide Widget
   Widget _buildSlide(int index) {
-    final List<String> imageUrls = [
-      'assets/onboard1.png', 
-      'assets/onboard2.png',
-      'assets/onboard3.png',
-    ];
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: Image.asset(
-            imageUrls[index],
+            _slides[index]['image']!,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-           
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Center(
-                  child: Icon(Icons.image_not_supported,
-                      color: Colors.white54, size: 48),
-                ),
-              );
-            },
           ),
         ),
       ),

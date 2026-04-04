@@ -1,3 +1,4 @@
+import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:flutter/material.dart';
 
 class QuoteScreen extends StatefulWidget {
@@ -32,10 +33,10 @@ class _QuoteScreenState extends State<QuoteScreen> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: kText),
+        icon: Icon(Icons.arrow_back, color: kText),
         onPressed: () => Navigator.pop(context),
       ),
-      title: const Text(
+      title:Text(
         'Quote',
         style: TextStyle(
           color: kText,
@@ -46,7 +47,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       centerTitle: true,
       actions: [
         IconButton(
-          icon: const Icon(Icons.more_vert, color: kText),
+          icon: Icon(Icons.more_vert, color: kText),
           onPressed: () {},
         ),
       ],
@@ -98,7 +99,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Who is it for?',
             style: TextStyle(
               fontSize: 14,
@@ -219,7 +220,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: kText,
@@ -244,7 +245,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Items',
             style: TextStyle(
               fontSize: 16,
@@ -280,7 +281,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _items.length,
-              separatorBuilder: (_, __) => const Divider(color: kBorder),
+              separatorBuilder: (_, __) =>  Divider(color: kBorder),
               itemBuilder: (context, index) {
                 return _buildItemTile(_items[index], index);
               },
@@ -292,8 +293,8 @@ class _QuoteScreenState extends State<QuoteScreen> {
           // Add item button
           OutlinedButton.icon(
             onPressed: _showAddItemDialog,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text(
+            icon: Icon(Icons.add, size: 18),
+            label:Text(
               'ADD AN ITEM',
               style: TextStyle(
                 fontSize: 13,
@@ -327,7 +328,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
               children: [
                 Text(
                   item['name'],
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: kText,
@@ -346,7 +347,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
           ),
           Text(
             '${item['amount']}',
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: kText,
@@ -373,7 +374,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Item'),
+        title:Text('Add Item'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -447,7 +448,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
               backgroundColor: kPrimary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Add'),
+            child:Text('Add'),
           ),
         ],
       ),
@@ -470,7 +471,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+         Text(
             'Total',
             style: TextStyle(
               fontSize: 16,
@@ -480,7 +481,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
           ),
           Text(
             '\$${total.toStringAsFixed(2)}',
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: kPrimary,
@@ -501,7 +502,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       child: OutlinedButton.icon(
         onPressed: _showAttachFilesBottomSheet,
         icon: Icon(Icons.attach_file, size: 18, color: kPrimary),
-        label: const Text(
+        label:Text(
           '+ ATTACH FILES',
           style: TextStyle(
             fontSize: 13,
@@ -543,7 +544,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+             Text(
                 'Attach Files',
                 style: TextStyle(
                   fontSize: 18,
@@ -607,7 +608,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
       ),
       title: Text(
         label,
-        style: const TextStyle(
+        style:  TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: kText,
@@ -649,7 +650,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
+                child:Text(
                   'Save as draft',
                   style: TextStyle(
                     fontSize: 15,
@@ -672,7 +673,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text(
+                child:Text(
                   'Email',
                   style: TextStyle(
                     fontSize: 15,
@@ -712,26 +713,26 @@ class _QuoteScreenState extends State<QuoteScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Tax Type'),
+        title:Text('Select Tax Type'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('Tax exclusive'),
+              title:Text('Tax exclusive'),
               onTap: () {
                 setState(() => _taxType = 'Tax exclusive');
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              title: const Text('Tax inclusive'),
+              title:Text('Tax inclusive'),
               onTap: () {
                 setState(() => _taxType = 'Tax inclusive');
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              title: const Text('No tax'),
+              title:Text('No tax'),
               onTap: () {
                 setState(() => _taxType = 'No tax');
                 Navigator.pop(context);
@@ -758,12 +759,3 @@ class _QuoteScreenState extends State<QuoteScreen> {
     super.dispose();
   }
 }
-
-// Color constants (agar already defined nahi hain to)
-const Color kPrimary = Color(0xFF1AB4F5);
-const Color kPrimaryDark = Color(0xFF0FA3E0);
-const Color kBg = Color(0xFFF0F4F8);
-const Color kCardBg = Colors.white;
-const Color kText = Color(0xFF1A1A2E);
-const Color kSubText = Color(0xFF7A8FA6);
-const Color kBorder = Color(0xFFDDE4EE);

@@ -1,6 +1,6 @@
 {
-    "name": "accounting_app",
-    "short_name": "accounting_app",
+    "name": "LedgerPro_app",
+    "short_name": "LedgerPro_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

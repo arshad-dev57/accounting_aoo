@@ -1,4 +1,5 @@
-import 'package:accounting_app/core/dashboard/Screens/dashbaord_screen.dart';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashbaord_screen.dart';
 import 'package:flutter/material.dart';
 
 class ReceiptScreen extends StatefulWidget {
@@ -118,10 +119,10 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: kText),
+        icon: Icon(Icons.arrow_back, color: kText),
         onPressed: () => Navigator.pop(context),
       ),
-      title: const Text(
+      title:Text(
         'Receipt',
         style: TextStyle(
           color: kText,
@@ -137,7 +138,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
             foregroundColor: kPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
-          child: const Text(
+          child:Text(
             'Save',
             style: TextStyle(
               fontSize: 16,
@@ -202,7 +203,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Where was it spent?',
             style: TextStyle(
               fontSize: 14,
@@ -243,7 +244,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'What was it for?',
             style: TextStyle(
               fontSize: 14,
@@ -302,7 +303,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
                   const SizedBox(height: 2),
                   Text(
                     _formatDate(_spentDate),
-                    style: const TextStyle(
+                    style:  TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: kText,
@@ -328,7 +329,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'How did you pay?',
             style: TextStyle(
               fontSize: 14,
@@ -390,7 +391,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+             Text(
                 'No Bank Connected',
                 style: TextStyle(
                   fontSize: 18,
@@ -442,7 +443,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
                 ),
                 title: Text(
                   method['name'],
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: kText,
@@ -480,7 +481,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Categorise to an account',
             style: TextStyle(
               fontSize: 14,
@@ -550,7 +551,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                 Text(
                     'Select Category',
                     style: TextStyle(
                       fontSize: 18,
@@ -601,7 +602,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       ),
       title: Text(
         category['name'],
-        style: const TextStyle(
+        style:  TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: kText,
@@ -633,7 +634,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Tax inclusive',
             style: TextStyle(
               fontSize: 14,
@@ -775,7 +776,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
               ..._taxRates[_selectedTaxTab]!.map((rate) => ListTile(
                 title: Text(
                   rate['name'],
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: kText,
@@ -855,7 +856,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+         Text(
             'Total',
             style: TextStyle(
               fontSize: 16,
@@ -866,7 +867,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
           const SizedBox(width: 8),
           Text(
             _amountController.text.isEmpty ? '0.00' : _amountController.text,
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: kPrimary,
@@ -887,7 +888,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       child: OutlinedButton.icon(
         onPressed: _showAttachFileBottomSheet,
         icon: Icon(Icons.attach_file, size: 18, color: kPrimary),
-        label: const Text(
+        label:Text(
           'ATTACH FILE',
           style: TextStyle(
             fontSize: 13,
@@ -929,7 +930,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+             Text(
                 'Attach File',
                 style: TextStyle(
                   fontSize: 18,
@@ -990,7 +991,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> with SingleTickerProvider
       ),
       title: Text(
         label,
-        style: const TextStyle(
+        style:  TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: kText,

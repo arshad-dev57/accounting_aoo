@@ -1,0 +1,223 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../config/apiconfig.dart';
+
+class OTPController extends GetxController {
+  // Observable variables
+  var isLoading = false.obs;
+  var isOtpSent = false.obs;
+  var isOtpVerified = false.obs;
+  var timerSeconds = 0.obs;
+  var email = ''.obs;
+  var resetToken = ''.obs;
+  
+  // Form controllers
+  late TextEditingController emailController;
+  late TextEditingController otpController;
+  
+  // Error messages
+  var emailError = ''.obs;
+  var otpError = ''.obs;
+  
+  Timer? _timer;
+  final String baseUrl = Apiconfig().baseUrl;
+  
+  @override
+  void onInit() {
+    super.onInit();
+    emailController = TextEditingController();
+    otpController = TextEditingController();
+  }
+  
+  // Send OTP
+  Future<void> sendOTP() async {
+    if (emailController.text.trim().isEmpty) {
+      emailError.value = 'Please enter email address';
+      return;
+    }
+    if (!emailController.text.contains('@') || !emailController.text.contains('.')) {
+      emailError.value = 'Please enter a valid email';
+      return;
+    }
+    
+    emailError.value = '';
+    isLoading.value = true;
+    
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/users/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': emailController.text.trim(),
+        }),
+      );
+      
+      final data = json.decode(response.body);
+      
+      if (response.statusCode == 200 && data['success'] == true) {
+        email.value = emailController.text.trim();
+        isOtpSent.value = true;
+        _startTimer();
+        Get.snackbar(
+          'Success',
+          data['message'] ?? 'OTP sent to your email',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          data['message'] ?? 'Failed to send OTP',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Network error. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+  
+  // Verify OTP
+  Future<void> verifyOTP() async {
+    if (otpController.text.trim().isEmpty) {
+      otpError.value = 'Please enter OTP';
+      return;
+    }
+    if (otpController.text.trim().length != 6) {
+      otpError.value = 'Please enter valid 6-digit OTP';
+      return;
+    }
+    
+    otpError.value = '';
+    isLoading.value = true;
+    
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/users/verify-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'email': email.value,
+          'otp': otpController.text.trim(),
+        }),
+      );
+      
+      final data = json.decode(response.body);
+      
+      if (response.statusCode == 200 && data['success'] == true) {
+        // ✅ Get resetToken from response
+        String token = data['resetToken'] ?? '';
+        resetToken.value = token;
+        
+        // ✅ Store resetToken in SharedPreferences
+        if (token.isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('auth_token', token);
+          print('Auth token stored in SharedPreferences: $token');
+        }
+        
+        isOtpVerified.value = true;
+        _stopTimer();
+        
+        Get.snackbar(
+          'Success',
+          data['message'] ?? 'OTP verified successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        
+        // ✅ Navigation will happen from the screen widget
+      } else {
+        Get.snackbar(
+          'Error',
+          data['message'] ?? 'Invalid OTP',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      print('Verify OTP Error: $e');
+      Get.snackbar(
+        'Error',
+        'Network error. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+  
+  // ✅ Get reset token from SharedPreferences
+  Future<String?> getResetToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('reset_token');
+  }
+  
+  // ✅ Clear reset token from SharedPreferences
+  Future<void> clearResetToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('reset_token');
+    print('Reset token cleared from SharedPreferences');
+  }
+  
+  void _startTimer() {
+    timerSeconds.value = 60;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (timerSeconds.value > 0) {
+        timerSeconds.value--;
+      } else {
+        _stopTimer();
+      }
+    });
+  }
+  
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+  
+  void resendOTP() {
+    if (timerSeconds.value == 0) {
+      sendOTP();
+    }
+  }
+  
+  String get timerText {
+    if (timerSeconds.value == 0) {
+      return 'Resend OTP';
+    }
+    int minutes = timerSeconds.value ~/ 60;
+    int seconds = timerSeconds.value % 60;
+    return 'Resend in ${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+  
+  void clearErrors() {
+    emailError.value = '';
+    otpError.value = '';
+  }
+  
+  @override
+  void onClose() {
+    _stopTimer();
+    emailController.dispose();
+    otpController.dispose();
+    super.onClose();
+  }
+}

@@ -1,4 +1,5 @@
-import 'package:accounting_app/core/dashboard/Screens/dashbaord_screen.dart';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashbaord_screen.dart';
 import 'package:flutter/material.dart';
 
 class PurchaseOrderScreen extends StatefulWidget {
@@ -37,10 +38,10 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: kText),
+        icon:  Icon(Icons.arrow_back, color: kText),
         onPressed: () => Navigator.pop(context),
       ),
-      title: const Text(
+      title:Text(
         'Purchase Order',
         style: TextStyle(
           color: kText,
@@ -56,7 +57,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
             foregroundColor: kPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
-          child: const Text(
+          child:Text(
             'Save',
             style: TextStyle(
               fontSize: 16,
@@ -113,7 +114,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Who is it for?',
             style: TextStyle(
               fontSize: 14,
@@ -233,7 +234,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style:  TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: kText,
@@ -258,7 +259,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Items',
             style: TextStyle(
               fontSize: 16,
@@ -292,9 +293,9 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
           ] else ...[
             ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics:  NeverScrollableScrollPhysics(),
               itemCount: _items.length,
-              separatorBuilder: (_, __) => const Divider(color: kBorder),
+              separatorBuilder: (_, __) =>  Divider(color: kBorder),
               itemBuilder: (context, index) {
                 return _buildItemTile(_items[index], index);
               },
@@ -306,8 +307,8 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
           // Add item button
           OutlinedButton.icon(
             onPressed: _showAddItemDialog,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text(
+            icon: Icon(Icons.add, size: 18),
+            label:Text(
               'ADD AN ITEM',
               style: TextStyle(
                 fontSize: 13,
@@ -341,7 +342,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
               children: [
                 Text(
                   item['name'],
-                  style: const TextStyle(
+                  style:  TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: kText,
@@ -360,7 +361,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
           ),
           Text(
             '${item['amount']}',
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: kText,
@@ -387,7 +388,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Item'),
+        title:Text('Add Item'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -461,7 +462,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
               backgroundColor: kPrimary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Add'),
+            child:Text('Add'),
           ),
         ],
       ),
@@ -484,7 +485,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+         Text(
             'TOTAL',
             style: TextStyle(
               fontSize: 16,
@@ -495,7 +496,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
           ),
           Text(
             '${total.toStringAsFixed(2)}',
-            style: const TextStyle(
+            style:  TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: kPrimary,
@@ -516,7 +517,7 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+         Text(
             'Delivery Details',
             style: TextStyle(
               fontSize: 16,
@@ -666,26 +667,26 @@ class _PurchaseOrderScreenState extends State<PurchaseOrderScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Tax Type'),
+        title:Text('Select Tax Type'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('Tax exclusive'),
+              title:Text('Tax exclusive'),
               onTap: () {
                 setState(() => _taxType = 'Tax exclusive');
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              title: const Text('Tax inclusive'),
+              title:Text('Tax inclusive'),
               onTap: () {
                 setState(() => _taxType = 'Tax inclusive');
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              title: const Text('No tax'),
+              title:Text('No tax'),
               onTap: () {
                 setState(() => _taxType = 'No tax');
                 Navigator.pop(context);

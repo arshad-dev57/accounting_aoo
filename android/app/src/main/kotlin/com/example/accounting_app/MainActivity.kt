@@ -1,4 +1,4 @@
-package com.example.accounting_app
+package com.example.LedgerPro_app
 
 import io.flutter.embedding.android.FlutterActivity
 

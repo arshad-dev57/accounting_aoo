@@ -1,4 +1,5 @@
-import 'package:accounting_app/core/dashboard/Screens/dashbaord_screen.dart';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashbaord_screen.dart';
 import 'package:flutter/material.dart';
 
 class ContactScreen extends StatefulWidget {
@@ -9,15 +10,12 @@ class ContactScreen extends StatefulWidget {
 }
 
 class _ContactScreenState extends State<ContactScreen> {
-  // Controllers for all fields
   final TextEditingController _contactNameController = TextEditingController();
   final TextEditingController _accountNumberController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  
-  // Lists for dynamic fields
-  final List<Map<String, TextEditingController>> _phoneNumbers = [];
+    final List<Map<String, TextEditingController>> _phoneNumbers = [];
   final List<Map<String, TextEditingController>> _addresses = [];
   final List<TextEditingController> _notes = [];
 
@@ -110,18 +108,15 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  // ════════════════════════════════════════════
-  //  APP BAR WITH SAVE BUTTON
-  // ════════════════════════════════════════════
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: kText),
+        icon:  Icon(Icons.arrow_back, color: kText),
         onPressed: () => Navigator.pop(context),
       ),
-      title: const Text(
+      title:  Text(
         'Contact',
         style: TextStyle(
           color: kText,
@@ -137,7 +132,7 @@ class _ContactScreenState extends State<ContactScreen> {
             foregroundColor: kPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
-          child: const Text(
+          child:Text(
             'Save',
             style: TextStyle(
               fontSize: 16,
@@ -198,7 +193,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'What is the contact\'s name',
             style: TextStyle(
               fontSize: 14,
@@ -239,7 +234,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'ACCOUNT NUMBER',
             style: TextStyle(
               fontSize: 14,
@@ -276,11 +271,11 @@ class _ContactScreenState extends State<ContactScreen> {
   Widget _buildPrimaryPersonSection() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.all(16),
+      padding:  EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'PRIMARY PERSON',
             style: TextStyle(
               fontSize: 14,
@@ -350,9 +345,6 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  // ════════════════════════════════════════════
-  //  EMAIL SECTION
-  // ════════════════════════════════════════════
   Widget _buildEmailSection() {
     return Container(
       color: Colors.white,
@@ -360,7 +352,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'Email Address',
             style: TextStyle(
               fontSize: 14,
@@ -392,9 +384,6 @@ class _ContactScreenState extends State<ContactScreen> {
     );
   }
 
-  // ════════════════════════════════════════════
-  //  PHONE NUMBERS SECTION
-  // ════════════════════════════════════════════
   Widget _buildPhoneNumbersSection() {
     return Container(
       color: Colors.white,
@@ -402,7 +391,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'NUMBER',
             style: TextStyle(
               fontSize: 14,
@@ -423,8 +412,6 @@ class _ContactScreenState extends State<ContactScreen> {
           ),
           
           const SizedBox(height: 8),
-          
-          // Add new contact number button
           TextButton.icon(
             onPressed: _addNewPhoneNumber,
             icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 20),
@@ -520,7 +507,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'ADDRESS',
             style: TextStyle(
               fontSize: 14,
@@ -652,7 +639,7 @@ class _ContactScreenState extends State<ContactScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+           Text(
             'NOTE',
             style: TextStyle(
               fontSize: 14,

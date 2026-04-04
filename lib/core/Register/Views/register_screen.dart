@@ -1,95 +1,43 @@
-import 'package:accounting_app/core/plans/views/Subscription_plans.dart';
+import 'package:LedgerPro_app/core/Register/controller/registercontroller.dart';
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
+import 'package:get/get.dart';
 
-// ─────────────────────────────────────────────
-//  Theme constants — same as your project
-// ─────────────────────────────────────────────
-const Color kPrimary = Color(0xFF1AB4F5);
-const Color kPrimaryDark = Color(0xFF0FA3E0);
-const Color kBg = Colors.white;
-const Color kText = Color(0xFF1A1A2E);
-const Color kSubText = Color(0xFF7A8FA6);
-const Color kBorder = Color(0xFFDDE4EE);
-const Color kFieldBg = Color(0xFFF5F8FC);
-
-class RegistrationScreen extends StatefulWidget {
+class RegistrationScreen extends StatelessWidget {
   const RegistrationScreen({super.key});
 
   @override
-  State<RegistrationScreen> createState() => _RegistrationScreenState();
-}
-
-class _RegistrationScreenState extends State<RegistrationScreen> {
-  int _currentStep = 0;
-  bool _agreeToTerms = false;
-  bool _passwordVisible = false;
-  bool _confirmPasswordVisible = false;
-
-  final _firstNameController = TextEditingController();
-  final _lastNameController = TextEditingController();
-  final _countryController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-
-  final List<String> countries = [
-    'Pakistan', 'United States', 'United Kingdom', 'Canada',
-    'Australia', 'India', 'Bangladesh', 'Sri Lanka', 'Nepal', 'UAE',
-  ];
-
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _countryController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  // ── step labels & icons ──────────────────────
-  final _stepLabels = ['Personal', 'Contact', 'Password'];
-  final _stepIcons = [
-    Icons.person_outline,
-    Icons.phone_outlined,
-    Icons.lock_outline,
-    Icons.check_circle_outline,
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    final AuthController auth = Get.put(AuthController());
+
     return Scaffold(
-      backgroundColor: kBg,
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          // ── Blue header ─────────────────────
           _buildHeader(),
-
-          // ── Step tabs ───────────────────────
-          _buildStepTabs(),
-
-          // ── Form content (scrollable) ────────
+          // ✅ FIX: Obx wrap kiya taake step change hone par UI update ho
+          Obx(() => _buildStepTabs(auth)),
           Expanded(
-            child: _buildCurrentStep(),
+            child: Obx(() {
+              switch (auth.currentStep.value) {
+                case 0: return _buildPersonalStep(auth);
+                case 1: return _buildContactStep(auth);
+                case 2: return _buildPasswordStep(auth);
+                case 3: return _buildSuccessStep(auth);
+                default: return _buildPersonalStep(auth);
+              }
+            }),
           ),
         ],
       ),
     );
   }
 
-  // ════════════════════════════════════════════
-  //  HEADER
-  // ════════════════════════════════════════════
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [kPrimary, kPrimaryDark],
+          colors: [Color(0xFF1AB4F5), Color(0xFF0FA3E0)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -106,7 +54,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: () => Get.back(),
               ),
               const Expanded(
                 child: Text(
@@ -120,7 +68,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 48), // balance
+              const SizedBox(width: 48),
             ],
           ),
         ),
@@ -128,79 +76,91 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // ════════════════════════════════════════════
-  //  STEP TABS
-  // ════════════════════════════════════════════
-  Widget _buildStepTabs() {
+  // ✅ FIX: Obx hataya yahaan se — upar parent mein hai
+  Widget _buildStepTabs(AuthController auth) {
     return Container(
-      color: kBg,
+      color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Row(
-        children: List.generate(_stepLabels.length, (i) {
-          final isActive = _currentStep >= i;
-          final isDone = _currentStep > i;
-          final isLast = i == _stepLabels.length - 1;
+        children: List.generate(4, (i) {
+          // ✅ FIX: .value directly use kar rahe hain — Obx parent mein hai
+          final isActive = auth.currentStep.value >= i;
+          final isDone = auth.currentStep.value > i;
+          final isLast = i == 3;
 
           return Expanded(
             child: Row(
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () {
-                      if (i <= _currentStep + 1) {
-                        setState(() => _currentStep = i);
-                      }
-                    },
+                    onTap: () => auth.goToStep(i),
                     child: Column(
                       children: [
-                        // Circle
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
+                            // ✅ FIX: isDone aur isActive sahi calculate ho rahe hain
                             color: isDone
-                                ? kPrimary
+                                ? const Color(0xFF1AB4F5)
                                 : isActive
-                                    ? kPrimary.withOpacity(0.12)
-                                    : kFieldBg,
+                                    ? const Color(0xFF1AB4F5).withOpacity(0.12)
+                                    : const Color(0xFFF5F8FC),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: isActive ? kPrimary : kBorder,
+                              color: isActive
+                                  ? const Color(0xFF1AB4F5)
+                                  : const Color(0xFFDDE4EE),
                               width: isActive ? 2 : 1.5,
                             ),
                           ),
                           child: Icon(
-                            isDone ? Icons.check : _stepIcons[i],
+                            // ✅ FIX: isDone hone par check icon show hoga
+                            isDone
+                                ? Icons.check
+                                : auth.getStepIcon(i),
                             color: isDone
                                 ? Colors.white
                                 : isActive
-                                    ? kPrimary
-                                    : kSubText,
+                                    ? const Color(0xFF1AB4F5)
+                                    : const Color(0xFF7A8FA6),
                             size: 18,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _stepLabels[i],
+                          i == 0
+                              ? 'Personal'
+                              : i == 1
+                                  ? 'Contact'
+                                  : i == 2
+                                      ? 'Password'
+                                      : 'Done',
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                            color: isActive ? kPrimary : kSubText,
+                            fontWeight: isActive
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: isActive
+                                ? const Color(0xFF1AB4F5)
+                                : const Color(0xFF7A8FA6),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                // Connector line
                 if (!isLast)
                   Expanded(
                     child: Container(
                       height: 2,
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
-                        color: _currentStep > i ? kPrimary : kBorder,
+                        // ✅ FIX: Line bhi fill hogi jab step done ho
+                        color: isDone
+                            ? const Color(0xFF1AB4F5)
+                            : const Color(0xFFDDE4EE),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -213,64 +173,42 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // ════════════════════════════════════════════
-  //  CURRENT STEP ROUTER
-  // ════════════════════════════════════════════
-  Widget _buildCurrentStep() {
-    switch (_currentStep) {
-      case 0: return _buildPersonalStep();
-      case 1: return _buildContactStep();
-      case 2: return _buildPasswordStep();
-      case 3: return _buildSuccessStep();
-      default: return _buildPersonalStep();
-    }
-  }
-
-  // ════════════════════════════════════════════
-  //  STEP 1 — Personal Info
-  // ════════════════════════════════════════════
-  Widget _buildPersonalStep() {
+  Widget _buildPersonalStep(AuthController auth) {
     return _stepScaffold(
+      auth: auth,
       title: 'Personal Information',
       subtitle: 'Please provide your personal details',
       fields: [
         _fieldLabel('First Name'),
         _inputField(
-          controller: _firstNameController,
+          controller: auth.firstNameController,
           hint: 'Enter your first name',
           icon: Icons.person_outline,
         ),
         const SizedBox(height: 20),
         _fieldLabel('Last Name'),
         _inputField(
-          controller: _lastNameController,
+          controller: auth.lastNameController,
           hint: 'Enter your last name',
           icon: Icons.person_outline,
         ),
         const SizedBox(height: 20),
         _fieldLabel('Country'),
-        _dropdownField(),
+        _dropdownField(auth),
       ],
       buttonLabel: 'Next',
-      onNext: _firstNameController.text.isNotEmpty &&
-              _lastNameController.text.isNotEmpty &&
-              _countryController.text.isNotEmpty
-          ? () => setState(() => _currentStep = 1)
-          : null,
     );
   }
 
-  // ════════════════════════════════════════════
-  //  STEP 2 — Contact
-  // ════════════════════════════════════════════
-  Widget _buildContactStep() {
+  Widget _buildContactStep(AuthController auth) {
     return _stepScaffold(
-      title: 'Contact Information',
-      subtitle: 'How can we reach you?',
+      auth: auth,
+      title: 'Contact & Business Information',
+      subtitle: 'Tell us about your business',
       fields: [
         _fieldLabel("What's your phone number?"),
         _inputField(
-          controller: _phoneController,
+          controller: auth.phoneController,
           hint: '+92 300 1234567',
           icon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
@@ -278,98 +216,120 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         const SizedBox(height: 20),
         _fieldLabel("What's your email?"),
         _inputField(
-          controller: _emailController,
+          controller: auth.emailController,
           hint: 'you@example.com',
           icon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 20),
-        _termsCheckbox(),
+        _fieldLabel("Company / Organization Name (Optional)"),
+        _inputField(
+          controller: auth.organizationNameController,
+          hint: 'Your company name',
+          icon: Icons.business_outlined,
+        ),
+        const SizedBox(height: 20),
+        _fieldLabel("Address (Optional)"),
+        _inputField(
+          controller: auth.addressController,
+          hint: 'Street, City, Postal Code',
+          icon: Icons.location_on_outlined,
+          maxLines: 2,
+        ),
+        const SizedBox(height: 20),
+        _termsCheckbox(auth),
       ],
       buttonLabel: 'Next',
-      onNext: _phoneController.text.isNotEmpty &&
-              _emailController.text.contains('@') &&
-              _agreeToTerms
-          ? () => setState(() => _currentStep = 2)
-          : null,
     );
   }
 
-  // ════════════════════════════════════════════
-  //  STEP 3 — Password
-  // ════════════════════════════════════════════
-  Widget _buildPasswordStep() {
-    return _stepScaffold(
-      title: 'Create Password',
-      subtitle: 'Choose a strong password for your account',
-      fields: [
-        _fieldLabel('Password'),
-        _inputField(
-          controller: _passwordController,
-          hint: 'Enter your password',
-          icon: Icons.lock_outline,
-          obscure: !_passwordVisible,
-          suffix: IconButton(
-            icon: Icon(
-              _passwordVisible ? Icons.visibility : Icons.visibility_off,
-              color: kSubText, size: 20,
+  Widget _buildPasswordStep(AuthController auth) {
+  return _stepScaffold(
+    auth: auth,
+    title: 'Create Password',
+    subtitle: 'Choose a strong password for your account',
+    fields: [
+      _fieldLabel('Password'),
+      // ✅ FIX: Ek Obx mein dono cheezein — password field + strength
+      Obx(() {
+        final isVisible = auth.isPasswordVisible.value;
+        // ✅ passwordStrength.value observe karo — text.isNotEmpty ki jagah
+        final showStrength = auth.passwordStrength.value > 0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _inputField(
+              controller: auth.passwordController,
+              hint: 'Enter your password',
+              icon: Icons.lock_outline,
+              obscure: !isVisible,
+              suffix: IconButton(
+                icon: Icon(
+                  isVisible ? Icons.visibility : Icons.visibility_off,
+                  color: const Color(0xFF7A8FA6),
+                  size: 20,
+                ),
+                onPressed: () =>
+                    auth.isPasswordVisible.value = !auth.isPasswordVisible.value,
+              ),
             ),
-            onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-          ),
-          onChanged: (_) => setState(() {}),
-        ),
-        if (_passwordController.text.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _passwordStrength(),
-        ],
-        const SizedBox(height: 20),
-        _fieldLabel('Confirm Password'),
-        _inputField(
-          controller: _confirmPasswordController,
+            if (showStrength) ...[
+              const SizedBox(height: 8),
+              _passwordStrength(auth),
+            ],
+          ],
+        );
+      }),
+
+      const SizedBox(height: 20),
+      _fieldLabel('Confirm Password'),
+
+      // ✅ FIX: Sirf isConfirmPasswordVisible observe karo
+      Obx(() {
+        final isVisible = auth.isConfirmPasswordVisible.value;
+        return _inputField(
+          controller: auth.confirmPasswordController,
           hint: 'Re-enter your password',
           icon: Icons.lock_outline,
-          obscure: !_confirmPasswordVisible,
+          obscure: !isVisible,
           suffix: IconButton(
             icon: Icon(
-              _confirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
-              color: kSubText, size: 20,
+              isVisible ? Icons.visibility : Icons.visibility_off,
+              color: const Color(0xFF7A8FA6),
+              size: 20,
             ),
-            onPressed: () => setState(() => _confirmPasswordVisible = !_confirmPasswordVisible),
+            onPressed: () => auth.isConfirmPasswordVisible.value =
+                !auth.isConfirmPasswordVisible.value,
           ),
-        ),
-      ],
-      buttonLabel: 'Create Account',
-      onNext: _passwordController.text.length >= 6 &&
-              _passwordController.text == _confirmPasswordController.text
-          ? () => setState(() => _currentStep = 3)
-          : null,
-    );
-  }
+        );
+      }),
+    ],
+    buttonLabel: 'Create Account',
+  );
+}
 
-  // ════════════════════════════════════════════
-  //  STEP 4 — Success
-  // ════════════════════════════════════════════
-  Widget _buildSuccessStep() {
+  Widget _buildSuccessStep(AuthController auth) {
     return _stepScaffold(
+      auth: auth,
       title: '',
       subtitle: '',
       fields: [
         const SizedBox(height: 8),
-        // Big tick
         Center(
           child: Container(
             width: 110,
             height: 110,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [kPrimary, kPrimaryDark],
+                colors: [Color(0xFF1AB4F5), Color(0xFF0FA3E0)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: kPrimary.withOpacity(0.35),
+                  color: const Color(0xFF1AB4F5).withOpacity(0.35),
                   blurRadius: 24,
                   offset: const Offset(0, 10),
                 ),
@@ -380,62 +340,65 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         const SizedBox(height: 28),
         Center(
-          child: Text(
+          child: const Text(
             'Account Activated!',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: kText,
+              color: Color(0xFF1A1A2E),
             ),
           ),
         ),
         const SizedBox(height: 8),
         Center(
           child: Text(
-            'Welcome, ${_firstNameController.text}! 🎉',
-            style: const TextStyle(fontSize: 15, color: kSubText),
+            'Welcome, ${auth.firstNameController.text}! 🎉',
+            style: const TextStyle(fontSize: 15, color: Color(0xFF7A8FA6)),
           ),
         ),
         const SizedBox(height: 28),
-        // Info card
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: kFieldBg,
+            color: const Color(0xFFF5F8FC),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: kBorder),
+            border: Border.all(color: const Color(0xFFDDE4EE)),
           ),
           child: Column(
             children: [
               _infoRow(Icons.person, 'Name',
-                  '${_firstNameController.text} ${_lastNameController.text}'),
+                  '${auth.firstNameController.text} ${auth.lastNameController.text}'),
               _divider(),
-              _infoRow(Icons.public, 'Country', _countryController.text),
+              _infoRow(Icons.public, 'Country', auth.countryController.text),
               _divider(),
-              _infoRow(Icons.phone, 'Phone', _phoneController.text),
+              _infoRow(Icons.phone, 'Phone', auth.phoneController.text),
               _divider(),
-              _infoRow(Icons.email, 'Email', _emailController.text),
+              _infoRow(Icons.email, 'Email', auth.emailController.text),
+              _divider(),
+              _infoRow(Icons.business, 'Organization',
+                  auth.organizationNameController.text),
+              _divider(),
+              _infoRow(
+                  Icons.location_on, 'Address', auth.addressController.text),
             ],
           ),
         ),
       ],
       buttonLabel: 'Get Started',
-      onNext: () {
-     Get.to(SelectPlanScreen());
-      },
+      isSuccessStep: true,
     );
   }
 
   Widget _stepScaffold({
+    required AuthController auth,
     required String title,
     required String subtitle,
     required List<Widget> fields,
     required String buttonLabel,
-    required VoidCallback? onNext,
+    bool isSuccessStep = false,
   }) {
     return Column(
       children: [
-        // Scrollable content
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -447,11 +410,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: kText,
+                        color: Color(0xFF1A1A2E),
                       )),
                   const SizedBox(height: 6),
                   Text(subtitle,
-                      style: const TextStyle(fontSize: 14, color: kSubText)),
+                      style: const TextStyle(
+                          fontSize: 14, color: Color(0xFF7A8FA6))),
                   const SizedBox(height: 28),
                 ],
                 ...fields,
@@ -459,12 +423,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             ),
           ),
         ),
-
-        // ── Sticky bottom button ──────────────
         Container(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
           decoration: BoxDecoration(
-            color: kBg,
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.06),
@@ -476,31 +438,43 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           child: SizedBox(
             width: double.infinity,
             height: 54,
-            child: ElevatedButton(
-              onPressed: onNext,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: onNext != null ? kPrimary : kBorder,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Text(
-                buttonLabel,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
+            child: Obx(() => ElevatedButton(
+                  onPressed: auth.isLoading.value
+                      ? null
+                      : isSuccessStep
+                          ? () => auth.resetForm()
+                          : () => auth.nextStep(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1AB4F5),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: auth.isLoading.value
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          buttonLabel,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                )),
           ),
         ),
       ],
     );
   }
-
 
   Widget _fieldLabel(String label) {
     return Padding(
@@ -510,7 +484,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: kText,
+          color: Color(0xFF1A1A2E),
         ),
       ),
     );
@@ -523,146 +497,163 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     bool obscure = false,
     Widget? suffix,
     TextInputType keyboardType = TextInputType.text,
-    void Function(String)? onChanged,
+    int maxLines = 1,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      onChanged: onChanged ?? (_) => setState(() {}),
-      style: const TextStyle(fontSize: 14, color: kText),
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: kSubText, fontSize: 14),
+        hintStyle: const TextStyle(color: Color(0xFF7A8FA6), fontSize: 14),
         filled: true,
-        fillColor: kFieldBg,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        fillColor: const Color(0xFFF5F8FC),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: kBorder, width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFFDDE4EE), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: kPrimary, width: 2),
+          borderSide:
+              const BorderSide(color: Color(0xFF1AB4F5), width: 2),
         ),
-        prefixIcon: Icon(icon, color: kSubText, size: 20),
+        prefixIcon: Icon(icon, color: const Color(0xFF7A8FA6), size: 20),
         suffixIcon: suffix,
       ),
     );
   }
 
-  Widget _dropdownField() {
+  Widget _dropdownField(AuthController auth) {
     return Container(
       decoration: BoxDecoration(
-        color: kFieldBg,
+        color: const Color(0xFFF5F8FC),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: kBorder, width: 1.5),
+        border: Border.all(color: const Color(0xFFDDE4EE), width: 1.5),
       ),
       child: DropdownButtonFormField<String>(
-        value: _countryController.text.isEmpty ? null : _countryController.text,
+        value: auth.countryController.text.isEmpty
+            ? null
+            : auth.countryController.text,
         hint: const Text('Select your country',
-            style: TextStyle(color: kSubText, fontSize: 14)),
-        icon: const Icon(Icons.keyboard_arrow_down, color: kSubText),
+            style: TextStyle(color: Color(0xFF7A8FA6), fontSize: 14)),
+        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF7A8FA6)),
         decoration: const InputDecoration(
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          prefixIcon: Icon(Icons.public, color: kSubText, size: 20),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          prefixIcon:
+              Icon(Icons.public, color: Color(0xFF7A8FA6), size: 20),
         ),
-        items: countries.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-        onChanged: (v) => setState(() => _countryController.text = v ?? ''),
+        items: auth.countries
+            .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+            .toList(),
+        onChanged: (v) {
+          auth.countryController.text = v ?? '';
+          auth.country.value = v ?? '';
+        },
       ),
     );
   }
 
-  Widget _termsCheckbox() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Transform.scale(
-          scale: 1.1,
-          child: Checkbox(
-            value: _agreeToTerms,
-            onChanged: (v) => setState(() => _agreeToTerms = v ?? false),
-            activeColor: kPrimary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-            side: const BorderSide(color: kBorder, width: 1.5),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _agreeToTerms = !_agreeToTerms),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: RichText(
-                text: TextSpan(
-                  text: 'By continuing, you agree to our ',
-                  style: const TextStyle(color: kSubText, fontSize: 13, height: 1.5),
-                  children: [
-                    TextSpan(
-                      text: 'Terms of Service',
+  Widget _termsCheckbox(AuthController auth) {
+    return Obx(() => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Transform.scale(
+              scale: 1.1,
+              child: Checkbox(
+                value: auth.agreeToTerms.value,
+                onChanged: (v) => auth.agreeToTerms.value = v ?? false,
+                activeColor: const Color(0xFF1AB4F5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                side: const BorderSide(
+                    color: Color(0xFFDDE4EE), width: 1.5),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: GestureDetector(
+                onTap: () =>
+                    auth.agreeToTerms.value = !auth.agreeToTerms.value,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: RichText(
+                    text: TextSpan(
+                      text: 'By continuing, you agree to our ',
                       style: const TextStyle(
-                          color: kPrimary, fontWeight: FontWeight.w600),
+                          color: Color(0xFF7A8FA6),
+                          fontSize: 13,
+                          height: 1.5),
+                      children: const [
+                        TextSpan(
+                          text: 'Terms of Service',
+                          style: TextStyle(
+                              color: Color(0xFF1AB4F5),
+                              fontWeight: FontWeight.w600),
+                        ),
+                        TextSpan(text: ' and '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: TextStyle(
+                              color: Color(0xFF1AB4F5),
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                    const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: const TextStyle(
-                          color: kPrimary, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ],
-    );
+          ],
+        ));
   }
 
-  Widget _passwordStrength() {
-    final p = _passwordController.text;
-    double s = 0;
-    if (p.length >= 8) s += 0.3;
-    if (p.contains(RegExp(r'[A-Z]'))) s += 0.2;
-    if (p.contains(RegExp(r'[0-9]'))) s += 0.2;
-    if (p.contains(RegExp(r'[!@#\$%^&*]'))) s += 0.3;
-    s = s.clamp(0.0, 1.0);
-
-    final label = s >= 0.7 ? 'Strong' : s >= 0.4 ? 'Medium' : 'Weak';
-    final color = s >= 0.7 ? const Color(0xFF2ECC71) : s >= 0.4 ? Colors.orange : Colors.red;
-
+  Widget _passwordStrength(AuthController auth) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 8),
         Row(
           children: [
-            Text('Password strength: ',
-                style: TextStyle(fontSize: 12, color: kSubText)),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 12, color: color, fontWeight: FontWeight.w700)),
+            const Text('Password strength: ',
+                style: TextStyle(fontSize: 12, color: Color(0xFF7A8FA6))),
+            Obx(() => Text(
+                  auth.passwordStrengthText.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: auth.passwordStrengthColor.value,
+                    fontWeight: FontWeight.w700,
+                  ),
+                )),
           ],
         ),
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: s,
-            minHeight: 5,
-            backgroundColor: kBorder,
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
+        Obx(() => ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: auth.passwordStrength.value,
+                minHeight: 5,
+                backgroundColor: const Color(0xFFDDE4EE),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    auth.passwordStrengthColor.value),
+              ),
+            )),
       ],
     );
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -671,20 +662,23 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: kPrimary.withOpacity(0.1),
+              color: const Color(0xFF1AB4F5).withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: kPrimary, size: 16),
+            child: Icon(icon, color: const Color(0xFF1AB4F5), size: 16),
           ),
           const SizedBox(width: 12),
           Text('$label:',
-              style: const TextStyle(fontSize: 13, color: kSubText)),
+              style: const TextStyle(
+                  fontSize: 13, color: Color(0xFF7A8FA6))),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700, color: kText),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E)),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -693,5 +687,5 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  Widget _divider() => Divider(color: kBorder, height: 1);
+  Widget _divider() => const Divider(color: Color(0xFFDDE4EE), height: 1);
 }
