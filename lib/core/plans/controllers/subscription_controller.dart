@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Services/subscription_service.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -138,81 +139,62 @@ void updateFromUserData(Map<String, dynamic> userData) {
       isLoading.value = false;
     }
   }
+Future<bool> subscribe(String plan, double amount) async {
+  try {
+    isLoading.value = true;
+    justSubscribed.value = true;
 
-  Future<bool> subscribe(String plan, double amount) async {
-    try {
-      print("start subscription");
-      isLoading.value = true;
-
-      // ✅ Flag set karo taake dashboard check na kare
-      justSubscribed.value = true;
-
-      final response = await _subscriptionService.createSubscription(
+    // ✅ Web par Stripe use karo
+    if (kIsWeb) {
+      final response = await _subscriptionService.createStripeCheckout(
         plan: plan,
-        amount: amount,
       );
 
-      print("printing response");
-      print(response);
-
       if (response['success'] == true) {
-        final userData = response['data']['user'];
-        final subscriptionData = userData['subscription'];
-
-        // ✅ Response se directly update karo
-        hasActiveSubscription.value = true;
-        subscriptionPlan.value = subscriptionData['plan'];
-        subscriptionStatus.value = subscriptionData['status'];
-        isTrialActive.value = false;
-        subscriptionDaysRemaining.value = subscriptionData['daysRemaining'] ?? 30;
-        trialDaysRemaining.value = 0;
-
-        await _saveSubscriptionStatus();
-
-        Get.snackbar(
-          '🎉 Success',
-          'Subscription activated successfully! Enjoy premium features.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
-
-        // ✅ 10 second baad flag reset karo
-        Future.delayed(const Duration(seconds: 10), () {
-          justSubscribed.value = false;
-        });
-
+        // ✅ Stripe page par redirect ho gaya
+        // Baaki kaam webhook karega automatically
+        // Flutter ko kuch aur nahi karna yahan
+        isLoading.value = false;
         return true;
       } else {
-        // ✅ Fail hone par flag reset karo
         justSubscribed.value = false;
-
         Get.snackbar(
           'Error',
-          response['message'] ?? 'Failed to activate subscription',
+          response['message'] ?? 'Failed to start payment',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
+        isLoading.value = false;
         return false;
       }
-    } catch (e) {
-      justSubscribed.value = false;
-      Get.snackbar(
-        'Error',
-        'Network error. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
-    } finally {
-      isLoading.value = false;
     }
-  }
 
-  Future<void> cancelSubscription() async {
+    // ❌ Android/iOS par Stripe nahi — yeh show karo
+    Get.snackbar(
+      'Web Only',
+      'Stripe payment is only available on web version',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.orange,
+      colorText: Colors.white,
+    );
+    justSubscribed.value = false;
+    isLoading.value = false;
+    return false;
+
+  } catch (e) {
+    justSubscribed.value = false;
+    isLoading.value = false;
+    Get.snackbar(
+      'Error',
+      'Network error. Please try again.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+    return false;
+  }
+}  Future<void> cancelSubscription() async {
     try {
       isLoading.value = true;
       final response = await _subscriptionService.cancelSubscription();

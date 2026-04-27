@@ -1,11 +1,11 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/cashflowstatement/controller/cashflow_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:sizer/sizer.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -16,19 +16,23 @@ class CashFlowStatementScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(CashFlowController());
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
 
-    return Scaffold(
-      backgroundColor: kBg,
-      appBar: _buildAppBar(controller),
-      body: Obx(() {
+    return Container(
+      color: kBg,
+      child: Obx(() {
         if (controller.isLoading.value) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: kPrimary, strokeWidth: 3.w),
-                SizedBox(height: 2.h),
-                Text('Loading cash flow statement...', style: TextStyle(fontSize: 13.sp, color: kSubText)),
+                LoadingAnimationWidget.waveDots(
+                  color: kPrimary,
+                  size: isWeb ? 60 : 40,
+                ),
+                SizedBox(height: isWeb ? 16 : 12),
+                Text('Loading cash flow statement...', style: TextStyle(fontSize: isWeb ? 14 : 12, color: kSubText)),
               ],
             ),
           );
@@ -39,109 +43,152 @@ class CashFlowStatementScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 12.w, color: kDanger),
-                SizedBox(height: 2.h),
-                Text(controller.errorMessage.value, style: TextStyle(fontSize: 13.sp, color: kDanger)),
-                SizedBox(height: 2.h),
+                Icon(Icons.error_outline, size: isWeb ? 80 : 64, color: kDanger),
+                SizedBox(height: isWeb ? 20 : 16),
+                Text(controller.errorMessage.value, style: TextStyle(fontSize: isWeb ? 14 : 12, color: kDanger)),
+                SizedBox(height: isWeb ? 20 : 16),
                 ElevatedButton(
                   onPressed: () => controller.retryLoad(),
                   style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                  child: Text('Retry', style: TextStyle(fontSize: 13.sp, color: Colors.white)),
+                  child: Text('Retry', style: TextStyle(fontSize: isWeb ? 14 : 12, color: Colors.white)),
                 ),
               ],
             ),
           );
         }
         
-        return Column(
-          children: [
-            _buildPeriodSelector(controller),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(4.w),
-                child: Column(
-                  children: [
-                    _buildReportHeader(controller),
-                    SizedBox(height: 2.h),
-                    _buildCashBalanceSummary(controller),
-                    SizedBox(height: 2.h),
-                    _buildOperatingActivitiesSection(controller),
-                    SizedBox(height: 2.h),
-                    _buildInvestingActivitiesSection(controller),
-                    SizedBox(height: 2.h),
-                    _buildFinancingActivitiesSection(controller),
-                    SizedBox(height: 2.h),
-                    _buildNetCashFlowSection(controller),
-                    SizedBox(height: 2.h),
-                    _buildCashBalanceReconciliation(controller),
-                    SizedBox(height: 2.h),
-                    _buildActionButtons(controller),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        // Single ScrollView that scrolls everything together
+        return SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(controller, context),
+              _buildPeriodSelector(controller, context),
+              _buildCashBalanceSummary(controller, context),
+              _buildOperatingActivitiesSection(controller, context),
+              _buildInvestingActivitiesSection(controller, context),
+              _buildFinancingActivitiesSection(controller, context),
+              _buildNetCashFlowSection(controller, context),
+              _buildCashBalanceReconciliation(controller, context),
+              _buildActionButtons(controller, context),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       }),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(CashFlowController controller) {
-    return AppBar(
-      title: Text(
-        'Cash Flow Statement',
-        style: TextStyle(
-          fontSize: 15.sp,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
+  // Custom Header without AppBar
+  Widget _buildHeader(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        isWeb ? 24 : 16,
+        isWeb ? 20 : 16,
+        isWeb ? 24 : 16,
+        isWeb ? 16 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: kPrimary,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
         ),
       ),
-      backgroundColor: kPrimary,
-      elevation: 0,
-      actions: [
-       IconButton(
-    icon: Icon(Icons.download_outlined, color: Colors.white),
-    onPressed: () => controller.exportToExcel(),
-  ),
- 
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cash Flow Statement',
+                  style: TextStyle(
+                    fontSize: isWeb ? 20 : 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Track cash inflows and outflows',
+                  style: TextStyle(
+                    fontSize: isWeb ? 13 : 11,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Export Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => controller.exportToExcel(),
+            ),
+          ),
+          if (!isMobile) const SizedBox(width: 8),
+          // Print Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => controller.printReport(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildPeriodSelector(CashFlowController controller) {
+  Widget _buildPeriodSelector(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      width: 100.w,
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
       color: kCardBg,
       child: Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: isWeb ? 2 : 2,
             child: Container(
-              height: 6.h,
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              height: isWeb ? 45 : 40,
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
               decoration: BoxDecoration(
                 color: kBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 border: Border.all(color: kBorder),
               ),
               child: Obx(() => DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: controller.selectedPeriod.value,
-                  icon: Icon(Icons.arrow_drop_down, size: 5.w, color: kText),
+                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
                   isExpanded: true,
-                  style: TextStyle(fontSize: 13.sp, color: kText),
+                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
                   dropdownColor: kCardBg,
                   items: controller.periodOptions.map((period) {
                     return DropdownMenuItem(
                       value: period,
-                      child: Text(period, style: TextStyle(fontSize: 13.sp)),
+                      child: Text(period, style: TextStyle(fontSize: isWeb ? 13 : 12)),
                     );
                   }).toList(),
                   onChanged: (value) {
                     if (value != null) {
                       if (value == 'Custom Range') {
-                        _selectDateRange(controller);
+                        _selectDateRange(controller, context);
                       } else {
                         controller.changePeriod(value);
                       }
@@ -153,38 +200,40 @@ class CashFlowStatementScreen extends StatelessWidget {
           ),
           Obx(() {
             if (controller.selectedDateRange.value != null) {
-              return Row(
-                children: [
-                  SizedBox(width: 3.w),
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      height: 6.h,
-                      padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${DateFormat('dd MMM yyyy').format(controller.selectedDateRange.value!.start)} - ${DateFormat('dd MMM yyyy').format(controller.selectedDateRange.value!.end)}',
+              final range = controller.selectedDateRange.value!;
+              return Expanded(
+                flex: isWeb ? 3 : 2,
+                child: Padding(
+                  padding: EdgeInsets.only(left: isWeb ? 12 : 8),
+                  child: Container(
+                    height: isWeb ? 45 : 40,
+                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
+                    decoration: BoxDecoration(
+                      color: kPrimary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}',
                             style: TextStyle(
-                              fontSize: 12.sp,
+                              fontSize: isWeb ? 12 : 11,
                               color: kPrimary,
                               fontWeight: FontWeight.w500,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          GestureDetector(
-                            onTap: () => controller.clearDateRange(),
-                            child: Icon(Icons.close, size: 5.w, color: kPrimary),
-                          ),
-                        ],
-                      ),
+                        ),
+                        GestureDetector(
+                          onTap: () => controller.clearDateRange(),
+                          child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               );
             }
             return const SizedBox.shrink();
@@ -194,51 +243,15 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReportHeader(CashFlowController controller) {
+  Widget _buildCashBalanceSummary(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Cash Flow Statement',
-            style: TextStyle(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w800,
-              color: kText,
-            ),
-          ),
-          SizedBox(height: 0.5.h),
-          Obx(() => Text(
-            controller.periodText.value,
-            style: TextStyle(
-              fontSize: 13.sp,
-              color: kSubText,
-            ),
-          )),
-          SizedBox(height: 1.h),
-          Divider(color: kBorder, height: 1.h),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCashBalanceSummary(CashFlowController controller) {
-    return Container(
-      padding: EdgeInsets.all(4.w),
-      decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -255,24 +268,27 @@ class CashFlowStatementScreen extends StatelessWidget {
               controller.formatAmount(controller.openingCashBalance.value),
               kPrimary,
               Icons.account_balance,
+              isWeb,
             )),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           Expanded(
             child: Obx(() => _buildBalanceCard(
               'Net Cash Flow',
               controller.formatAmount(controller.netCashFlow.value),
               controller.netCashFlow.value >= 0 ? kSuccess : kDanger,
               controller.netCashFlow.value >= 0 ? Icons.trending_up : Icons.trending_down,
+              isWeb,
             )),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           Expanded(
             child: Obx(() => _buildBalanceCard(
               'Closing Balance',
               controller.formatAmount(controller.closingCashBalance.value),
               kSuccess,
               Icons.account_balance_wallet,
+              isWeb,
             )),
           ),
         ],
@@ -280,31 +296,31 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBalanceCard(String title, String amount, Color color, IconData icon) {
+  Widget _buildBalanceCard(String title, String amount, Color color, IconData icon, bool isWeb) {
     return Container(
-      padding: EdgeInsets.all(2.5.w),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 5.w, color: color),
-          SizedBox(height: 1.h),
+          Icon(icon, size: isWeb ? 24 : 20, color: color),
+          SizedBox(height: isWeb ? 8 : 6),
           Text(
             title,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: isWeb ? 12 : 11,
               color: kSubText,
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(height: 0.5.h),
+          SizedBox(height: isWeb ? 4 : 2),
           Text(
             amount,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: isWeb ? 16 : 14,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -314,12 +330,15 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOperatingActivitiesSection(CashFlowController controller) {
+  Widget _buildOperatingActivitiesSection(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -333,27 +352,28 @@ class CashFlowStatementScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.business_center, size: 5.w, color: kPrimary),
-              SizedBox(width: 2.w),
+              Icon(Icons.business_center, size: isWeb ? 24 : 20, color: kPrimary),
+              SizedBox(width: isWeb ? 12 : 8),
               Text(
                 'Cash Flow from Operating Activities',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: isWeb ? 16 : 14,
                   fontWeight: FontWeight.w700,
                   color: kPrimary,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : 8),
           ...controller.operatingItems.map((item) => 
-            _buildCashFlowRow(controller, item.name, item.amount)
+            _buildCashFlowRow(controller, item.name, item.amount, isWeb)
           ).toList(),
-          Divider(color: kBorder, height: 2.h),
+          Divider(color: kBorder, height: isWeb ? 16 : 12),
           Obx(() => _buildCashFlowRow(
             controller, 
             'Net Cash from Operating Activities', 
             controller.cashFlowFromOperations.value, 
+            isWeb,
             isBold: true
           )),
         ],
@@ -361,12 +381,15 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInvestingActivitiesSection(CashFlowController controller) {
+  Widget _buildInvestingActivitiesSection(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -380,27 +403,28 @@ class CashFlowStatementScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.trending_down, size: 5.w, color: kWarning),
-              SizedBox(width: 2.w),
+              Icon(Icons.trending_down, size: isWeb ? 24 : 20, color: kWarning),
+              SizedBox(width: isWeb ? 12 : 8),
               Text(
                 'Cash Flow from Investing Activities',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: isWeb ? 16 : 14,
                   fontWeight: FontWeight.w700,
                   color: kWarning,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : 8),
           ...controller.investingItems.map((item) => 
-            _buildCashFlowRow(controller, item.name, item.amount)
+            _buildCashFlowRow(controller, item.name, item.amount, isWeb)
           ).toList(),
-          Divider(color: kBorder, height: 2.h),
+          Divider(color: kBorder, height: isWeb ? 16 : 12),
           Obx(() => _buildCashFlowRow(
             controller, 
             'Net Cash from Investing Activities', 
             controller.cashFlowFromInvesting.value, 
+            isWeb,
             isBold: true
           )),
         ],
@@ -408,12 +432,15 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFinancingActivitiesSection(CashFlowController controller) {
+  Widget _buildFinancingActivitiesSection(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -427,27 +454,28 @@ class CashFlowStatementScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.account_balance, size: 5.w, color: kSuccess),
-              SizedBox(width: 2.w),
+              Icon(Icons.account_balance, size: isWeb ? 24 : 20, color: kSuccess),
+              SizedBox(width: isWeb ? 12 : 8),
               Text(
                 'Cash Flow from Financing Activities',
                 style: TextStyle(
-                  fontSize: 15.sp,
+                  fontSize: isWeb ? 16 : 14,
                   fontWeight: FontWeight.w700,
                   color: kSuccess,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : 8),
           ...controller.financingItems.map((item) => 
-            _buildCashFlowRow(controller, item.name, item.amount)
+            _buildCashFlowRow(controller, item.name, item.amount, isWeb)
           ).toList(),
-          Divider(color: kBorder, height: 2.h),
+          Divider(color: kBorder, height: isWeb ? 16 : 12),
           Obx(() => _buildCashFlowRow(
             controller, 
             'Net Cash from Financing Activities', 
             controller.cashFlowFromFinancing.value, 
+            isWeb,
             isBold: true
           )),
         ],
@@ -455,31 +483,34 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNetCashFlowSection(CashFlowController controller) {
+  Widget _buildNetCashFlowSection(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() => Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: controller.netCashFlow.value >= 0 ? kSuccess.withOpacity(0.05) : kDanger.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         border: Border.all(color: controller.netCashFlow.value >= 0 ? kSuccess : kDanger, width: 1),
       ),
       child: Column(
         children: [
-          _buildCashFlowRow(controller, 'Net Increase / Decrease in Cash', controller.netCashFlow.value, isBold: true, fontSize: 15.sp),
-          SizedBox(height: 1.h),
+          _buildCashFlowRow(controller, 'Net Increase / Decrease in Cash', controller.netCashFlow.value, isWeb, isBold: true, fontSize: isWeb ? 18 : 16),
+          SizedBox(height: isWeb ? 12 : 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 controller.netCashFlow.value >= 0 ? Icons.trending_up : Icons.trending_down,
-                size: 4.w,
+                size: isWeb ? 20 : 16,
                 color: controller.netCashFlow.value >= 0 ? kSuccess : kDanger,
               ),
-              SizedBox(width: 1.w),
+              SizedBox(width: isWeb ? 8 : 6),
               Text(
                 controller.netCashFlow.value >= 0 ? 'Positive Cash Flow' : 'Negative Cash Flow',
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: isWeb ? 13 : 12,
                   color: controller.netCashFlow.value >= 0 ? kSuccess : kDanger,
                   fontWeight: FontWeight.w500,
                 ),
@@ -491,12 +522,15 @@ class CashFlowStatementScreen extends StatelessWidget {
     ));
   }
 
-  Widget _buildCashBalanceReconciliation(CashFlowController controller) {
+  Widget _buildCashBalanceReconciliation(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -511,45 +545,52 @@ class CashFlowStatementScreen extends StatelessWidget {
           Text(
             'Cash Balance Reconciliation',
             style: TextStyle(
-              fontSize: 15.sp,
+              fontSize: isWeb ? 16 : 14,
               fontWeight: FontWeight.w700,
               color: kText,
             ),
           ),
-          SizedBox(height: 1.5.h),
-          Obx(() => _buildReconciliationRow('Opening Cash Balance', controller.formatAmount(controller.openingCashBalance.value))),
-          Obx(() => _buildReconciliationRow('Add: Net Cash Flow', controller.formatAmount(controller.netCashFlow.value), isAdd: true)),
-          Divider(color: kBorder, height: 2.h),
-          Obx(() => _buildReconciliationRow('Closing Cash Balance', controller.formatAmount(controller.closingCashBalance.value), isBold: true)),
+          SizedBox(height: isWeb ? 12 : 8),
+          Obx(() => _buildReconciliationRow('Opening Cash Balance', controller.formatAmount(controller.openingCashBalance.value), isWeb)),
+          Obx(() => _buildReconciliationRow('Add: Net Cash Flow', controller.formatAmount(controller.netCashFlow.value), isWeb, isAdd: true)),
+          Divider(color: kBorder, height: isWeb ? 16 : 12),
+          Obx(() => _buildReconciliationRow('Closing Cash Balance', controller.formatAmount(controller.closingCashBalance.value), isWeb, isBold: true)),
         ],
       ),
     );
   }
 
-  Widget _buildCashFlowRow(CashFlowController controller, String label, double amount, {bool isBold = false, double? fontSize}) {
+  Widget _buildCashFlowRow(CashFlowController controller, String label, double amount, bool isWeb, {bool isBold = false, double? fontSize}) {
     Color amountColor = amount >= 0 ? kSuccess : kDanger;
     String prefix = amount >= 0 ? '' : '-';
     String displayAmount = prefix + controller.formatAmount(amount.abs());
     
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 0.8.h),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 8 : 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSize ?? (isBold ? 13.sp : 13.sp),
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-              color: kText,
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                color: kText,
+              ),
             ),
           ),
-          Text(
-            displayAmount,
-            style: TextStyle(
-              fontSize: fontSize ?? (isBold ? 13.sp : 13.sp),
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-              color: amountColor,
+          Expanded(
+            flex: 1,
+            child: Text(
+              displayAmount,
+              style: TextStyle(
+                fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: amountColor,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -557,26 +598,33 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReconciliationRow(String label, String amount, {bool isAdd = false, bool isBold = false}) {
+  Widget _buildReconciliationRow(String label, String amount, bool isWeb, {bool isAdd = false, bool isBold = false}) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 0.8.h),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 8 : 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            isAdd ? '   + $label' : label,
-            style: TextStyle(
-              fontSize: isBold ? 13.sp : 13.sp,
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-              color: kText,
+          Expanded(
+            flex: 3,
+            child: Text(
+              isAdd ? '   + $label' : label,
+              style: TextStyle(
+                fontSize: isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12),
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                color: kText,
+              ),
             ),
           ),
-          Text(
-            amount,
-            style: TextStyle(
-              fontSize: isBold ? 13.sp : 13.sp,
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-              color: kText,
+          Expanded(
+            flex: 1,
+            child: Text(
+              amount,
+              style: TextStyle(
+                fontSize: isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12),
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: kText,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -584,46 +632,51 @@ class CashFlowStatementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(CashFlowController controller) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _generateAndPrintPDF(controller),
-            icon: Icon(Icons.picture_as_pdf, size: 4.5.w),
-            label: Text('Save as PDF', style: TextStyle(fontSize: 12.sp)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: kPrimary,
-              side: BorderSide(color: kPrimary, width: 1),
-              padding: EdgeInsets.symmetric(vertical: 1.5.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildActionButtons(CashFlowController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _generateAndPrintPDF(controller, context),
+              icon: Icon(Icons.picture_as_pdf, size: isWeb ? 20 : 16),
+              label: Text('Save as PDF', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kPrimary,
+                side: BorderSide(color: kPrimary, width: 1),
+                padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                ),
               ),
             ),
           ),
-        ),
-        SizedBox(width: 3.w),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => controller.printReport(),
-            icon: Icon(Icons.print, size: 4.5.w, color: Colors.white),
-            label: Text('Print Report', style: TextStyle(fontSize: 12.sp)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimary,
-              padding: EdgeInsets.symmetric(vertical: 1.5.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          SizedBox(width: isWeb ? 16 : 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => controller.printReport(),
+              icon: Icon(Icons.print, size: isWeb ? 20 : 16, color: Colors.white),
+              label: Text('Print Report', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimary,
+                padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  void _selectDateRange(CashFlowController controller) async {
+  void _selectDateRange(CashFlowController controller, BuildContext context) async {
     final picked = await showDateRangePicker(
-      context: Get.context!,
+      context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
       initialDateRange: controller.selectedDateRange.value,
@@ -633,25 +686,27 @@ class CashFlowStatementScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _generateAndPrintPDF(CashFlowController controller) async {
+  Future<void> _generateAndPrintPDF(CashFlowController controller, BuildContext context) async {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     try {
       Get.dialog(
         Center(
           child: Container(
-            padding: EdgeInsets.all(5.w),
+            padding: EdgeInsets.all(isWeb ? 24 : 20),
             decoration: BoxDecoration(
               color: kCardBg,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 LoadingAnimationWidget.waveDots(
-                    color: kPrimary,
-                    size: 10.w,
-                  ),  
-                SizedBox(height: 2.h),
-                Text('Generating PDF...', style: TextStyle(fontSize: 13.sp, color: kText)),
+                  color: kPrimary,
+                  size: isWeb ? 50 : 40,
+                ),
+                SizedBox(height: isWeb ? 16 : 12),
+                Text('Generating PDF...', style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText)),
               ],
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/bills/controller/bills_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,73 +16,137 @@ class BillsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(BillsController());
     
-     WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (vendorId != null && vendorId!.isNotEmpty && controller.vendors.isNotEmpty) {
-        // Check if vendor exists in list
         bool vendorExists = controller.vendors.any((v) => v['_id'].toString() == vendorId);
         if (vendorExists) {
           controller.filterByVendor(vendorId!);
         } else {
-          // Vendor not found, clear filter
           controller.filterByVendor('');
         }
       }
     });
-    return Scaffold(
-      backgroundColor: kBg,
-      appBar: _buildAppBar(controller),
-      body: Obx(() {
+    
+    return Container(
+      color: kBg,
+      child: Obx(() {
         if (controller.isLoading.value) {
           return Center(
-            child:LoadingAnimationWidget.waveDots(
-                    color: kPrimary,
-                    size: 10.w,
-                  )
+            child: LoadingAnimationWidget.waveDots(
+              color: kPrimary,
+              size: ResponsiveUtils.isWeb(context) ? 60 : 40,
+            ),
           );
         }
 
-        return Column(
-          children: [
-            _buildSummaryCards(controller),
-            _buildFilterBar(controller),
-            Expanded(
-              child: _buildBillsList(controller),
-            ),
-          ],
+        // Single ScrollView that scrolls everything together
+        return SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(controller, context),
+              _buildSummaryCards(controller, context),
+              _buildFilterBar(controller, context),
+              _buildBillsList(controller, context),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       }),
-      floatingActionButton: _buildFAB(controller),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BillsController controller) {
-    return AppBar(
-      title: Text(
-        'Bills',
-        style: TextStyle(
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
+  // Custom Header without AppBar
+  Widget _buildHeader(BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        isWeb ? 24 : 16,
+        isWeb ? 20 : 16,
+        isWeb ? 24 : 16,
+        isWeb ? 16 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: kPrimary,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
         ),
       ),
-      backgroundColor: kPrimary,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: 5.w),
-          onPressed: () => _showFilterDialog(controller),
-        ),
-        IconButton(
-          icon: Icon(Icons.download_outlined, color: Colors.white, size: 5.w),
-          onPressed: () => controller.exportBills(),
-        ),
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bills',
+                  style: TextStyle(
+                    fontSize: isWeb ? 20 : 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage all your bills',
+                  style: TextStyle(
+                    fontSize: isWeb ? 13 : 11,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Filter Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => _showFilterDialog(controller, context),
+            ),
+          ),
+          if (!isMobile) const SizedBox(width: 8),
+          // Export Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => controller.exportBills(),
+            ),
+          ),
+          if (!isMobile) const SizedBox(width: 8),
+          if (!isMobile)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.add, color: kPrimary, size: isWeb ? 22 : 20),
+                onPressed: () => _showAddBillDialog(controller, context),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSummaryCards(BillsController controller) {
+  Widget _buildSummaryCards(BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() => Container(
-      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
       child: Row(
         children: [
           _buildSummaryCard(
@@ -89,33 +154,38 @@ class BillsScreen extends StatelessWidget {
             _formatAmount(controller.totalAmount.value),
             kPrimary,
             Icons.receipt,
+            context,
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           _buildSummaryCard(
             'Paid',
             _formatAmount(controller.totalPaid.value),
             kSuccess,
             Icons.check_circle,
+            context,
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           _buildSummaryCard(
             'Outstanding',
             _formatAmount(controller.totalOutstanding.value),
             kDanger,
             Icons.payment,
+            context,
           ),
         ],
       ),
     ));
   }
 
-  Widget _buildSummaryCard(String title, String amount, Color color, IconData icon) {
+  Widget _buildSummaryCard(String title, String amount, Color color, IconData icon, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(2.5.w),
+        padding: EdgeInsets.all(isWeb ? 16 : 12),
         decoration: BoxDecoration(
           color: kCardBg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -129,13 +199,13 @@ class BillsScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 4.5.w, color: color),
-                SizedBox(width: 1.5.w),
+                Icon(icon, size: isWeb ? 24 : 20, color: color),
+                SizedBox(width: isWeb ? 8 : 6),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 12.sp,
+                      fontSize: isWeb ? 12 : 11,
                       color: kSubText,
                       fontWeight: FontWeight.w500,
                     ),
@@ -145,11 +215,11 @@ class BillsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 1.h),
+            SizedBox(height: isWeb ? 8 : 6),
             Text(
               amount,
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: isWeb ? 18 : 14,
                 fontWeight: FontWeight.w800,
                 color: color,
               ),
@@ -161,172 +231,185 @@ class BillsScreen extends StatelessWidget {
       ),
     );
   }
-Widget _buildFilterBar(BillsController controller) {
-  return Container(
-    width: 100.w,
-    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
-    color: kCardBg,
-    child: Row(
-      children: [
-        // Status Filter
-        Expanded(
-          child: Container(
-            height: 6.h,
-            padding: EdgeInsets.symmetric(horizontal: 3.w),
-            decoration: BoxDecoration(
-              color: kBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kBorder),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: Obx(() => DropdownButton<String>(
-                value: controller.selectedFilter.value,
-                icon: Icon(Icons.arrow_drop_down, size: 5.w),
-                isExpanded: true,
-                style: TextStyle(fontSize: 12.sp, color: kText),
-                items: const [
-                  DropdownMenuItem(value: 'All', child: Text('All')),
-                  DropdownMenuItem(value: 'Unpaid', child: Text('Unpaid')),
-                  DropdownMenuItem(value: 'Paid', child: Text('Paid')),
-                  DropdownMenuItem(value: 'Overdue', child: Text('Overdue')),
-                  DropdownMenuItem(value: 'Partial', child: Text('Partial')),
-                ],
-                onChanged: (value) {
-                  if (value != null) controller.changeFilter(value);
-                },
-              )),
-            ),
-          ),
-        ),
-        SizedBox(width: 3.w),
-        // Vendor Filter - FIXED
-        Expanded(
-          child: Container(
-            height: 6.h,
-            padding: EdgeInsets.symmetric(horizontal: 3.w),
-            decoration: BoxDecoration(
-              color: kBg,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: kBorder),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: Obx(() {
-                // CRITICAL FIX: Only show dropdown when vendors are loaded
-                if (controller.vendors.isEmpty) {
-                  return Container(
-                    alignment: Alignment.centerLeft,
-                    padding: EdgeInsets.symmetric(horizontal: 3.w),
-                    child: Text(
-                      'Loading vendors...',
-                      style: TextStyle(fontSize: 12.sp, color: kSubText),
-                    ),
-                  );
-                }
-                
-                // Get current value
-                String? currentValue = controller.selectedVendorId.value.isEmpty 
-                    ? null 
-                    : controller.selectedVendorId.value;
-                
-                // Validate current value exists in vendors list
-                if (currentValue != null && currentValue.isNotEmpty) {
-                  bool exists = controller.vendors.any((v) => v['_id'] == currentValue);
-                  if (!exists) {
-                    currentValue = null;
-                  }
-                }
-                
-                return DropdownButton<String>(
-                  value: currentValue,
-                  icon: Icon(Icons.arrow_drop_down, size: 5.w),
+
+  Widget _buildFilterBar(BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+      color: kCardBg,
+      child: Row(
+        children: [
+          // Status Filter
+          Expanded(
+            child: Container(
+              height: isWeb ? 45 : 40,
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
+              decoration: BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                border: Border.all(color: kBorder),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: Obx(() => DropdownButton<String>(
+                  value: controller.selectedFilter.value,
+                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
                   isExpanded: true,
-                  hint: Text('All Vendors', style: TextStyle(fontSize: 12.sp, color: kSubText)),
-                  style: TextStyle(fontSize: 12.sp, color: kText),
-                  items: [
-                    const DropdownMenuItem(value: '', child: Text('All Vendors')),
-                    ...controller.vendors.map((vendor) {
-                      return DropdownMenuItem<String>(
-                        value: vendor['_id'].toString(),
-                        child: Text(vendor['name']),
-                      );
-                    }).toList(),
+                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                  items: const [
+                    DropdownMenuItem(value: 'All', child: Text('All')),
+                    DropdownMenuItem(value: 'Unpaid', child: Text('Unpaid')),
+                    DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                    DropdownMenuItem(value: 'Overdue', child: Text('Overdue')),
+                    DropdownMenuItem(value: 'Partial', child: Text('Partial')),
                   ],
                   onChanged: (value) {
-                    if (value != null) {
-                      controller.filterByVendor(value);
-                    }
+                    if (value != null) controller.changeFilter(value);
                   },
-                );
-              }),
+                )),
+              ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}  Widget _buildBillsList(BillsController controller) {
+          SizedBox(width: isWeb ? 16 : 12),
+          // Vendor Filter
+          Expanded(
+            child: Container(
+              height: isWeb ? 45 : 40,
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
+              decoration: BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                border: Border.all(color: kBorder),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: Obx(() {
+                  if (controller.vendors.isEmpty) {
+                    return Container(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Loading vendors...',
+                        style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText),
+                      ),
+                    );
+                  }
+                  
+                  String? currentValue = controller.selectedVendorId.value.isEmpty 
+                      ? null 
+                      : controller.selectedVendorId.value;
+                  
+                  if (currentValue != null && currentValue.isNotEmpty) {
+                    bool exists = controller.vendors.any((v) => v['_id'] == currentValue);
+                    if (!exists) {
+                      currentValue = null;
+                    }
+                  }
+                  
+                  return DropdownButton<String>(
+                    value: currentValue,
+                    icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
+                    isExpanded: true,
+                    hint: Text('All Vendors', style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
+                    style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('All Vendors')),
+                      ...controller.vendors.map((vendor) {
+                        return DropdownMenuItem<String>(
+                          value: vendor['_id'].toString(),
+                          child: Text(vendor['name'], overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        controller.filterByVendor(value);
+                      }
+                    },
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBillsList(BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() {
       final bills = controller.bills;
 
       if (bills.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.receipt_outlined, size: 15.w, color: kSubText.withOpacity(0.5)),
-              SizedBox(height: 2.h),
-              Text(
-                'No bills found',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: kSubText,
-                  fontWeight: FontWeight.w500,
+        return Padding(
+          padding: EdgeInsets.all(isWeb ? 40 : 20),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.receipt_outlined, size: isWeb ? 80 : 64, color: kSubText.withOpacity(0.5)),
+                SizedBox(height: isWeb ? 20 : 16),
+                Text(
+                  'No bills found',
+                  style: TextStyle(fontSize: isWeb ? 18 : 16, color: kSubText),
                 ),
-              ),
-              SizedBox(height: 2.h),
-              ElevatedButton(
-                onPressed: () => _showAddBillDialog(controller),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                SizedBox(height: isWeb ? 20 : 16),
+                ElevatedButton(
+                  onPressed: () => _showAddBillDialog(controller, context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                    ),
+                  ),
+                  child: Text(
+                    'Add Bill',
+                    style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w600),
                   ),
                 ),
-                child: Text(
-                  'Add Bill',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }
 
-      return ListView.builder(
-        padding: EdgeInsets.all(4.w),
-        itemCount: bills.length,
-        itemBuilder: (context, index) {
-          final bill = bills[index];
-          return _buildBillCard(bill, controller);
-        },
+      return Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 8),
+            child: Text(
+              'Bills',
+              style: TextStyle(
+                fontSize: isWeb ? 18 : 16,
+                fontWeight: FontWeight.w700,
+                color: kText,
+              ),
+            ),
+          ),
+          ...bills.map((bill) => Padding(
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 12, vertical: isWeb ? 8 : 6),
+            child: _buildBillCard(bill, controller, context),
+          )).toList(),
+        ],
       );
     });
   }
 
-  Widget _buildBillCard(Bill bill, BillsController controller) {
+  Widget _buildBillCard(Bill bill, BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     Color statusColor = bill.status == 'Paid' ? kSuccess :
                         bill.status == 'Overdue' ? kDanger :
                         bill.status == 'Partial' ? kWarning : kPrimary;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 2.h),
+      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -338,147 +421,265 @@ Widget _buildFilterBar(BillsController controller) {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showBillDetails(bill, controller),
-          borderRadius: BorderRadius.circular(16),
+          onTap: () => _showBillDetails(bill, controller, context),
+          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
           child: Padding(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 12.w,
-                      height: 12.w,
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.receipt, size: 6.w, color: statusColor),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                bill.billNumber,
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w800,
-                                  color: kText,
-                                ),
-                              ),
-                              SizedBox(width: 2.w),
-                              _statusBadge(bill.status, statusColor),
-                            ],
-                          ),
-                          Text(
-                            bill.vendorName,
-                            style: TextStyle(fontSize: 12.sp, color: kSubText),
-                          ),
-                          Text(
-                            'Due: ${DateFormat('dd MMM yyyy').format(bill.dueDate)}',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: bill.isOverdue ? kDanger : kSubText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          _formatAmount(bill.totalAmount),
-                          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w800, color: kText),
-                        ),
-                        Text(
-                          'Paid: ${_formatAmount(bill.paidAmount)}',
-                          style: TextStyle(fontSize: 12.sp, color: kSuccess),
-                        ),
-                        if (bill.outstanding > 0)
-                          Text(
-                            'Due: ${_formatAmount(bill.outstanding)}',
-                            style: TextStyle(fontSize: 12.sp, color: kDanger),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2.h),
-                _buildBillItemsPreview(bill.items),
-                SizedBox(height: 2.h),
-                Row(
-                  children: [
-                    if (bill.status != 'Paid')
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _recordBillPayment(bill, controller),
-                          icon: Icon(Icons.payment, size: 4.w, color: Colors.white),
-                          label: Text('Pay Now', style: TextStyle(fontSize: 12.sp)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kSuccess,
-                            padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (bill.status != 'Paid') SizedBox(width: 3.w),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _printBill(bill),
-                        icon: Icon(Icons.print, size: 4.w),
-                        label: Text('Print', style: TextStyle(fontSize: 12.sp)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: kPrimary,
-                          side: BorderSide(color: kPrimary, width: 1),
-                          padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            padding: EdgeInsets.all(isWeb ? 16 : 12),
+            child: isMobile
+                ? _buildMobileBillCard(bill, controller, statusColor, context)
+                : _buildDesktopBillCard(bill, controller, statusColor, context),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildBillItemsPreview(List<BillItem> items) {
+  Widget _buildDesktopBillCard(Bill bill, BillsController controller, Color statusColor, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: isWeb ? 50 : 44,
+              height: isWeb ? 50 : 44,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+              ),
+              child: Icon(Icons.receipt, size: isWeb ? 24 : 20, color: statusColor),
+            ),
+            SizedBox(width: isWeb ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        bill.billNumber,
+                        style: TextStyle(
+                          fontSize: isWeb ? 15 : 13,
+                          fontWeight: FontWeight.w800,
+                          color: kText,
+                        ),
+                      ),
+                      SizedBox(width: isWeb ? 8 : 6),
+                      _statusBadge(bill.status, statusColor, isWeb),
+                    ],
+                  ),
+                  SizedBox(height: isWeb ? 4 : 2),
+                  Text(
+                    bill.vendorName,
+                    style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                  ),
+                  Text(
+                    'Due: ${DateFormat('dd MMM yyyy').format(bill.dueDate)}',
+                    style: TextStyle(
+                      fontSize: isWeb ? 12 : 11,
+                      color: bill.isOverdue ? kDanger : kSubText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _formatAmount(bill.totalAmount),
+                  style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: kText),
+                ),
+                SizedBox(height: isWeb ? 4 : 2),
+                Text(
+                  'Paid: ${_formatAmount(bill.paidAmount)}',
+                  style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSuccess),
+                ),
+                if (bill.outstanding > 0)
+                  Text(
+                    'Due: ${_formatAmount(bill.outstanding)}',
+                    style: TextStyle(fontSize: isWeb ? 12 : 11, color: kDanger),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        SizedBox(height: isWeb ? 16 : 12),
+        if (bill.items.isNotEmpty)
+          _buildBillItemsPreview(bill.items, isWeb),
+        SizedBox(height: isWeb ? 16 : 12),
+        Row(
+          children: [
+            if (bill.status != 'Paid')
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _recordBillPayment(bill, controller, context),
+                  icon: Icon(Icons.payment, size: isWeb ? 18 : 14, color: Colors.white),
+                  label: Text('Pay Now', style: TextStyle(fontSize: isWeb ? 12 : 10)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kSuccess,
+                    padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                    ),
+                  ),
+                ),
+              ),
+            if (bill.status != 'Paid') SizedBox(width: isWeb ? 12 : 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _printBill(bill, context),
+                icon: Icon(Icons.print, size: isWeb ? 18 : 14),
+                label: Text('Print', style: TextStyle(fontSize: isWeb ? 12 : 10)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimary,
+                  side: BorderSide(color: kPrimary, width: 1),
+                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileBillCard(Bill bill, BillsController controller, Color statusColor, BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.receipt, size: 20, color: statusColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          bill.billNumber,
+                          style:  TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: kText,
+                          ),
+                        ),
+                      ),
+                      _statusBadge(bill.status, statusColor, false),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    bill.vendorName,
+                    style:  TextStyle(fontSize: 11, color: kSubText),
+                  ),
+                  Text(
+                    'Due: ${DateFormat('dd MMM yyyy').format(bill.dueDate)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: bill.isOverdue ? kDanger : kSubText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  _formatAmount(bill.totalAmount),
+                  style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText),
+                ),
+                Text(
+                  'Paid: ${_formatAmount(bill.paidAmount)}',
+                  style: const TextStyle(fontSize: 10, color: kSuccess),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (bill.items.isNotEmpty)
+          _buildMobileBillItemsPreview(bill.items),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            if (bill.status != 'Paid')
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _recordBillPayment(bill, controller, context),
+                  icon: Icon(Icons.payment, size: 14, color: Colors.white),
+                  label: const Text('Pay Now', style: TextStyle(fontSize: 9)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kSuccess,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ),
+            if (bill.status != 'Paid') const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _printBill(bill, context),
+                icon: Icon(Icons.print, size: 14),
+                label: const Text('Print', style: TextStyle(fontSize: 9)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimary,
+                  side: const BorderSide(color: kPrimary, width: 1),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBillItemsPreview(List<BillItem> items, bool isWeb) {
     if (items.isEmpty) return const SizedBox.shrink();
     
     return Column(
       children: items.take(2).map((item) {
         return Padding(
-          padding: EdgeInsets.only(bottom: 1.h),
+          padding: EdgeInsets.only(bottom: isWeb ? 8 : 6),
           child: Row(
             children: [
               Expanded(
                 child: Text(
                   item.description,
-                  style: TextStyle(fontSize: 12.sp, color: kSubText),
+                  style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Text(
                 '${item.quantity} x ${_formatAmount(item.unitPrice)}',
-                style: TextStyle(fontSize: 12.sp, color: kSubText),
+                style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
               ),
-              SizedBox(width: 2.w),
+              SizedBox(width: isWeb ? 12 : 8),
               Text(
                 _formatAmount(item.amount),
-                style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600, color: kText),
+                style: TextStyle(fontSize: isWeb ? 12 : 11, fontWeight: FontWeight.w600, color: kText),
               ),
             ],
           ),
@@ -487,23 +688,56 @@ Widget _buildFilterBar(BillsController controller) {
     );
   }
 
-  Widget _statusBadge(String status, Color color) {
+  Widget _buildMobileBillItemsPreview(List<BillItem> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    
+    return Column(
+      children: items.take(2).map((item) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.description,
+                  style:  TextStyle(fontSize: 10, color: kSubText),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '${item.quantity} x ${_formatAmount(item.unitPrice)}',
+                style:  TextStyle(fontSize: 9, color: kSubText),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                _formatAmount(item.amount),
+                style:  TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: kText),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _statusBadge(String status, Color color, bool isWeb) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.3.h),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(status, style: TextStyle(fontSize: 12.sp, color: color, fontWeight: FontWeight.w600)),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 6 : 4)),
+      child: Text(
+        status,
+        style: TextStyle(
+          fontSize: isWeb ? 11 : 9,
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
-  Widget _buildFAB(BillsController controller) {
-    return FloatingActionButton(
-      onPressed: () => _showAddBillDialog(controller),
-      backgroundColor: kPrimary,
-      child: Icon(Icons.add, color: Colors.white, size: 6.w),
-    );
-  }
-
-  void _showAddBillDialog(BillsController controller) {
+  void _showAddBillDialog(BillsController controller, BuildContext ctx) {
+    final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
     String selectedVendorId = '';
     DateTime selectedDate = DateTime.now();
@@ -518,7 +752,7 @@ Widget _buildFilterBar(BillsController controller) {
     addItem();
 
     showDialog(
-      context: Get.context!,
+      context: ctx,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           double calculateTotal() {
@@ -532,13 +766,13 @@ Widget _buildFilterBar(BillsController controller) {
           return Dialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
-              width: 90.w,
-              constraints: BoxConstraints(maxHeight: 85.h),
-              padding: EdgeInsets.all(5.w),
+              width: isWeb ? 600 : double.infinity,
+              constraints: BoxConstraints(maxHeight: isWeb ? 700 : 600),
+              padding: EdgeInsets.all(isWeb ? 24 : 20),
               child: Column(
                 children: [
-                  Text('Add Bill', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w800)),
-                  SizedBox(height: 2.h),
+                  Text('Add Bill', style: TextStyle(fontSize: isWeb ? 20 : 18, fontWeight: FontWeight.w800)),
+                  SizedBox(height: isWeb ? 20 : 16),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Form(
@@ -547,34 +781,34 @@ Widget _buildFilterBar(BillsController controller) {
                           children: [
                             DropdownButtonFormField<String>(
                               value: selectedVendorId.isEmpty ? null : selectedVendorId,
-                              decoration: _inputDecoration('Vendor *'),
-                              style: TextStyle(fontSize: 12.sp),
+                              decoration: _inputDecoration('Vendor *', isWeb),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               items: controller.vendors.map((v) {
                                 return DropdownMenuItem<String>(
                                   value: v['_id'].toString(),
-                                  child: Text(v['name']),
+                                  child: Text(v['name'], style: TextStyle(color: Colors.black)),
                                 );
                               }).toList(),
                               onChanged: (v) => selectedVendorId = v!,
                               validator: (v) => v == null ? 'Vendor required' : null,
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             Row(
                               children: [
-                                Expanded(child: _dateTile('Bill Date', selectedDate, (d) => selectedDate = d)),
-                                SizedBox(width: 3.w),
-                                Expanded(child: _dateTile('Due Date', selectedDueDate, (d) => selectedDueDate = d)),
+                                Expanded(child: _dateTile('Bill Date', selectedDate, (d) => selectedDate = d, isWeb, ctx)),
+                                SizedBox(width: isWeb ? 16 : 12),
+                                Expanded(child: _dateTile('Due Date', selectedDueDate, (d) => selectedDueDate = d, isWeb, ctx)),
                               ],
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Items', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700)),
+                                Text('Items', style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w700)),
                                 TextButton.icon(
                                   onPressed: () => setState(() => addItem()),
-                                  icon: Icon(Icons.add, size: 4.w),
-                                  label: Text('Add Item', style: TextStyle(fontSize: 12.sp)),
+                                  icon: Icon(Icons.add, size: isWeb ? 20 : 16),
+                                  label: Text('Add Item', style: TextStyle(fontSize: isWeb ? 12 : 11)),
                                 ),
                               ],
                             ),
@@ -582,11 +816,11 @@ Widget _buildFilterBar(BillsController controller) {
                               int index = entry.key;
                               var item = entry.value;
                               return Container(
-                                margin: EdgeInsets.only(bottom: 2.h),
-                                padding: EdgeInsets.all(2.w),
+                                margin: EdgeInsets.only(bottom: isWeb ? 16 : 12),
+                                padding: EdgeInsets.all(isWeb ? 12 : 10),
                                 decoration: BoxDecoration(
                                   color: kBg,
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
                                   border: Border.all(color: kBorder),
                                 ),
                                 child: Column(
@@ -595,38 +829,38 @@ Widget _buildFilterBar(BillsController controller) {
                                       children: [
                                         Expanded(
                                           child: TextFormField(
-                                            decoration: _inputDecoration('Description'),
-                                            style: TextStyle(fontSize: 12.sp),
+                                            decoration: _inputDecoration('Description', isWeb),
+                                            style: TextStyle(fontSize: isWeb ? 13 : 12),
                                             onChanged: (v) => item['description'] = v,
                                           ),
                                         ),
                                         IconButton(
-                                          icon: Icon(Icons.delete, size: 4.w, color: kDanger),
+                                          icon: Icon(Icons.delete, size: isWeb ? 20 : 16, color: kDanger),
                                           onPressed: () => setState(() => items.removeAt(index)),
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 1.h),
+                                    SizedBox(height: isWeb ? 8 : 6),
                                     Row(
                                       children: [
                                         Expanded(
                                           child: TextFormField(
-                                            decoration: _inputDecoration('Qty'),
+                                            decoration: _inputDecoration('Qty', isWeb),
                                             keyboardType: TextInputType.number,
-                                            style: TextStyle(fontSize: 12.sp),
+                                            style: TextStyle(fontSize: isWeb ? 13 : 12),
                                             onChanged: (v) {
                                               item['quantity'] = int.tryParse(v) ?? 1;
                                               setState(() {});
                                             },
                                           ),
                                         ),
-                                        SizedBox(width: 2.w),
+                                        SizedBox(width: isWeb ? 12 : 8),
                                         Expanded(
                                           flex: 2,
                                           child: TextFormField(
-                                            decoration: _inputDecoration('Unit Price', prefix: '₨ '),
+                                            decoration: _inputDecoration('Unit Price', isWeb, prefix: '₨ '),
                                             keyboardType: TextInputType.number,
-                                            style: TextStyle(fontSize: 12.sp),
+                                            style: TextStyle(fontSize: isWeb ? 13 : 12),
                                             onChanged: (v) {
                                               item['unitPrice'] = double.tryParse(v) ?? 0;
                                               setState(() {});
@@ -639,28 +873,28 @@ Widget _buildFilterBar(BillsController controller) {
                                 ),
                               );
                             }).toList(),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             TextFormField(
-                              decoration: _inputDecoration('Discount', prefix: '₨ '),
+                              decoration: _inputDecoration('Discount', isWeb, prefix: '₨ '),
                               keyboardType: TextInputType.number,
-                              style: TextStyle(fontSize: 12.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               onChanged: (v) => discount = double.tryParse(v) ?? 0,
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             TextFormField(
-                              decoration: _inputDecoration('Notes'),
+                              decoration: _inputDecoration('Notes', isWeb),
                               maxLines: 2,
-                              style: TextStyle(fontSize: 12.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               onChanged: (v) => notes = v,
                             ),
                             Container(
-                              padding: EdgeInsets.all(2.w),
-                              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(10)),
+                              padding: EdgeInsets.all(isWeb ? 16 : 12),
+                              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Total Amount', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600)),
-                                  Text(_formatAmount(calculateTotal()), style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w800, color: kPrimary)),
+                                  Text('Total Amount', style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w600)),
+                                  Text(_formatAmount(calculateTotal()), style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: kPrimary)),
                                 ],
                               ),
                             ),
@@ -669,16 +903,16 @@ Widget _buildFilterBar(BillsController controller) {
                       ),
                     ),
                   ),
-                  SizedBox(height: 2.h),
+                  SizedBox(height: isWeb ? 20 : 16),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Get.back(),
-                          child: Text('Cancel', style: TextStyle(fontSize: 12.sp)),
+                          child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
                         ),
                       ),
-                      SizedBox(width: 3.w),
+                      SizedBox(width: isWeb ? 16 : 12),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
@@ -700,7 +934,7 @@ Widget _buildFilterBar(BillsController controller) {
                             }
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                          child: Text('Create Bill', style: TextStyle(fontSize: 12.sp)),
+                          child: Text('Create Bill', style: TextStyle(fontSize: isWeb ? 14 : 12)),
                         ),
                       ),
                     ],
@@ -714,7 +948,8 @@ Widget _buildFilterBar(BillsController controller) {
     );
   }
 
-  void _recordBillPayment(Bill bill, BillsController controller) {
+  void _recordBillPayment(Bill bill, BillsController controller, BuildContext ctx) {
+    final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
     double amount = bill.outstanding;
     DateTime paymentDate = DateTime.now();
@@ -723,37 +958,37 @@ Widget _buildFilterBar(BillsController controller) {
     String selectedBankAccountId = '';
 
     showDialog(
-      context: Get.context!,
+      context: ctx,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: Text('Pay Bill - ${bill.billNumber}', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w800)),
+            title: Text('Pay Bill - ${bill.billNumber}', style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800)),
             content: SizedBox(
-              width: 80.w,
+              width: isWeb ? 400 : 280,
               child: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(2.w),
-                      decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(10)),
+                      padding: EdgeInsets.all(isWeb ? 16 : 12),
+                      decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
                       child: Column(
                         children: [
-                          _detailRow('Vendor', bill.vendorName),
-                          _detailRow('Bill Date', DateFormat('dd MMM yyyy').format(bill.date)),
-                          _detailRow('Due Date', DateFormat('dd MMM yyyy').format(bill.dueDate)),
-                          _detailRow('Total Amount', _formatAmount(bill.totalAmount)),
-                          _detailRow('Outstanding', _formatAmount(bill.outstanding), isImportant: true),
+                          _detailRow('Vendor', bill.vendorName, isWeb),
+                          _detailRow('Bill Date', DateFormat('dd MMM yyyy').format(bill.date), isWeb),
+                          _detailRow('Due Date', DateFormat('dd MMM yyyy').format(bill.dueDate), isWeb),
+                          _detailRow('Total Amount', _formatAmount(bill.totalAmount), isWeb),
+                          _detailRow('Outstanding', _formatAmount(bill.outstanding), isWeb, isImportant: true),
                         ],
                       ),
                     ),
-                    SizedBox(height: 2.h),
+                    SizedBox(height: isWeb ? 16 : 12),
                     TextFormField(
                       initialValue: amount.toString(),
-                      decoration: _inputDecoration('Payment Amount *', prefix: '₨ '),
+                      decoration: _inputDecoration('Payment Amount *', isWeb, prefix: '₨ '),
                       keyboardType: TextInputType.number,
-                      style: TextStyle(fontSize: 12.sp),
+                      style: TextStyle(fontSize: isWeb ? 13 : 12),
                       onChanged: (v) => amount = double.tryParse(v) ?? 0,
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Amount required';
@@ -763,13 +998,13 @@ Widget _buildFilterBar(BillsController controller) {
                         return null;
                       },
                     ),
-                    SizedBox(height: 2.h),
-                    _dateTile('Payment Date', paymentDate, (d) => paymentDate = d),
-                    SizedBox(height: 2.h),
+                    SizedBox(height: isWeb ? 16 : 12),
+                    _dateTile('Payment Date', paymentDate, (d) => paymentDate = d, isWeb, ctx),
+                    SizedBox(height: isWeb ? 16 : 12),
                     DropdownButtonFormField<String>(
                       value: paymentMethod,
-                      decoration: _inputDecoration('Payment Method'),
-                      style: TextStyle(fontSize: 12.sp),
+                      decoration: _inputDecoration('Payment Method', isWeb),
+                      style: TextStyle(fontSize: isWeb ? 13 : 12),
                       items: const [
                         DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
                         DropdownMenuItem(value: 'Cash', child: Text('Cash')),
@@ -777,26 +1012,26 @@ Widget _buildFilterBar(BillsController controller) {
                       ],
                       onChanged: (v) => paymentMethod = v!,
                     ),
-                    SizedBox(height: 2.h),
+                    SizedBox(height: isWeb ? 16 : 12),
                     TextFormField(
-                      decoration: _inputDecoration('Reference Number'),
-                      style: TextStyle(fontSize: 12.sp),
+                      decoration: _inputDecoration('Reference Number', isWeb),
+                      style: TextStyle(fontSize: isWeb ? 13 : 12),
                       onChanged: (v) => reference = v,
                     ),
                     if (paymentMethod == 'Bank Transfer') ...[
-                      SizedBox(height: 2.h),
+                      SizedBox(height: isWeb ? 16 : 12),
                       Obx(() => DropdownButtonFormField<String>(
                         value: selectedBankAccountId.isEmpty ? null : selectedBankAccountId,
-                        decoration: _inputDecoration('Bank Account *'),
-                        style: TextStyle(fontSize: 12.sp),
+                        decoration: _inputDecoration('Bank Account *', isWeb),
+                        style: TextStyle(fontSize: isWeb ? 13 : 12),
                         items: controller.bankAccounts.map((acc) {
                           return DropdownMenuItem<String>(
                             value: acc['_id'].toString(),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(acc['accountName'], style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600)),
-                                Text('Balance: ${_formatAmount(acc['currentBalance'])}', style: TextStyle(fontSize: 10.sp, color: kSubText)),
+                                Text(acc['accountName'], style: TextStyle(fontSize: isWeb ? 13 : 12, fontWeight: FontWeight.w600)),
+                                Text('Balance: ${_formatAmount(acc['currentBalance'])}', style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
                               ],
                             ),
                           );
@@ -810,7 +1045,7 @@ Widget _buildFilterBar(BillsController controller) {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Get.back(), child: Text('Cancel', style: TextStyle(fontSize: 12.sp))),
+              TextButton(onPressed: () => Get.back(), child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12))),
               Obx(() => ElevatedButton(
                 onPressed: controller.isProcessing.value
                     ? null
@@ -833,8 +1068,8 @@ Widget _buildFilterBar(BillsController controller) {
                       },
                 style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
                 child: controller.isProcessing.value
-                    ? SizedBox(width: 5.w, height: 5.w, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text('Record Payment', style: TextStyle(fontSize: 12.sp)),
+                    ? SizedBox(width: isWeb ? 24 : 20, height: isWeb ? 24 : 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text('Record Payment', style: TextStyle(fontSize: isWeb ? 14 : 12)),
               )),
             ],
           );
@@ -843,125 +1078,161 @@ Widget _buildFilterBar(BillsController controller) {
     );
   }
 
-  void _showBillDetails(Bill bill, BillsController controller) {
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(5.w),
-        constraints: BoxConstraints(maxHeight: 85.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+  void _showBillDetails(Bill bill, BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    if (isWeb) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            child: _buildBillDetailsContent(bill, controller, ctx),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(20),
+          constraints: BoxConstraints(maxHeight: 85.
+          h),
+          child: _buildBillDetailsContent(bill, controller, ctx),
+        ),
+      );
+    }
+  }
+
+  Widget _buildBillDetailsContent(Bill bill, BillsController controller, BuildContext ctx) {
+    final isWeb = ResponsiveUtils.isWeb(ctx);
+    Color statusColor = bill.status == 'Paid' ? kSuccess :
+                        bill.status == 'Overdue' ? kDanger :
+                        bill.status == 'Partial' ? kWarning : kPrimary;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 12.w,
-                  height: 12.w,
-                  decoration: BoxDecoration(
-                    color: (bill.status == 'Paid' ? kSuccess : kPrimary).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.receipt, size: 6.w, color: bill.status == 'Paid' ? kSuccess : kPrimary),
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(bill.billNumber, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w800)),
-                      Text(bill.vendorName, style: TextStyle(fontSize: 12.sp, color: kSubText)),
-                    ],
-                  ),
-                ),
-                _statusBadge(bill.status, bill.status == 'Paid' ? kSuccess : bill.status == 'Overdue' ? kDanger : kPrimary),
-              ],
+            Container(
+              width: isWeb ? 60 : 50,
+              height: isWeb ? 60 : 50,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isWeb ? 14 : 10),
+              ),
+              child: Icon(Icons.receipt, size: isWeb ? 28 : 24, color: statusColor),
             ),
-            SizedBox(height: 2.h),
-            _detailRow('Bill Date', DateFormat('dd MMM yyyy').format(bill.date)),
-            _detailRow('Due Date', DateFormat('dd MMM yyyy').format(bill.dueDate)),
-            _detailRow('Subtotal', _formatAmount(bill.subtotal)),
-            if (bill.taxTotal > 0) _detailRow('Tax', _formatAmount(bill.taxTotal)),
-            if (bill.discount > 0) _detailRow('Discount', _formatAmount(bill.discount)),
-            Divider(color: kBorder, height: 2.h),
-            _detailRow('Total Amount', _formatAmount(bill.totalAmount), isBold: true),
-            _detailRow('Paid Amount', _formatAmount(bill.paidAmount), color: kSuccess),
-            _detailRow('Outstanding', _formatAmount(bill.outstanding), color: kDanger, isBold: true),
-            SizedBox(height: 2.h),
-            Text('Items', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700)),
-            SizedBox(height: 1.h),
-            ...bill.items.map((item) => Container(
-              margin: EdgeInsets.only(bottom: 1.h),
-              padding: EdgeInsets.all(2.w),
-              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(10)),
-              child: Row(
+            SizedBox(width: isWeb ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.description, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600)),
-                        Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style: TextStyle(fontSize: 10.sp, color: kSubText)),
-                      ],
-                    ),
-                  ),
-                  Text(_formatAmount(item.amount), style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700)),
+                  Text(bill.billNumber, style: TextStyle(fontSize: isWeb ? 18 : 16, fontWeight: FontWeight.w800)),
+                  Text(bill.vendorName, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
                 ],
               ),
-            )).toList(),
-            if (bill.notes.isNotEmpty) ...[
-              SizedBox(height: 2.h),
-              Text('Notes', style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700)),
-              SizedBox(height: 0.5.h),
-              Text(bill.notes, style: TextStyle(fontSize: 12.sp, color: kSubText)),
-            ],
-            SizedBox(height: 2.h),
-            if (bill.status != 'Paid')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _recordBillPayment(bill, controller);
-                  },
-                  icon: Icon(Icons.payment, size: 4.w),
-                  label: Text('Pay Now', style: TextStyle(fontSize: 12.sp)),
-                  style: ElevatedButton.styleFrom(backgroundColor: kSuccess, padding: EdgeInsets.symmetric(vertical: 1.5.h)),
-                ),
-              ),
+            ),
+            _statusBadge(bill.status, statusColor, isWeb),
           ],
         ),
-      ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Container(
+          padding: EdgeInsets.all(isWeb ? 16 : 12),
+          decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
+          child: Column(
+            children: [
+              _detailRow('Bill Date', DateFormat('dd MMM yyyy').format(bill.date), isWeb),
+              _detailRow('Due Date', DateFormat('dd MMM yyyy').format(bill.dueDate), isWeb),
+              _detailRow('Subtotal', _formatAmount(bill.subtotal), isWeb),
+              if (bill.taxTotal > 0) _detailRow('Tax', _formatAmount(bill.taxTotal), isWeb),
+              if (bill.discount > 0) _detailRow('Discount', _formatAmount(bill.discount), isWeb),
+              Divider(color: kBorder, height: isWeb ? 16 : 12),
+              _detailRow('Total Amount', _formatAmount(bill.totalAmount), isWeb, isBold: true),
+              _detailRow('Paid Amount', _formatAmount(bill.paidAmount), isWeb, color: kSuccess),
+              _detailRow('Outstanding', _formatAmount(bill.outstanding), isWeb, color: kDanger, isBold: true),
+            ],
+          ),
+        ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Text('Items', style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700)),
+        SizedBox(height: isWeb ? 12 : 8),
+        ...bill.items.map((item) => Container(
+          margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
+          padding: EdgeInsets.all(isWeb ? 12 : 10),
+          decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.description, style: TextStyle(fontSize: isWeb ? 13 : 12, fontWeight: FontWeight.w600)),
+                    Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
+                  ],
+                ),
+              ),
+              Text(_formatAmount(item.amount), style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        )).toList(),
+        if (bill.notes.isNotEmpty) ...[
+          SizedBox(height: isWeb ? 20 : 16),
+          Text('Notes', style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700)),
+          SizedBox(height: isWeb ? 8 : 6),
+          Text(bill.notes, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
+        ],
+        SizedBox(height: isWeb ? 20 : 16),
+        if (bill.status != 'Paid')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _recordBillPayment(bill, controller, ctx);
+              },
+              icon: Icon(Icons.payment, size: isWeb ? 20 : 18),
+              label: Text('Pay Now', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+              style: ElevatedButton.styleFrom(backgroundColor: kSuccess, padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10)),
+            ),
+          ),
+      ],
     );
   }
 
-  void _showFilterDialog(BillsController controller) {
+  void _showFilterDialog(BillsController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     showDialog(
-      context: Get.context!,
+      context: context,
       builder: (context) => AlertDialog(
-        title: Text('Filter Bills', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700)),
+        title: Text('Filter Bills', style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.calendar_today),
-              title: Text('Date Range', style: TextStyle(fontSize: 12.sp)),
-              trailing: Icon(Icons.arrow_forward_ios),
+              leading: Icon(Icons.calendar_today, size: isWeb ? 24 : 20),
+              title: Text('Date Range', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+              trailing: Icon(Icons.arrow_forward_ios, size: isWeb ? 20 : 16),
               onTap: () async {
                 Navigator.pop(context);
                 final start = await showDatePicker(
-                  context: Get.context!,
+                  context: context,
                   initialDate: DateTime.now(),
                   firstDate: DateTime(2020),
                   lastDate: DateTime.now(),
                 );
                 if (start != null) {
                   final end = await showDatePicker(
-                    context: Get.context!,
+                    context: context,
                     initialDate: DateTime.now(),
                     firstDate: start,
                     lastDate: DateTime.now(),
@@ -971,8 +1242,8 @@ Widget _buildFilterBar(BillsController controller) {
               },
             ),
             ListTile(
-              leading: Icon(Icons.clear),
-              title: Text('Clear Filters', style: TextStyle(fontSize: 12.sp)),
+              leading: Icon(Icons.clear, size: isWeb ? 24 : 20),
+              title: Text('Clear Filters', style: TextStyle(fontSize: isWeb ? 14 : 12)),
               onTap: () {
                 Navigator.pop(context);
                 controller.clearFilters();
@@ -983,36 +1254,32 @@ Widget _buildFilterBar(BillsController controller) {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(fontSize: 12.sp)),
+            child: Text('Close', style: TextStyle(fontSize: isWeb ? 14 : 12)),
           ),
         ],
       ),
     );
   }
 
-  void _printBill(Bill bill) {
+  void _printBill(Bill bill, BuildContext context) {
     Get.snackbar('Print', 'Printing ${bill.billNumber}...');
   }
 
-  void _exportBills() {
-    Get.snackbar('Export', 'Exporting bills to Excel...');
-  }
-
-  InputDecoration _inputDecoration(String label, {String? prefix}) {
+  InputDecoration _inputDecoration(String label, bool isWeb, {String? prefix}) {
     return InputDecoration(
       labelText: label,
       prefixText: prefix,
-      labelStyle: TextStyle(fontSize: 12.sp),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+      labelStyle: TextStyle(fontSize: isWeb ? 12 : 11),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
+      contentPadding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 12 : 10),
     );
   }
 
-  Widget _dateTile(String label, DateTime date, Function(DateTime) onChanged) {
+  Widget _dateTile(String label, DateTime date, Function(DateTime) onChanged, bool isWeb, BuildContext context) {
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
-          context: Get.context!,
+          context: context,
           initialDate: date,
           firstDate: DateTime(2020),
           lastDate: DateTime.now().add(const Duration(days: 365)),
@@ -1020,22 +1287,22 @@ Widget _buildFilterBar(BillsController controller) {
         if (picked != null) onChanged(picked);
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 12 : 10),
         decoration: BoxDecoration(
           color: kBg,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
           border: Border.all(color: kBorder),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, size: 4.w, color: kPrimary),
-            SizedBox(width: 2.w),
+            Icon(Icons.calendar_today, size: isWeb ? 20 : 16, color: kPrimary),
+            SizedBox(width: isWeb ? 12 : 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: TextStyle(fontSize: 10.sp, color: kSubText)),
-                  Text(DateFormat('dd MMM yyyy').format(date), style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600)),
+                  Text(label, style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
+                  Text(DateFormat('dd MMM yyyy').format(date), style: TextStyle(fontSize: isWeb ? 13 : 12, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -1045,17 +1312,17 @@ Widget _buildFilterBar(BillsController controller) {
     );
   }
 
-  Widget _detailRow(String label, String value, {bool isImportant = false, bool isBold = false, Color? color}) {
+  Widget _detailRow(String label, String value, bool isWeb, {bool isImportant = false, bool isBold = false, Color? color}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 1.h),
+      padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 12.sp, color: kSubText)),
+          Text(label, style: TextStyle(fontSize: isWeb ? 13 : 11, color: kSubText)),
           Text(
             value,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : 12,
               fontWeight: isBold ? FontWeight.w800 : (isImportant ? FontWeight.w700 : FontWeight.w600),
               color: color ?? (isImportant ? kDanger : kText),
             ),

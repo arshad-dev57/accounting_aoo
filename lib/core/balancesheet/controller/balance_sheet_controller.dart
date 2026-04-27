@@ -25,6 +25,7 @@ class BalanceSheetController extends GetxController {
   // Balance Sheet Data
   var liabilitiesData = <String, Map<String, double>>{}.obs;
   var assetsData = <String, Map<String, double>>{}.obs;
+  var equityData = <String, Map<String, double>>{}.obs;
 
   // Totals
   var totalLiabilities = 0.0.obs;
@@ -144,6 +145,22 @@ class BalanceSheetController extends GetxController {
             });
           } else {
             assetsData.clear();
+          }
+
+          // Parse equity
+          if (data['equityDetails'] != null && data['equityDetails'] is Map) {
+            equityData.clear();
+            (data['equityDetails'] as Map).forEach((key, value) {
+              Map<String, double> items = {};
+              if (value is Map) {
+                (value as Map).forEach((itemKey, itemValue) {
+                  items[itemKey] = (itemValue as num).toDouble();
+                });
+              }
+              equityData[key] = items;
+            });
+          } else {
+            equityData.clear();
           }
 
           // Set totals
@@ -713,6 +730,7 @@ class BalanceSheetController extends GetxController {
   // ==================== GETTERS FOR UI ====================
   List<String> get liabilityCategories => liabilitiesData.keys.toList();
   List<String> get assetCategories => assetsData.keys.toList();
+  List<String> get equityCategories => equityData.keys.toList();
 
   Map<String, double> getCategoryItems(String category, bool isLiability) {
     if (isLiability) {

@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/About/about_app_screen.dart';
 import 'package:LedgerPro_app/core/About/privacypolicy_screen.dart';
 import 'package:LedgerPro_app/core/About/termsofservice_screen.dart';
@@ -27,6 +28,7 @@ import 'package:LedgerPro_app/core/cashflowstatement/screen/cash_flow_statement_
 import 'package:LedgerPro_app/core/changepassword/screen/change_password_screen.dart';
 import 'package:LedgerPro_app/core/chartofaccounts/screens/chart_of_account_screen.dart';
 import 'package:LedgerPro_app/core/companyprofile/screen/company_profile_screen.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashboard_screen_web.dart';
 import 'package:LedgerPro_app/core/dashboard/Screens/transaction_screen.dart';
 import 'package:LedgerPro_app/core/dashboard/controllers/dashboard_controller.dart';
 import 'package:LedgerPro_app/core/journalEntries/Screens/journal_entries_screen.dart';
@@ -41,11 +43,9 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sizer/sizer.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/mdi.dart';
-
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -117,23 +117,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX 2: _controller already initialized in initState — no Get.put here
     return Scaffold(
-      key: _scaffoldKey, // ✅ FIX 1: attach key
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-      bottomNavigationBar: _buildBottomNav(),
-      drawer: _buildDrawer(),
+      key: _scaffoldKey,
+      appBar: _buildAppBar(context),
+      body: _buildBody(context),
+      bottomNavigationBar: _buildBottomNav(context),
+      drawer: _buildDrawer(context),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     const titles = ['Dashboard', 'Transactions', 'Invoices', 'More'];
+    
     return AppBar(
       title: Text(
         titles[_currentTab],
         style: TextStyle(
-          fontSize: 15.sp,
+          fontSize: isWeb ? 18 : 15,
           fontWeight: FontWeight.w800,
           color: Colors.white,
           letterSpacing: -0.3,
@@ -143,30 +144,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       elevation: 0,
       actions: [
         IconButton(
-          icon: Iconify(Mdi.account_outline, color: Colors.white, size: 5.5.w),
+          icon: Iconify(Mdi.account_outline, color: Colors.white, size: isWeb ? 24 : 22),
           onPressed: () => Get.to(() => const ProfileScreen()),
         ),
-        SizedBox(width: 1.w),
+        SizedBox(width: isWeb ? 8 : 4),
       ],
     );
   }
 
-  // ✅ FIX 3: _buildBody no longer handles tab 4 with addPostFrameCallback
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
     switch (_currentTab) {
       case 0:
-        return _buildDashboardContent();
+        return _buildDashboardContent(context);
       case 1:
         return const TransactionsScreen();
       case 2:
         return const InvoicesScreen();
-     
       default:
-        return _buildDashboardContent();
+        return _buildDashboardContent(context);
     }
   }
 
-  Widget _buildDashboardContent() {
+  Widget _buildDashboardContent(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return RefreshIndicator(
       onRefresh: () async {
         _controller.refreshData();
@@ -178,11 +180,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                LoadingAnimationWidget.waveDots(color: kPrimary, size: 10.w),
-                SizedBox(height: 2.h),
+                LoadingAnimationWidget.waveDots(color: kPrimary, size: isWeb ? 60 : 40),
+                SizedBox(height: isWeb ? 20 : 16),
                 Text(
                   'Loading dashboard...',
-                  style: TextStyle(fontSize: 13.sp, color: kSubText),
+                  style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText),
                 ),
               ],
             ),
@@ -194,18 +196,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Iconify(Mdi.alert_circle_outline, size: 12.w, color: kDanger),
-                SizedBox(height: 2.h),
+                Iconify(Mdi.alert_circle_outline, size: isWeb ? 60 : 48, color: kDanger),
+                SizedBox(height: isWeb ? 20 : 16),
                 Text(
                   _controller.errorMessage.value,
-                  style: TextStyle(fontSize: 13.sp, color: kDanger),
+                  style: TextStyle(fontSize: isWeb ? 14 : 13, color: kDanger),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 2.h),
+                SizedBox(height: isWeb ? 20 : 16),
                 ElevatedButton(
                   onPressed: () => _controller.refreshData(),
                   style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                  child: Text('Retry', style: TextStyle(fontSize: 13.sp)),
+                  child: Text('Retry', style: TextStyle(fontSize: isWeb ? 14 : 13)),
                 ),
               ],
             ),
@@ -214,29 +216,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: 4.h),
+          padding: EdgeInsets.only(bottom: isWeb ? 32 : 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildWelcomeHeader(),
+              _buildWelcomeHeader(context),
               Transform.translate(
-                offset: Offset(0, -2.5.h),
-                child: _buildKPICards(),
+                offset: Offset(0, isWeb ? -20 : -16),
+                child: _buildKPICards(context),
               ),
-              SizedBox(height: 0.5.h),
+              SizedBox(height: isWeb ? 4 : 2),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.w),
-                child: _buildChartTabs(),
+                padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+                child: _buildChartTabs(context),
               ),
-              SizedBox(height: 2.h),
-              _buildRevenueExpenseChart(),
-              SizedBox(height: 2.h),
-              _buildCashAndOutstanding(),
-              SizedBox(height: 2.h),
-              _buildRecentTransactions(),
-              SizedBox(height: 2.h),
-              _buildQuickActions(),
-              SizedBox(height: 1.h),
+              SizedBox(height: isWeb ? 20 : 16),
+              _buildRevenueExpenseChart(context),
+              SizedBox(height: isWeb ? 20 : 16),
+              _buildCashAndOutstanding(context),
+              SizedBox(height: isWeb ? 20 : 16),
+              _buildRecentTransactions(context),
+              SizedBox(height: isWeb ? 20 : 16),
+              _buildQuickActions(context),
+              SizedBox(height: isWeb ? 12 : 8),
             ],
           ),
         );
@@ -244,7 +246,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSimpleSubscriptionStatus() {
+  Widget _buildSimpleSubscriptionStatus(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() {
       String statusText = '';
       String statusIcon = Mdi.check_circle;
@@ -265,12 +269,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
 
       return Container(
-        padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 8 : 6),
         decoration: BoxDecoration(
           color: isExpired
               ? Colors.red.withOpacity(0.18)
               : Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(2.5.w),
+          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
           border: Border.all(
             color: isExpired
                 ? Colors.red.withOpacity(0.45)
@@ -284,14 +288,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: isExpired
                   ? Colors.redAccent.shade100
                   : Colors.white.withOpacity(0.95),
-              size: 4.5.w,
+              size: isWeb ? 24 : 18,
             ),
-            SizedBox(width: 2.w),
+            SizedBox(width: isWeb ? 12 : 8),
             Expanded(
               child: Text(
                 statusText,
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: isWeb ? 13 : 11,
                   fontWeight: FontWeight.w500,
                   color: isExpired
                       ? Colors.red.shade100
@@ -304,18 +308,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               GestureDetector(
                 onTap: () => Get.to(() => const SelectPlanScreen()),
                 child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 2.5.w, vertical: 0.5.h),
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.20),
                     borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: Colors.white.withOpacity(0.35)),
+                    border: Border.all(color: Colors.white.withOpacity(0.35)),
                   ),
                   child: Text(
                     'Renew',
                     style: TextStyle(
-                      fontSize: 11.sp,
+                      fontSize: isWeb ? 12 : 10,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                       letterSpacing: 0.2,
@@ -325,8 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             if (_subscriptionController.isTrialActive.value)
               Container(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.4.h),
+                padding: EdgeInsets.symmetric(horizontal: isWeb ? 10 : 6, vertical: isWeb ? 5 : 3),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.20),
                   borderRadius: BorderRadius.circular(20),
@@ -334,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text(
                   'FREE',
                   style: TextStyle(
-                    fontSize: 10.sp,
+                    fontSize: isWeb ? 11 : 9,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                     letterSpacing: 0.8,
@@ -347,9 +348,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Container(
-      margin: EdgeInsets.fromLTRB(4.w, 0, 4.w, 0),
+      margin: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 0, isWeb ? 24 : 16, 0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -361,12 +365,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(5.w),
-          bottomRight: Radius.circular(5.w),
+          bottomLeft: Radius.circular(isWeb ? 24 : 20),
+          bottomRight: Radius.circular(isWeb ? 24 : 20),
         ),
         boxShadow: [
           BoxShadow(
-            color: kPrimary.withValues(alpha: 0.35),
+            color: kPrimary.withOpacity(0.35),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -376,29 +380,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            right: -8.w,
-            top: -1.h,
+            right: -40,
+            top: -8,
             child: IgnorePointer(
               child: Container(
-                width: 35.w,
-                height: 35.w,
+                width: isWeb ? 200 : 140,
+                height: isWeb ? 200 : 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: Colors.white.withOpacity(0.08),
                 ),
               ),
             ),
           ),
           Positioned(
-            left: -5.w,
+            left: -30,
             bottom: 0,
             child: IgnorePointer(
               child: Container(
-                width: 22.w,
-                height: 22.w,
+                width: isWeb ? 120 : 88,
+                height: isWeb ? 120 : 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: Colors.white.withOpacity(0.06),
                 ),
               ),
             ),
@@ -407,9 +411,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildSimpleSubscriptionStatus(),
+              _buildSimpleSubscriptionStatus(context),
               Padding(
-                padding: EdgeInsets.fromLTRB(4.w, 1.h, 4.w, 4.h),
+                padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, isWeb ? 12 : 8, isWeb ? 24 : 16, isWeb ? 32 : 24),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -418,47 +422,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 2.w, vertical: 0.4.h),
+                            padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.18),
+                              color: Colors.white.withOpacity(0.18),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Iconify(Mdi.chart_line,
-                                    size: 3.5.w,
-                                    color:
-                                        Colors.white.withValues(alpha: 0.95)),
-                                SizedBox(width: 1.w),
+                                    size: isWeb ? 20 : 14,
+                                    color: Colors.white.withOpacity(0.95)),
+                                SizedBox(width: isWeb ? 8 : 4),
                                 Text(
                                   'Overview',
                                   style: TextStyle(
-                                    fontSize: 13.sp,
-                                    color:
-                                        Colors.white.withValues(alpha: 0.95),
+                                    fontSize: isWeb ? 14 : 12,
+                                    color: Colors.white.withOpacity(0.95),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          SizedBox(height: 1.2.h),
+                          SizedBox(height: isWeb ? 16 : 12),
                           Text(
                             'Welcome back',
                             style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              fontSize: isWeb ? 15 : 13,
+                              color: Colors.white.withOpacity(0.85),
                               letterSpacing: 0.2,
                             ),
                           ),
-                          SizedBox(height: 0.4.h),
+                          SizedBox(height: isWeb ? 6 : 4),
                           Obx(
                             () => Text(
                               _controller.companyName.value,
                               style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: isWeb ? 22 : 18,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
                                 height: 1.15,
@@ -466,53 +467,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(height: 0.8.h),
+                          SizedBox(height: isWeb ? 12 : 8),
                           Text(
                             'Financial snapshot · ${DateFormat('EEEE').format(DateTime.now())}',
                             style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.white.withValues(alpha: 0.78),
+                              fontSize: isWeb ? 14 : 12,
+                              color: Colors.white.withOpacity(0.78),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(width: 2.w),
+                    SizedBox(width: isWeb ? 16 : 12),
                     Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 3.w, vertical: 1.2.h),
+                      padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 16, vertical: isWeb ? 16 : 12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(3.w),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22)),
+                        color: Colors.white.withOpacity(0.16),
+                        borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
+                        border: Border.all(color: Colors.white.withOpacity(0.22)),
                       ),
                       child: Column(
                         children: [
                           Text(
                             DateFormat('dd').format(DateTime.now()),
                             style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: isWeb ? 22 : 18,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               height: 1,
                             ),
                           ),
                           Text(
-                            DateFormat('MMM')
-                                .format(DateTime.now())
-                                .toUpperCase(),
+                            DateFormat('MMM').format(DateTime.now()).toUpperCase(),
                             style: TextStyle(
-                              fontSize: 13.sp,
+                              fontSize: isWeb ? 15 : 13,
                               color: Colors.white70,
                               letterSpacing: 1.2,
                             ),
                           ),
-                          SizedBox(height: 0.3.h),
+                          SizedBox(height: isWeb ? 4 : 2),
                           Text(
                             DateFormat('yyyy').format(DateTime.now()),
-                            style: TextStyle(
-                                fontSize: 13.sp, color: Colors.white60),
+                            style: TextStyle(fontSize: isWeb ? 14 : 12, color: Colors.white60),
                           ),
                         ],
                       ),
@@ -527,20 +523,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKPICards() {
+  Widget _buildKPICards(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
       child: SizedBox(
-        height: 17.h,
+        height: isWeb ? 160 : (isTablet ? 150 : 140),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
           itemCount: 4,
-          separatorBuilder: (_, __) => SizedBox(width: 3.w),
+          separatorBuilder: (_, __) => SizedBox(width: isWeb ? 20 : 16),
           itemBuilder: (context, i) {
             switch (i) {
               case 0:
                 return Obx(() => _buildKPICard(
+                      context,
                       'Total Revenue',
                       _controller.totalRevenueFormatted.value,
                       kSuccess,
@@ -551,6 +551,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ));
               case 1:
                 return Obx(() => _buildKPICard(
+                      context,
                       'Total Expenses',
                       _controller.totalExpensesFormatted.value,
                       kDanger,
@@ -561,6 +562,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ));
               case 2:
                 return Obx(() => _buildKPICard(
+                      context,
                       'Outstanding',
                       _controller.outstandingFormatted.value,
                       kWarning,
@@ -571,6 +573,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ));
               case 3:
                 return Obx(() => _buildKPICard(
+                      context,
                       'Cash Balance',
                       _controller.cashBalanceFormatted.value,
                       kPrimary,
@@ -588,25 +591,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKPICard(String title, String amount, Color color, String icon,
+  Widget _buildKPICard(BuildContext context, String title, String amount, Color color, String icon,
       String trend, String trendText, bool isPositive) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
     final showArrow = trendText == 'vs last month';
+    
     return Container(
-      width: 42.w,
-      padding: EdgeInsets.fromLTRB(3.2.w, 2.h, 3.2.w, 2.h),
+      width: isWeb ? 280 : (isTablet ? 260 : 220),
+      padding: EdgeInsets.fromLTRB(isWeb ? 20 : 16, isWeb ? 16 : 14, isWeb ? 20 : 16, isWeb ? 16 : 14),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
         border: Border.all(color: kBorder.withOpacity(0.85)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.06),
               blurRadius: 16,
               offset: const Offset(0, 6)),
-          BoxShadow(
-              color: kPrimary.withOpacity(0.04),
-              blurRadius: 0,
-              offset: Offset.zero),
         ],
       ),
       child: Column(
@@ -617,19 +619,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 0.9.w,
-                height: 4.h,
+                width: isWeb ? 4 : 3,
+                height: isWeb ? 32 : 28,
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              SizedBox(width: 2.5.w),
+              SizedBox(width: isWeb ? 16 : 12),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: isWeb ? 14 : 13,
                       color: kSubText,
                       fontWeight: FontWeight.w600,
                       height: 1.25),
@@ -637,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               Container(
-                padding: EdgeInsets.all(1.8.w),
+                padding: EdgeInsets.all(isWeb ? 12 : 10),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -647,16 +649,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color.withOpacity(0.06)
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(2.2.w),
+                  borderRadius: BorderRadius.circular(isWeb ? 16 : 14),
                 ),
-                child: Iconify(icon, color: color, size: 4.8.w),
+                child: Iconify(icon, color: color, size: isWeb ? 28 : 24),
               ),
             ],
           ),
           Text(
             amount,
             style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: isWeb ? 22 : 18,
                 fontWeight: FontWeight.w800,
                 color: kText,
                 letterSpacing: -0.3),
@@ -666,13 +668,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               if (showArrow) ...[
                 Padding(
-                  padding: EdgeInsets.only(top: 0.2.h),
+                  padding: EdgeInsets.only(top: isWeb ? 2 : 1),
                   child: Iconify(
                       isPositive ? Mdi.trending_up : Mdi.trending_down,
-                      size: 3.2.w,
+                      size: isWeb ? 18 : 16,
                       color: isPositive ? kSuccess : kDanger),
                 ),
-                SizedBox(width: 0.8.w),
+                SizedBox(width: isWeb ? 6 : 4),
               ],
               Expanded(
                 child: RichText(
@@ -680,7 +682,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   overflow: TextOverflow.ellipsis,
                   text: TextSpan(
                     style: TextStyle(
-                        fontSize: 13.sp, color: kSubText, height: 1.25),
+                        fontSize: isWeb ? 13 : 12, color: kSubText, height: 1.25),
                     children: [
                       TextSpan(
                         text: trend,
@@ -703,12 +705,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildChartTabs() {
+  Widget _buildChartTabs(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
-      padding: EdgeInsets.all(1.2.w),
+      padding: EdgeInsets.all(isWeb ? 8 : 6),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
         border: Border.all(color: kBorder.withOpacity(0.9)),
         boxShadow: [
           BoxShadow(
@@ -719,27 +723,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildChartTab('Revenue vs Expenses', 0)),
-          SizedBox(width: 1.5.w),
-          Expanded(child: _buildChartTab('Trends', 1)),
-          SizedBox(width: 1.5.w),
-          Expanded(child: _buildChartTab('Categories', 2)),
+          Expanded(child: _buildChartTab(context, 'Revenue vs Expenses', 0)),
+          SizedBox(width: isWeb ? 12 : 8),
+          Expanded(child: _buildChartTab(context, 'Trends', 1)),
+          SizedBox(width: isWeb ? 12 : 8),
+          Expanded(child: _buildChartTab(context, 'Categories', 2)),
         ],
       ),
     );
   }
 
-  Widget _buildChartTab(String title, int index) {
+  Widget _buildChartTab(BuildContext context, String title, int index) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     final isSelected = _selectedChartIndex == index;
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => setState(() => _selectedChartIndex = index),
-        borderRadius: BorderRadius.circular(3.w),
+        borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          padding: EdgeInsets.symmetric(vertical: 1.2.h, horizontal: 1.w),
+          padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10, horizontal: isWeb ? 8 : 6),
           decoration: BoxDecoration(
             gradient: isSelected
                 ? LinearGradient(
@@ -748,7 +754,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     end: Alignment.bottomRight)
                 : null,
             color: isSelected ? null : kBg,
-            borderRadius: BorderRadius.circular(3.w),
+            borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -764,7 +770,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: isWeb ? 14 : 13,
               fontWeight: FontWeight.w700,
               color: isSelected ? Colors.white : kSubText,
               letterSpacing: -0.2,
@@ -775,17 +781,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRevenueExpenseChart() {
+  Widget _buildRevenueExpenseChart(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     final titles = [
       'Revenue vs expenses',
       'Monthly financial trends',
       'Expense breakdown'
     ];
+    
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 4.w),
+      margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(5.w),
+        borderRadius: BorderRadius.circular(isWeb ? 28 : 24),
         border: Border.all(color: kBorder.withOpacity(0.85)),
         boxShadow: [
           BoxShadow(
@@ -795,13 +803,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(5.w),
+        borderRadius: BorderRadius.circular(isWeb ? 28 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.8.h),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 20, vertical: isWeb ? 16 : 14),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [kBg, kCardBg],
@@ -814,14 +821,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(2.w),
+                    padding: EdgeInsets.all(isWeb ? 16 : 12),
                     decoration: BoxDecoration(
                       color: kPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(2.5.w),
+                      borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
                     ),
-                    child: Iconify(Mdi.chart_line, color: kPrimary, size: 5.w),
+                    child: Iconify(Mdi.chart_line, color: kPrimary, size: isWeb ? 30 : 26),
                   ),
-                  SizedBox(width: 3.w),
+                  SizedBox(width: isWeb ? 20 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -829,39 +836,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           titles[_selectedChartIndex],
                           style: TextStyle(
-                              fontSize: 15.sp,
+                              fontSize: isWeb ? 18 : 16,
                               fontWeight: FontWeight.w800,
                               color: kText,
                               letterSpacing: -0.3),
                         ),
-                        SizedBox(height: 0.3.h),
+                        SizedBox(height: isWeb ? 4 : 2),
                         Text('Tap tabs above to switch view',
-                            style:
-                                TextStyle(fontSize: 13.sp, color: kSubText)),
+                            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
                       ],
                     ),
                   ),
                   Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 2.5.w, vertical: 0.6.h),
+                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 8 : 6),
                     decoration: BoxDecoration(
                       color: kPrimary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: kPrimary.withOpacity(0.2)),
+                      border: Border.all(color: kPrimary.withOpacity(0.2)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Iconify(Mdi.calendar_month,
-                            size: 3.w, color: kPrimary),
-                        SizedBox(width: 1.w),
-                        Text(
-                            DateFormat('yyyy').format(DateTime.now()),
-                            style: TextStyle(
-                                fontSize: 13.sp,
-                                color: kPrimary,
-                                fontWeight: FontWeight.w700)),
+                        Iconify(Mdi.calendar_month, size: isWeb ? 18 : 16, color: kPrimary),
+                        SizedBox(width: isWeb ? 6 : 4),
+                        Text(DateFormat('yyyy').format(DateTime.now()),
+                            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kPrimary, fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -869,25 +868,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(4.w, 2.h, 4.w, 3.w),
+              padding: EdgeInsets.fromLTRB(isWeb ? 24 : 20, isWeb ? 20 : 16, isWeb ? 24 : 20, isWeb ? 24 : 20),
               child: Column(
                 children: [
                   SizedBox(
-                    height: 28.h,
+                    height: isWeb ? 300 : 240,
                     child: _selectedChartIndex == 0
-                        ? _buildDynamicBarChart()
+                        ? _buildDynamicBarChart(context)
                         : _selectedChartIndex == 1
-                            ? _buildDynamicLineChart()
-                            : _buildDynamicPieChart(),
+                            ? _buildDynamicLineChart(context)
+                            : _buildDynamicPieChart(context),
                   ),
                   if (_selectedChartIndex != 2) ...[
-                    SizedBox(height: 1.5.h),
+                    SizedBox(height: isWeb ? 16 : 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildLegend('Revenue', kPrimary),
-                        SizedBox(width: 5.w),
-                        _buildLegend('Expenses', kDanger),
+                        _buildLegend(context, 'Revenue', kPrimary),
+                        SizedBox(width: isWeb ? 40 : 32),
+                        _buildLegend(context, 'Expenses', kDanger),
                       ],
                     ),
                   ],
@@ -900,11 +899,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDynamicBarChart() {
+  Widget _buildDynamicBarChart(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     if (_controller.chartData.isEmpty) {
       return Center(
         child: Text('No chart data available',
-            style: TextStyle(fontSize: 13.sp, color: kSubText)),
+            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
       );
     }
     double maxValue = 0;
@@ -926,10 +927,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               return BarTooltipItem(
                 rod.toY.toStringAsFixed(0),
-                TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white),
+                TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w600, color: Colors.white),
               );
             },
           ),
@@ -941,20 +939,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 int index = value.toInt();
-                if (index >= 0 &&
-                    index < _controller.chartData.length) {
+                if (index >= 0 && index < _controller.chartData.length) {
                   return Padding(
-                    padding: EdgeInsets.only(top: 8.h),
+                    padding: EdgeInsets.only(top: isWeb ? 16 : 12),
                     child: Text(
                       _controller.getMonthName(index),
-                      style:
-                          TextStyle(fontSize: 11.sp, color: kSubText),
+                      style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSubText),
                     ),
                   );
                 }
                 return const SizedBox.shrink();
               },
-              reservedSize: 5.h,
+              reservedSize: isWeb ? 40 : 32,
             ),
           ),
           leftTitles: AxisTitles(
@@ -962,45 +958,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 return Padding(
-                  padding: EdgeInsets.only(right: 4.w),
+                  padding: EdgeInsets.only(right: isWeb ? 24 : 20),
                   child: Text(
-                    _formatCompactNumber(value),
-                    style: TextStyle(fontSize: 11.sp, color: kSubText),
+                    _formatCompactNumber(value, context),
+                    style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSubText),
                   ),
                 );
               },
-              reservedSize: 10.w,
+              reservedSize: isWeb ? 60 : 50,
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         gridData: FlGridData(
           show: true,
           drawHorizontalLine: true,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: kBorder, strokeWidth: 0.5),
+          getDrawingHorizontalLine: (value) => FlLine(color: kBorder, strokeWidth: 0.5),
         ),
         barGroups: List.generate(
           _controller.chartData.length,
           (index) => BarChartGroupData(
             x: index,
-            barsSpace: 3.w,
+            barsSpace: isWeb ? 16 : 12,
             barRods: [
               BarChartRodData(
                 toY: _controller.getMonthlyRevenue(index),
                 color: kPrimary,
-                width: 2.5.w,
-                borderRadius: BorderRadius.circular(1.w),
+                width: isWeb ? 24 : 18,
+                borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
               ),
               BarChartRodData(
                 toY: _controller.getMonthlyExpenses(index),
                 color: kDanger,
-                width: 2.5.w,
-                borderRadius: BorderRadius.circular(1.w),
+                width: isWeb ? 24 : 18,
+                borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
               ),
             ],
           ),
@@ -1009,11 +1002,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDynamicLineChart() {
+  Widget _buildDynamicLineChart(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     if (_controller.chartData.isEmpty) {
       return Center(
         child: Text('No chart data available',
-            style: TextStyle(fontSize: 13.sp, color: kSubText)),
+            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
       );
     }
     return LineChart(
@@ -1021,8 +1016,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         gridData: FlGridData(
           show: true,
           drawHorizontalLine: true,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: kBorder, strokeWidth: 0.5),
+          getDrawingHorizontalLine: (value) => FlLine(color: kBorder, strokeWidth: 0.5),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -1031,20 +1025,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 int index = value.toInt();
-                if (index >= 0 &&
-                    index < _controller.chartData.length) {
+                if (index >= 0 && index < _controller.chartData.length) {
                   return Padding(
-                    padding: EdgeInsets.only(top: 8.h),
+                    padding: EdgeInsets.only(top: isWeb ? 16 : 12),
                     child: Text(
                       _controller.getMonthName(index),
-                      style:
-                          TextStyle(fontSize: 11.sp, color: kSubText),
+                      style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSubText),
                     ),
                   );
                 }
                 return const SizedBox.shrink();
               },
-              reservedSize: 5.h,
+              reservedSize: isWeb ? 40 : 32,
             ),
           ),
           leftTitles: AxisTitles(
@@ -1052,59 +1044,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 return Padding(
-                  padding: EdgeInsets.only(right: 4.w),
+                  padding: EdgeInsets.only(right: isWeb ? 24 : 20),
                   child: Text(
-                    _formatCompactNumber(value),
-                    style: TextStyle(fontSize: 11.sp, color: kSubText),
+                    _formatCompactNumber(value, context),
+                    style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSubText),
                   ),
                 );
               },
-              reservedSize: 10.w,
+              reservedSize: isWeb ? 60 : 50,
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: List.generate(
               _controller.chartData.length,
-              (index) => FlSpot(index.toDouble(),
-                  _controller.getMonthlyRevenue(index)),
+              (index) => FlSpot(index.toDouble(), _controller.getMonthlyRevenue(index)),
             ),
             isCurved: true,
             color: kPrimary,
-            barWidth: 3,
+            barWidth: isWeb ? 4 : 3,
             dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-                show: true, color: kPrimary.withOpacity(0.1)),
+            belowBarData: BarAreaData(show: true, color: kPrimary.withOpacity(0.1)),
           ),
           LineChartBarData(
             spots: List.generate(
               _controller.chartData.length,
-              (index) => FlSpot(index.toDouble(),
-                  _controller.getMonthlyExpenses(index)),
+              (index) => FlSpot(index.toDouble(), _controller.getMonthlyExpenses(index)),
             ),
             isCurved: true,
             color: kDanger,
-            barWidth: 3,
+            barWidth: isWeb ? 4 : 3,
             dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-                show: true, color: kDanger.withOpacity(0.1)),
+            belowBarData: BarAreaData(show: true, color: kDanger.withOpacity(0.1)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDynamicPieChart() {
+  Widget _buildDynamicPieChart(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     if (_controller.expenseCategories.isEmpty) {
       return Center(
         child: Text('No expense data available',
-            style: TextStyle(fontSize: 13.sp, color: kSubText)),
+            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
       );
     }
     final total = _controller.expenseCategories
@@ -1121,9 +1109,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return PieChartSectionData(
             value: amount,
             title: '${category['name']}\n$percentage%',
-            radius: 12.w,
+            radius: isWeb ? 80 : 60,
             titleStyle: TextStyle(
-              fontSize: 11.sp,
+              fontSize: isWeb ? 13 : 11,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -1131,12 +1119,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         }).toList(),
         sectionsSpace: 2,
-        centerSpaceRadius: 8.w,
+        centerSpaceRadius: isWeb ? 40 : 30,
       ),
     );
   }
 
-  String _formatCompactNumber(double value) {
+  String _formatCompactNumber(double value, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(0)}K';
     return value.toStringAsFixed(0);
@@ -1159,16 +1148,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _buildLegend(String label, Color color) {
+  Widget _buildLegend(BuildContext context, String label, Color color) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 2.8.w,
-          height: 2.8.w,
+          width: isWeb ? 16 : 14,
+          height: isWeb ? 16 : 14,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(0.8.w),
+            borderRadius: BorderRadius.circular(isWeb ? 4 : 3),
             boxShadow: [
               BoxShadow(
                   color: color.withOpacity(0.45),
@@ -1177,22 +1168,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         ),
-        SizedBox(width: 1.8.w),
+        SizedBox(width: isWeb ? 10 : 8),
         Text(label,
             style: TextStyle(
-                fontSize: 13.sp,
+                fontSize: isWeb ? 14 : 13,
                 color: kSubText,
                 fontWeight: FontWeight.w600)),
       ],
     );
   }
 
-  Widget _buildCashAndOutstanding() {
+  Widget _buildCashAndOutstanding(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5.w),
+          borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -1201,14 +1194,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(5.w),
+          borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
                   child: Container(
-                    padding: EdgeInsets.all(4.w),
+                    padding: EdgeInsets.all(isWeb ? 24 : 20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -1224,28 +1217,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Row(
                               children: [
                                 Iconify(Mdi.piggy_bank_outline,
-                                    size: 4.5.w, color: kPrimary),
-                                SizedBox(width: 1.5.w),
+                                    size: isWeb ? 24 : 20, color: kPrimary),
+                                SizedBox(width: isWeb ? 12 : 8),
                                 Text('Cash balance',
                                     style: TextStyle(
-                                        fontSize: 13.sp,
+                                        fontSize: isWeb ? 14 : 13,
                                         color: kSubText,
                                         fontWeight: FontWeight.w600)),
                               ],
                             ),
-                            SizedBox(height: 1.2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             Text(
                               _controller.cashBalanceFormatted.value,
                               style: TextStyle(
-                                  fontSize: 15.sp,
+                                  fontSize: isWeb ? 22 : 18,
                                   fontWeight: FontWeight.w800,
                                   color: kText,
                                   letterSpacing: -0.5),
                             ),
-                            SizedBox(height: 1.h),
+                            SizedBox(height: isWeb ? 12 : 8),
                             Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 2.5.w, vertical: 0.6.h),
+                                  horizontal: isWeb ? 16 : 12, vertical: isWeb ? 8 : 6),
                               decoration: BoxDecoration(
                                 color: kSuccess.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(20),
@@ -1259,26 +1252,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     _controller.isCashPositive.value
                                         ? Mdi.trending_up
                                         : Mdi.trending_down,
-                                    size: 3.5.w,
+                                    size: isWeb ? 18 : 16,
                                     color: _controller.isCashPositive.value
                                         ? kSuccess
                                         : kDanger,
                                   ),
-                                  SizedBox(width: 1.w),
+                                  SizedBox(width: isWeb ? 6 : 4),
                                   Text(
                                     '${_controller.cashChange.value.toStringAsFixed(1)}%',
                                     style: TextStyle(
-                                        fontSize: 15.sp,
-                                        color:
-                                            _controller.isCashPositive.value
-                                                ? kSuccess
-                                                : kDanger,
+                                        fontSize: isWeb ? 15 : 13,
+                                        color: _controller.isCashPositive.value
+                                            ? kSuccess
+                                            : kDanger,
                                         fontWeight: FontWeight.w700),
                                   ),
-                                  SizedBox(width: 1.w),
+                                  SizedBox(width: isWeb ? 6 : 4),
                                   Text('vs last month',
                                       style: TextStyle(
-                                          fontSize: 13.sp, color: kSubText)),
+                                          fontSize: isWeb ? 13 : 12, color: kSubText)),
                                 ],
                               ),
                             ),
@@ -1302,7 +1294,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 Expanded(
                   child: Container(
-                    padding: EdgeInsets.all(4.w),
+                    padding: EdgeInsets.all(isWeb ? 24 : 20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
@@ -1320,38 +1312,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 Text('Outstanding',
                                     style: TextStyle(
-                                        fontSize: 13.sp,
+                                        fontSize: isWeb ? 14 : 13,
                                         color: kSubText,
                                         fontWeight: FontWeight.w600)),
-                                SizedBox(width: 1.5.w),
+                                SizedBox(width: isWeb ? 12 : 8),
                                 Iconify(Mdi.receipt_outline,
-                                    size: 4.5.w, color: kWarning),
+                                    size: isWeb ? 24 : 20, color: kWarning),
                               ],
                             ),
-                            SizedBox(height: 1.2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             Text(
                               _controller.outstandingFormatted.value,
                               style: TextStyle(
-                                  fontSize: 15.sp,
+                                  fontSize: isWeb ? 22 : 18,
                                   fontWeight: FontWeight.w800,
                                   color: kWarning,
                                   letterSpacing: -0.5),
                             ),
-                            SizedBox(height: 1.h),
+                            SizedBox(height: isWeb ? 12 : 8),
                             TextButton.icon(
                               onPressed: () =>
                                   setState(() => _currentTab = 2),
                               style: TextButton.styleFrom(
                                 padding: EdgeInsets.symmetric(
-                                    horizontal: 2.w, vertical: 0.5.h),
+                                    horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
                                 foregroundColor: kPrimary,
                                 tapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
                               ),
-                              icon: Iconify(Mdi.arrow_right, size: 3.8.w),
+                              icon: Iconify(Mdi.arrow_right, size: isWeb ? 20 : 18),
                               label: Text('View invoices',
                                   style: TextStyle(
-                                      fontSize: 13.sp,
+                                      fontSize: isWeb ? 14 : 13,
                                       fontWeight: FontWeight.w700)),
                             ),
                           ],
@@ -1366,17 +1358,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRecentTransactions() {
+  Widget _buildRecentTransactions(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Obx(() {
       if (_controller.recentTransactions.isEmpty) {
         return const SizedBox.shrink();
       }
       final recent = _controller.recentTransactions.take(4).toList();
       return Container(
-        margin: EdgeInsets.symmetric(horizontal: 4.w),
+        margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
         decoration: BoxDecoration(
           color: kCardBg,
-          borderRadius: BorderRadius.circular(5.w),
+          borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
           border: Border.all(color: kBorder.withOpacity(0.85)),
           boxShadow: [
             BoxShadow(
@@ -1389,30 +1384,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(4.w, 3.w, 3.w, 0),
+              padding: EdgeInsets.fromLTRB(isWeb ? 24 : 20, isWeb ? 20 : 16, isWeb ? 20 : 16, 0),
               child: Row(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(2.w),
+                    padding: EdgeInsets.all(isWeb ? 16 : 12),
                     decoration: BoxDecoration(
                         color: kPrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(2.5.w)),
-                    child: Iconify(Mdi.receipt, color: kPrimary, size: 5.w),
+                        borderRadius: BorderRadius.circular(isWeb ? 16 : 12)),
+                    child: Iconify(Mdi.receipt, color: kPrimary, size: isWeb ? 28 : 24),
                   ),
-                  SizedBox(width: 3.w),
+                  SizedBox(width: isWeb ? 20 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Recent activity',
                             style: TextStyle(
-                                fontSize: 15.sp,
+                                fontSize: isWeb ? 18 : 16,
                                 fontWeight: FontWeight.w800,
                                 color: kText,
                                 letterSpacing: -0.3)),
                         Text('Latest cash movements',
-                            style:
-                                TextStyle(fontSize: 13.sp, color: kSubText)),
+                            style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
                       ],
                     ),
                   ),
@@ -1420,16 +1414,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () => setState(() => _currentTab = 1),
                     child: Text('See all',
                         style: TextStyle(
-                            fontSize: 15.sp,
+                            fontSize: isWeb ? 14 : 13,
                             color: kPrimary,
                             fontWeight: FontWeight.w700)),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 1.5.h),
+            SizedBox(height: isWeb ? 16 : 12),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 3.w),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 16),
               child: Column(
                 children: recent.asMap().entries.map((e) {
                   final transaction = e.value;
@@ -1450,15 +1444,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.transparent,
                         child: InkWell(
                           onTap: () => setState(() => _currentTab = 1),
-                          borderRadius: BorderRadius.circular(3.w),
+                          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 2.w, vertical: 1.4.h),
+                                horizontal: isWeb ? 12 : 8, vertical: isWeb ? 12 : 10),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 11.w,
-                                  height: 11.w,
+                                  width: isWeb ? 60 : 48,
+                                  height: isWeb ? 60 : 48,
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       begin: Alignment.topLeft,
@@ -1468,17 +1462,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         amountColor.withOpacity(0.06)
                                       ],
                                     ),
-                                    borderRadius:
-                                        BorderRadius.circular(3.2.w),
+                                    borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
                                     border: Border.all(
                                         color: amountColor.withOpacity(0.2)),
                                   ),
                                   child: Iconify(
                                       _getTransactionIcon(iconName),
                                       color: amountColor,
-                                      size: 5.w),
+                                      size: isWeb ? 28 : 24),
                                 ),
-                                SizedBox(width: 3.w),
+                                SizedBox(width: isWeb ? 16 : 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -1486,17 +1479,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     children: [
                                       Text(title,
                                           style: TextStyle(
-                                              fontSize: 15.sp,
+                                              fontSize: isWeb ? 16 : 15,
                                               fontWeight: FontWeight.w700,
                                               color: kText),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis),
-                                      SizedBox(height: 0.3.h),
+                                      SizedBox(height: isWeb ? 4 : 2),
                                       Text(
                                           DateFormat('dd MMM yyyy')
                                               .format(date),
                                           style: TextStyle(
-                                              fontSize: 13.sp,
+                                              fontSize: isWeb ? 14 : 13,
                                               color: kSubText)),
                                     ],
                                   ),
@@ -1507,16 +1500,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Text(
                                       '${type == 'income' ? '+' : '-'} ₨ ${NumberFormat('#,##0').format(amount)}',
                                       style: TextStyle(
-                                          fontSize: 15.sp,
+                                          fontSize: isWeb ? 16 : 15,
                                           fontWeight: FontWeight.w800,
                                           color: amountColor,
                                           letterSpacing: -0.2),
                                     ),
-                                    SizedBox(height: 0.2.h),
+                                    SizedBox(height: isWeb ? 4 : 2),
                                     Container(
                                       padding: EdgeInsets.symmetric(
-                                          horizontal: 1.5.w,
-                                          vertical: 0.2.h),
+                                          horizontal: isWeb ? 12 : 8,
+                                          vertical: isWeb ? 4 : 2),
                                       decoration: BoxDecoration(
                                         color: amountColor.withOpacity(0.1),
                                         borderRadius:
@@ -1527,7 +1520,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             ? 'Income'
                                             : 'Expense',
                                         style: TextStyle(
-                                            fontSize: 13.sp,
+                                            fontSize: isWeb ? 13 : 12,
                                             color: amountColor,
                                             fontWeight: FontWeight.w700),
                                       ),
@@ -1541,7 +1534,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       if (!isLast)
                         Padding(
-                          padding: EdgeInsets.only(left: 16.w),
+                          padding: EdgeInsets.only(left: isWeb ? 80 : 64),
                           child: Divider(
                               height: 1,
                               thickness: 1,
@@ -1552,7 +1545,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }).toList(),
               ),
             ),
-            SizedBox(height: 1.h),
+            SizedBox(height: isWeb ? 12 : 8),
           ],
         ),
       );
@@ -1574,19 +1567,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() {
       if (_controller.quickActions.isEmpty) return const SizedBox.shrink();
       return Container(
-        margin: EdgeInsets.symmetric(horizontal: 4.w),
-        padding: EdgeInsets.all(4.w),
+        margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
+        padding: EdgeInsets.all(isWeb ? 24 : 20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [kCardBg, kPrimary.withOpacity(0.04)],
           ),
-          borderRadius: BorderRadius.circular(5.w),
+          borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
           border: Border.all(color: kBorder.withOpacity(0.9)),
           boxShadow: [
             BoxShadow(
@@ -1602,19 +1597,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text('Shortcuts',
                     style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: isWeb ? 18 : 16,
                         fontWeight: FontWeight.w800,
                         color: kText,
                         letterSpacing: -0.3)),
-                SizedBox(width: 2.w),
+                SizedBox(width: isWeb ? 12 : 8),
                 Expanded(
                     child: Container(height: 1, color: kBorder.withOpacity(0.8))),
               ],
             ),
-            SizedBox(height: 0.5.h),
+            SizedBox(height: isWeb ? 8 : 6),
             Text('Common tasks',
-                style: TextStyle(fontSize: 13.sp, color: kSubText)),
-            SizedBox(height: 2.h),
+                style: TextStyle(fontSize: isWeb ? 14 : 13, color: kSubText)),
+            SizedBox(height: isWeb ? 20 : 16),
             Row(
               children: _controller.quickActions.map((action) {
                 final label = action['label'] ?? '';
@@ -1622,6 +1617,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final colorHex = action['color'] ?? '#3498DB';
                 final color = _controller.getColorFromHex(colorHex);
                 return _buildQuickActionButton(
+                  context,
                   label,
                   _getQuickActionIcon(iconName),
                   color,
@@ -1670,18 +1666,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _buildQuickActionButton(
-      String label, String icon, Color color, VoidCallback onTap) {
+  Widget _buildQuickActionButton(BuildContext context, String label, String icon, Color color, VoidCallback onTap) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Expanded(
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(4.w),
+          borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
           child: Ink(
             decoration: BoxDecoration(
               color: kCardBg,
-              borderRadius: BorderRadius.circular(4.w),
+              borderRadius: BorderRadius.circular(isWeb ? 24 : 20),
               border: Border.all(color: color.withOpacity(0.35)),
               boxShadow: [
                 BoxShadow(
@@ -1691,12 +1688,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             child: Padding(
-              padding:
-                  EdgeInsets.symmetric(vertical: 1.8.h, horizontal: 1.w),
+              padding: EdgeInsets.symmetric(vertical: isWeb ? 20 : 16, horizontal: isWeb ? 8 : 6),
               child: Column(
                 children: [
                   Container(
-                    padding: EdgeInsets.all(2.2.w),
+                    padding: EdgeInsets.all(isWeb ? 16 : 12),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(colors: [
@@ -1704,14 +1700,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color.withOpacity(0.08)
                       ]),
                     ),
-                    child: Iconify(icon, color: color, size: 5.5.w),
+                    child: Iconify(icon, color: color, size: isWeb ? 32 : 28),
                   ),
-                  SizedBox(height: 1.h),
+                  SizedBox(height: isWeb ? 12 : 8),
                   Text(
                     label,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: isWeb ? 14 : 13,
                         fontWeight: FontWeight.w800,
                         color: kText),
                     maxLines: 1,
@@ -1726,103 +1722,72 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ✅ FIX 3: Bottom nav — tab 4 directly opens drawer via _scaffoldKey
-  Widget _buildBottomNav() {
-    final items = [
-      {
-        'icon': Mdi.view_dashboard_outline,
-        'activeIcon': Mdi.view_dashboard,
-        'label': 'Dashboard'
-      },
-      {
-        'icon': Mdi.swap_horizontal,
-        'activeIcon': Mdi.swap_horizontal,
-        'label': 'Transactions'
-      },
-      {
-        'icon': Mdi.receipt_outline,
-        'activeIcon': Mdi.receipt,
-        'label': 'Invoices'
-      },
-      {
-        'icon': Mdi.menu,
-        'activeIcon': Mdi.menu,
-        'label': 'Menu'
-      },
+  Widget _buildBottomNav(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     
+    final items = [
+      {'icon': Mdi.view_dashboard_outline, 'activeIcon': Mdi.view_dashboard, 'label': 'Dashboard'},
+      {'icon': Mdi.swap_horizontal, 'activeIcon': Mdi.swap_horizontal, 'label': 'Transactions'},
+      {'icon': Mdi.receipt_outline, 'activeIcon': Mdi.receipt, 'label': 'Invoices'},
+      {'icon': Mdi.menu, 'activeIcon': Mdi.menu, 'label': 'Menu'},
     ];
 
     return Container(
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(5.w)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(isWeb ? 28 : 24)),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.07),
               blurRadius: 20,
               offset: const Offset(0, -4)),
-          BoxShadow(
-              color: kPrimary.withOpacity(0.04),
-              blurRadius: 0,
-              offset: Offset.zero),
         ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 1.2.h, horizontal: 1.w),
+          padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10, horizontal: isWeb ? 8 : 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: items.asMap().entries.map((entry) {
               final i = entry.key;
               final item = entry.value;
-              // ✅ FIX 3: For tab 4, _currentTab stays where it was — just open drawer
               final isActive = (i == 3) ? false : _currentTab == i;
 
               return InkWell(
                 onTap: () {
                   if (i == 3) {
-                    // ✅ Direct drawer open — no setState, no addPostFrameCallback
                     _scaffoldKey.currentState?.openDrawer();
                     return;
                   }
                   setState(() => _currentTab = i);
                 },
-                borderRadius: BorderRadius.circular(3.w),
+                borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 1.5.w, vertical: 0.6.h),
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
-                      
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: EdgeInsets.all(isActive ? 1.8.w : 1.2.w),
+                        padding: EdgeInsets.all(isActive ? (isWeb ? 12 : 8) : (isWeb ? 8 : 6)),
                         decoration: BoxDecoration(
-                          color: isActive
-                              ? kPrimary.withOpacity(0.12)
-                              : Colors.transparent,
+                          color: isActive ? kPrimary.withOpacity(0.12) : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
                         child: Iconify(
-                          isActive
-                              ? item['activeIcon'] as String
-                              : item['icon'] as String,
+                          isActive ? item['activeIcon'] as String : item['icon'] as String,
                           color: isActive ? kPrimary : kSubText,
-                          size: isActive ? 6.w : 5.5.w,
+                          size: isActive ? (isWeb ? 28 : 26) : (isWeb ? 24 : 22),
                         ),
                       ),
-                      SizedBox(height: 0.6.h),
+                      SizedBox(height: isWeb ? 6 : 4),
                       Text(
                         item['label'] as String,
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: isWeb ? 13 : 12,
                           color: isActive ? kPrimary : kSubText,
-                          fontWeight: isActive
-                              ? FontWeight.w800
-                              : FontWeight.w500,
+                          fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
                           letterSpacing: -0.1,
                         ),
                       ),
@@ -1837,45 +1802,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Drawer(
-      width: 85.w,
+      width: isWeb ? 320 : 280,
       child: Column(
         children: [
-          _buildEnhancedDrawerHeader(),
+          _buildEnhancedDrawerHeader(context),
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
-              // ✅ FIX 4: addAutomaticKeepAlives false — less memory pressure on many sections
               addAutomaticKeepAlives: false,
               children: [
-                _buildExpandableSection('LedgerPro Core', Mdi.account_circle,
+                _buildExpandableSection(context, 'LedgerPro Core', Mdi.account_circle,
                     ['Chart of Accounts', 'Journal Entries', 'General Ledger', 'Trial Balance', 'Bank Accounts', 'Income', 'Expense']),
-                _buildExpandableSection('Receivables & Payables', Mdi.swap_horizontal,
+                _buildExpandableSection(context, 'Receivables & Payables', Mdi.swap_horizontal,
                     ['Accounts Receivable', 'Accounts Payable', 'Customers', 'bills', 'Vendors / Suppliers', 'Payments Received', 'Payments Made', 'Credit Notes']),
-                _buildExpandableSection('Assets & Liabilities', Mdi.business,
+                _buildExpandableSection(context, 'Assets & Liabilities', Mdi.business,
                     ['Fixed Assets', 'Loans & Borrowings', 'Capital / Equity']),
-                _buildExpandableSection('Financial Reports', Mdi.chart_line,
+                _buildExpandableSection(context, 'Financial Reports', Mdi.chart_line,
                     ['Profit & Loss Statement', 'Balance Sheet', 'Cash Flow Statement', 'Aged Receivables']),
                 Divider(height: 1, thickness: 1, color: kBorder),
-                _buildExpandableSection('My Account', Mdi.account,
+                _buildExpandableSection(context, 'My Account', Mdi.account,
                     ['My Profile', 'Change Password']),
-                // _buildExpandableSection('Data Management', Mdi.database,
-                //     ['Backup & Restore']),
-                _buildExpandableSection('Help & Support', Mdi.help_circle,
+                _buildExpandableSection(context, 'Help & Support', Mdi.help_circle,
                     ['User Guide', 'Contact Support', 'Report an Issue']),
-                _buildExpandableSection('Feedback', Mdi.feedback, ['Feedback']),
-                _buildExpandableSection('Subscription', Mdi.crown, ['subscription']),
-                _buildExpandableSection('About', Mdi.information,
-                    ['About App', 'Terms of Service', 'Privacy Policy',]),
+                _buildExpandableSection(context, 'Feedback', Mdi.feedback, ['Feedback']),
+                _buildExpandableSection(context, 'Subscription', Mdi.crown, ['subscription']),
+                _buildExpandableSection(context, 'About', Mdi.information,
+                    ['About App', 'Terms of Service', 'Privacy Policy']),
                 Divider(height: 1, thickness: 1, color: kBorder),
-                _buildLogoutButton(),
-                SizedBox(height: 2.h),
+                _buildLogoutButton(context),
+                SizedBox(height: isWeb ? 20 : 16),
                 Center(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 2.h),
+                    padding: EdgeInsets.symmetric(vertical: isWeb ? 16 : 12),
                     child: Text('Version 1.0.0',
-                        style: TextStyle(fontSize: 13.sp, color: kSubText)),
+                        style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
                   ),
                 ),
               ],
@@ -1886,107 +1850,113 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-Widget _buildEnhancedDrawerHeader() {
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.h),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(colors: [kPrimary, kPrimaryDark]),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.white,
-              child: Iconify(Mdi.business, size: 28, color: kPrimary),
-            ),
-            SizedBox(width: 4.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Obx(() => Text(
-                        _controller.companyName.value.isEmpty
-                            ? 'Company'
-                            : _controller.companyName.value,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      )),
-                  Obx(() => Text(
-                        _controller.userEmail.value.isEmpty
-                            ? 'Your Business Name'
-                            : _controller.userEmail.value,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13.sp,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      )),
-                ],
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 1.5.h),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(2.w),
-          ),
-          child: Row(
+  Widget _buildEnhancedDrawerHeader(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 20, vertical: isWeb ? 24 : 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [kPrimary, kPrimaryDark]),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Iconify(Mdi.shield_account, size: 3.5.w, color: Colors.white70),
-              SizedBox(width: 2.w),
-              Text('Plan',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.white70)),
-              const Spacer(),
-              Obx(() => Text(
-                    _subscriptionController.hasActiveSubscription.value
-                        ? 'Premium Plan'
-                        : _subscriptionController.isTrialActive.value
-                            ? 'Trial Active'
-                            : 'Expired',
-                    style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600),
-                  )),
+              CircleAvatar(
+                radius: isWeb ? 32 : 28,
+                backgroundColor: Colors.white,
+                child: Iconify(Mdi.business, size: isWeb ? 32 : 28, color: kPrimary),
+              ),
+              SizedBox(width: isWeb ? 20 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Obx(() => Text(
+                          _controller.companyName.value.isEmpty
+                              ? 'Company'
+                              : _controller.companyName.value,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isWeb ? 16 : 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )),
+                    Obx(() => Text(
+                          _controller.userEmail.value.isEmpty
+                              ? 'Your Business Name'
+                              : _controller.userEmail.value,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: isWeb ? 14 : 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-      ],
-    ),
-  );
-}  Widget _buildLogoutButton() {
+          SizedBox(height: isWeb ? 16 : 12),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+            ),
+            child: Row(
+              children: [
+                Iconify(Mdi.shield_account, size: isWeb ? 20 : 18, color: Colors.white70),
+                SizedBox(width: isWeb ? 12 : 8),
+                Text('Plan',
+                    style: TextStyle(fontSize: isWeb ? 14 : 13, color: Colors.white70)),
+                const Spacer(),
+                Obx(() => Text(
+                      _subscriptionController.hasActiveSubscription.value
+                          ? 'Premium Plan'
+                          : _subscriptionController.isTrialActive.value
+                              ? 'Trial Active'
+                              : 'Expired',
+                      style: TextStyle(
+                          fontSize: isWeb ? 14 : 13,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600),
+                    )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showLogoutDialog(),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.8.h),
+          padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 20, vertical: isWeb ? 16 : 14),
           child: Row(
             children: [
               Container(
-                width: 8.w,
-                height: 8.w,
+                width: isWeb ? 40 : 32,
+                height: isWeb ? 40 : 32,
                 decoration: BoxDecoration(
                   color: kDanger.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(2.w),
+                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 ),
-                child: Iconify(Mdi.logout, size: 4.5.w, color: kDanger),
+                child: Iconify(Mdi.logout, size: isWeb ? 22 : 20, color: kDanger),
               ),
-              SizedBox(width: 4.w),
+              SizedBox(width: isWeb ? 20 : 16),
               Expanded(
                 child: Text('Logout',
                     style: TextStyle(
-                        fontSize: 15.sp,
+                        fontSize: isWeb ? 16 : 15,
                         fontWeight: FontWeight.w700,
                         color: kDanger)),
               ),
@@ -2000,10 +1970,10 @@ Widget _buildEnhancedDrawerHeader() {
   void _showProfileDialog() {
     Get.bottomSheet(
       Container(
-        padding: EdgeInsets.all(4.w),
+        padding: EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: kCardBg,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(5.w)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2012,47 +1982,38 @@ Widget _buildEnhancedDrawerHeader() {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Profile',
-                    style: TextStyle(
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w800,
-                        color: kText)),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kText)),
                 IconButton(
-                  icon: Iconify(Mdi.close, size: 5.w),
+                  icon: Iconify(Mdi.close, size: 22),
                   onPressed: () => Get.back(),
                 ),
               ],
             ),
             Divider(color: kBorder),
-            SizedBox(height: 2.h),
+            SizedBox(height: 16),
             Center(
               child: CircleAvatar(
                 radius: 40,
                 backgroundColor: kPrimary.withOpacity(0.1),
-                child: Iconify(Mdi.account, size: 10.w, color: kPrimary),
+                child: Iconify(Mdi.account, size: 48, color: kPrimary),
               ),
             ),
-            SizedBox(height: 1.5.h),
+            SizedBox(height: 12),
             Text('Ahmed Khan',
-                style: TextStyle(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                    color: kText)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kText)),
             Text('ahmed@zolatech.com',
-                style: TextStyle(fontSize: 13.sp, color: kSubText)),
-            SizedBox(height: 1.h),
+                style: TextStyle(fontSize: 14, color: kSubText)),
+            SizedBox(height: 8),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: kSuccess.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Text('Admin',
-                  style: TextStyle(
-                      fontSize: 13.sp,
-                      color: kSuccess,
-                      fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontSize: 13, color: kSuccess, fontWeight: FontWeight.w600)),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Get.back();
@@ -2060,13 +2021,11 @@ Widget _buildEnhancedDrawerHeader() {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimary,
-                padding:
-                    EdgeInsets.symmetric(horizontal: 8.w, vertical: 1.5.h),
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
               ),
-              child: Text('Edit Profile',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.white)),
+              child: Text('Edit Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: 16),
           ],
         ),
       ),
@@ -2076,8 +2035,7 @@ Widget _buildEnhancedDrawerHeader() {
   void _showEditProfileDialog() {
     Get.dialog(
       AlertDialog(
-        title: Text('Edit Profile',
-            style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w800)),
+        title: Text('Edit Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2085,7 +2043,7 @@ Widget _buildEnhancedDrawerHeader() {
               decoration: InputDecoration(
                   labelText: 'Name', border: OutlineInputBorder()),
             ),
-            SizedBox(height: 2.h),
+            SizedBox(height: 16),
             const TextField(
               decoration: InputDecoration(
                   labelText: 'Email', border: OutlineInputBorder()),
@@ -2113,13 +2071,10 @@ Widget _buildEnhancedDrawerHeader() {
   void _showLogoutDialog() {
     Get.dialog(
       AlertDialog(
-        title: Text('Logout',
-            style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w800)),
-        content: Text('Are you sure you want to logout?',
-            style: TextStyle(fontSize: 13.sp)),
+        title: Text('Logout', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        content: Text('Are you sure you want to logout?', style: TextStyle(fontSize: 14)),
         actions: [
-          TextButton(
-              onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               SharedPreferences.getInstance().then((prefs) => prefs.clear());
@@ -2137,24 +2092,31 @@ Widget _buildEnhancedDrawerHeader() {
     );
   }
 
-  Widget _buildExpandableSection(
-      String title, String icon, List<String> items) {
-    return ExpandableSection(title: title, iconName: icon, items: items);
+  Widget _buildExpandableSection(BuildContext context, String title, String icon, List<String> items) {
+    return ExpandableSection(
+      context: context,
+      title: title, 
+      iconName: icon, 
+      items: items
+    );
   }
 }
-
 // ============================================================
-// ExpandableSection — unchanged logic, Get.back() fix applied
+// ExpandableSection — Corrected Version
 // ============================================================
 class ExpandableSection extends StatefulWidget {
+  final BuildContext context;
   final String title;
   final String iconName;
   final List<String> items;
-  const ExpandableSection(
-      {super.key,
-      required this.title,
-      required this.iconName,
-      required this.items});
+  
+  const ExpandableSection({
+    super.key,
+    required this.context,
+    required this.title,
+    required this.iconName,
+    required this.items
+  });
 
   @override
   State<ExpandableSection> createState() => _ExpandableSectionState();
@@ -2165,6 +2127,9 @@ class _ExpandableSectionState extends State<ExpandableSection> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Remove the wrong condition from here
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Column(
       children: [
         Material(
@@ -2172,32 +2137,31 @@ class _ExpandableSectionState extends State<ExpandableSection> {
           child: InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             child: Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.8.h),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 20, vertical: isWeb ? 16 : 14),
               child: Row(
                 children: [
                   Container(
-                    width: 8.w,
-                    height: 8.w,
+                    width: isWeb ? 40 : 32,
+                    height: isWeb ? 40 : 32,
                     decoration: BoxDecoration(
                       color: kPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(2.w),
+                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                     ),
-                    child: Iconify(widget.iconName, size: 4.5.w, color: kPrimary),
+                    child: Iconify(widget.iconName, size: isWeb ? 24 : 20, color: kPrimary),
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: isWeb ? 20 : 16),
                   Expanded(
                     child: Text(
                       widget.title,
                       style: TextStyle(
-                          fontSize: 15.sp,
+                          fontSize: isWeb ? 16 : 15,
                           fontWeight: FontWeight.w700,
                           color: kText),
                     ),
                   ),
                   Iconify(
                     _isExpanded ? Mdi.chevron_up : Mdi.chevron_down,
-                    size: 5.w,
+                    size: isWeb ? 24 : 20,
                     color: kSubText,
                   ),
                 ],
@@ -2218,12 +2182,12 @@ class _ExpandableSectionState extends State<ExpandableSection> {
                 final item = entry.value;
                 return Column(
                   children: [
-                    _buildMenuItem(item),
+                    _buildMenuItem(context, item),
                     if (index < widget.items.length - 1)
                       Divider(
                         height: 1,
-                        indent: 12.w,
-                        endIndent: 5.w,
+                        indent: isWeb ? 80 : 64,
+                        endIndent: isWeb ? 24 : 20,
                         color: kBorder.withOpacity(0.5),
                       ),
                   ],
@@ -2237,34 +2201,35 @@ class _ExpandableSectionState extends State<ExpandableSection> {
     );
   }
 
-  Widget _buildMenuItem(String item) {
+  Widget _buildMenuItem(BuildContext context, String item) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          // ✅ FIX 4: Get.back() is faster than Navigator.pop(context)
           Get.back();
           _navigateToScreen(item);
         },
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 1.5.h),
+          padding: EdgeInsets.symmetric(horizontal: isWeb ? 60 : 48, vertical: isWeb ? 14 : 12),
           child: Row(
             children: [
               SizedBox(
-                width: 5.w,
-                height: 5.w,
+                width: isWeb ? 28 : 24,
+                height: isWeb ? 28 : 24,
                 child: Iconify(
                   _getIconForMenuItem(item),
-                  size: 4.w,
+                  size: isWeb ? 20 : 18,
                   color: kSubText,
                 ),
               ),
-              SizedBox(width: 3.w),
+              SizedBox(width: isWeb ? 16 : 12),
               Expanded(
                 child: Text(
                   item,
                   style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: isWeb ? 15 : 14,
                       color: kText,
                       fontWeight: FontWeight.w500),
                 ),
@@ -2278,99 +2243,38 @@ class _ExpandableSectionState extends State<ExpandableSection> {
 
   void _navigateToScreen(String item) {
     switch (item) {
-      case 'Terms of Service': Get.to(() => const TermsOfServiceScreen());
-        break;
-        case 'Privacy Policy' : Get.to(()=> PrivacyPolicyScreen());
-        // case 'Licenses' : Get
-      case 'About App':
-        Get.to(() => const AboutAppScreen());
-        break;
-      case 'Change Password':
-        Get.to(() => ChangePasswordScreen());
-        break;
-      case 'My Profile':
-        Get.to(() => ProfileScreen());
-        break;
-      case 'Income':
-        Get.to(() => const IncomeScreen());
-        break;
-      case 'Expense':
-        Get.to(() => const ExpenseScreen());
-        break;
-      case 'Profit & Loss Statement':
-        Get.to(() => const ProfitLossStatementScreen());
-        break;
-      case 'Balance Sheet':
-        Get.to(() => const BalanceSheetScreen());
-        break;
-      case 'Cash Flow Statement':
-        Get.to(() => const CashFlowStatementScreen());
-        break;
-      case 'Aged Receivables':
-        Get.to(() => const AgedReceivablesScreen());
-        break;
-      case 'Chart of Accounts':
-        Get.to(() => const ChartOfAccountsScreen());
-        break;
-      case 'Journal Entries':
-        Get.to(() => const JournalEntriesScreen());
-        break;
-      case 'General Ledger':
-        Get.to(() => const GeneralLedgerScreen());
-        break;
-      case 'Trial Balance':
-        Get.to(() => const TrialBalanceScreen());
-        break;
-      case 'Bank Accounts':
-        Get.to(() => const BankAccountsScreen());
-        break;
-      case 'Accounts Receivable':
-        Get.to(() => const AccountsReceivableScreen());
-        break;
-      case 'Accounts Payable':
-        Get.to(() => const AccountsPayableScreen());
-        break;
-      case 'Customers':
-        Get.to(() => const CustomersScreen());
-        break;
-      case 'bills':
-        Get.to(() => const BillsScreen());
-        break;
-      case 'Vendors / Suppliers':
-        Get.to(() => const VendorsScreen());
-        break;
-      case 'Payments Received':
-        Get.to(() => const PaymentsReceivedScreen());
-        break;
-      case 'Payments Made':
-        Get.to(() => const PaymentsMadeScreen());
-        break;
-      case 'Credit Notes':
-        Get.to(() => const CreditNotesScreen());
-        break;
-      case 'Fixed Assets':
-        Get.to(() => const FixedAssetsScreen());
-        break;
-      case 'Loans & Borrowings':
-        Get.to(() => const LoansBorrowingsScreen());
-        break;
-      case 'Capital / Equity':
-        Get.to(() => const CapitalEquityScreen());
-        break;
-      case 'Contact Support':
-        Get.to(() => const ContactScreen());
-        break;
-      case 'Report an Issue':
-        Get.to(() => const ReportIssueScreen());
-        break;
-      case 'subscription':
-        Get.to(() => const SelectPlanScreen());
-      case 'User Guide':
-        Get.to(() => const UserGuideScreen());
-        break;
-      case 'Feedback':
-        Get.to(() => const FeedbackScreen());
-        break;
+      case 'Terms of Service': Get.to(() => const TermsOfServiceScreen()); break;
+      case 'Privacy Policy' : Get.to(()=> PrivacyPolicyScreen()); break;
+      case 'About App': Get.to(() => const AboutAppScreen()); break;
+      case 'Change Password': Get.to(() => ChangePasswordScreen()); break;
+      case 'My Profile': Get.to(() => ProfileScreen()); break;
+      case 'Income': Get.to(() => const IncomeScreen()); break;
+      case 'Expense': Get.to(() => const ExpenseScreen()); break;
+      case 'Profit & Loss Statement': Get.to(() => const ProfitLossStatementScreen()); break;
+      case 'Balance Sheet': Get.to(() => const BalanceSheetScreen()); break;
+      case 'Cash Flow Statement': Get.to(() => const CashFlowStatementScreen()); break;
+      case 'Aged Receivables': Get.to(() => const AgedReceivablesScreen()); break;
+      case 'Chart of Accounts': Get.to(() => const ChartOfAccountsScreen()); break;
+      case 'Journal Entries': Get.to(() => const JournalEntriesScreen()); break;
+      case 'General Ledger': Get.to(() => const GeneralLedgerScreen()); break;
+      case 'Trial Balance': Get.to(() => const TrialBalanceScreen()); break;
+      case 'Bank Accounts': Get.to(() => const BankAccountsScreen()); break;
+      case 'Accounts Receivable': Get.to(() => const AccountsReceivableScreen()); break;
+      case 'Accounts Payable': Get.to(() => const AccountsPayableScreen()); break;
+      case 'Customers': Get.to(() => const CustomersScreen()); break;
+      case 'bills': Get.to(() => const BillsScreen()); break;
+      case 'Vendors / Suppliers': Get.to(() => const VendorsScreen()); break;
+      case 'Payments Received': Get.to(() => const PaymentsReceivedScreen()); break;
+      case 'Payments Made': Get.to(() => const PaymentsMadeScreen()); break;
+      case 'Credit Notes': Get.to(() => const CreditNotesScreen()); break;
+      case 'Fixed Assets': Get.to(() => const FixedAssetsScreen()); break;
+      case 'Loans & Borrowings': Get.to(() => const LoansBorrowingsScreen()); break;
+      case 'Capital / Equity': Get.to(() => const CapitalEquityScreen()); break;
+      case 'Contact Support': Get.to(() => const ContactScreen()); break;
+      case 'Report an Issue': Get.to(() => const ReportIssueScreen()); break;
+      case 'subscription': Get.to(() => const SelectPlanScreen()); break;
+      case 'User Guide': Get.to(() => const UserGuideScreen()); break;
+      case 'Feedback': Get.to(() => const FeedbackScreen()); break;
       default:
         Get.snackbar(item, '$item module coming soon',
             snackPosition: SnackPosition.BOTTOM,
@@ -2382,40 +2286,160 @@ class _ExpandableSectionState extends State<ExpandableSection> {
   String _getIconForMenuItem(String item) {
     switch (item) {
       case 'Feedback': return Mdi.feedback;
-      case 'Chart of Accounts':        return Mdi.chart_tree;
-      case 'Journal Entries':          return Mdi.book_open_page_variant;
-      case 'General Ledger':           return Mdi.book_open_blank_variant;
-      case 'Trial Balance':            return Mdi.scale_balance;
-      case 'Bank Accounts':            return Mdi.bank;
-      case 'Accounts Receivable':      return Mdi.cash_plus;
-      case 'Accounts Payable':         return Mdi.cash_minus;
-      case 'Income':                   return Mdi.trending_up;
-      case 'Expense':                  return Mdi.trending_down;
-      case 'bills':                    return Mdi.file_document_outline;
-      case 'Profit & Loss Statement':  return Mdi.chart_line;
-      case 'Balance Sheet':            return Mdi.clipboard_list_outline;
-      case 'Cash Flow Statement':      return Mdi.cash;
-      case 'Aged Receivables':         return Mdi.account_clock;
-      case 'Customers':                return Mdi.account_group;
-      case 'Vendors / Suppliers':      return Mdi.truck_delivery_outline;
-      case 'Payments Received':        return Mdi.credit_card_outline;
-      case 'Payments Made':            return Mdi.cash_check;
-      case 'Credit Notes':             return Mdi.file_undo_outline;
-      case 'Fixed Assets':             return Mdi.office_building_outline;
-      case 'Loans & Borrowings':       return Mdi.hand_coin_outline;
-      case 'Capital / Equity':         return Mdi.chart_donut;
-      case 'subscription':             return Mdi.crown;
-      case 'My Profile':               return Mdi.account_circle_outline;
-      case 'Change Password':          return Mdi.lock_reset;
-      case 'Backup & Restore':         return Mdi.database_export_outline;
-      case 'Help Center':              return Mdi.help_circle_outline;
-      case 'User Guide':               return Mdi.book_information_variant;
-      case 'Contact Support':          return Mdi.headset;
-      case 'Report an Issue':          return Mdi.bug_outline;
-      case 'About App':                return Mdi.information_outline;
-      case 'Terms of Service':         return Mdi.file_sign;
-      case 'Privacy Policy':           return Mdi.shield_lock_outline;
-      default:                         return Mdi.circle_outline;
+      case 'Chart of Accounts': return Mdi.chart_tree;
+      case 'Journal Entries': return Mdi.book_open_page_variant;
+      case 'General Ledger': return Mdi.book_open_blank_variant;
+      case 'Trial Balance': return Mdi.scale_balance;
+      case 'Bank Accounts': return Mdi.bank;
+      case 'Accounts Receivable': return Mdi.cash_plus;
+      case 'Accounts Payable': return Mdi.cash_minus;
+      case 'Income': return Mdi.trending_up;
+      case 'Expense': return Mdi.trending_down;
+      case 'bills': return Mdi.file_document_outline;
+      case 'Profit & Loss Statement': return Mdi.chart_line;
+      case 'Balance Sheet': return Mdi.clipboard_list_outline;
+      case 'Cash Flow Statement': return Mdi.cash;
+      case 'Aged Receivables': return Mdi.account_clock;
+      case 'Customers': return Mdi.account_group;
+      case 'Vendors / Suppliers': return Mdi.truck_delivery_outline;
+      case 'Payments Received': return Mdi.credit_card_outline;
+      case 'Payments Made': return Mdi.cash_check;
+      case 'Credit Notes': return Mdi.file_undo_outline;
+      case 'Fixed Assets': return Mdi.office_building_outline;
+      case 'Loans & Borrowings': return Mdi.hand_coin_outline;
+      case 'Capital / Equity': return Mdi.chart_donut;
+      case 'subscription': return Mdi.crown;
+      case 'My Profile': return Mdi.account_circle_outline;
+      case 'Change Password': return Mdi.lock_reset;
+      case 'User Guide': return Mdi.book_information_variant;
+      case 'Contact Support': return Mdi.headset;
+      case 'Report an Issue': return Mdi.bug_outline;
+      case 'About App': return Mdi.information_outline;
+      case 'Terms of Service': return Mdi.file_sign;
+      case 'Privacy Policy': return Mdi.shield_lock_outline;
+      default: return Mdi.circle_outline;
     }
   }
 }
+
+Widget _buildMenuItem(BuildContext context, String item) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Get.back();
+          _navigateToScreen(item);
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: isWeb ? 60 : 48, vertical: isWeb ? 14 : 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: isWeb ? 28 : 24,
+                height: isWeb ? 28 : 24,
+                child: Iconify(
+                  _getIconForMenuItem(item),
+                  size: isWeb ? 20 : 18,
+                  color: kSubText,
+                ),
+              ),
+              SizedBox(width: isWeb ? 16 : 12),
+              Expanded(
+                child: Text(
+                  item,
+                  style: TextStyle(
+                      fontSize: isWeb ? 15 : 14,
+                      color: kText,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToScreen(String item) {
+    switch (item) {
+      case 'Terms of Service': Get.to(() => const TermsOfServiceScreen()); break;
+      case 'Privacy Policy' : Get.to(()=> PrivacyPolicyScreen()); break;
+      case 'About App': Get.to(() => const AboutAppScreen()); break;
+      case 'Change Password': Get.to(() => ChangePasswordScreen()); break;
+      case 'My Profile': Get.to(() => ProfileScreen()); break;
+      case 'Income': Get.to(() => const IncomeScreen()); break;
+      case 'Expense': Get.to(() => const ExpenseScreen()); break;
+      case 'Profit & Loss Statement': Get.to(() => const ProfitLossStatementScreen()); break;
+      case 'Balance Sheet': Get.to(() => const BalanceSheetScreen()); break;
+      case 'Cash Flow Statement': Get.to(() => const CashFlowStatementScreen()); break;
+      case 'Aged Receivables': Get.to(() => const AgedReceivablesScreen()); break;
+      case 'Chart of Accounts': Get.to(() => const ChartOfAccountsScreen()); break;
+      case 'Journal Entries': Get.to(() => const JournalEntriesScreen()); break;
+      case 'General Ledger': Get.to(() => const GeneralLedgerScreen()); break;
+      case 'Trial Balance': Get.to(() => const TrialBalanceScreen()); break;
+      case 'Bank Accounts': Get.to(() => const BankAccountsScreen()); break;
+      case 'Accounts Receivable': Get.to(() => const AccountsReceivableScreen()); break;
+      case 'Accounts Payable': Get.to(() => const AccountsPayableScreen()); break;
+      case 'Customers': Get.to(() => const CustomersScreen()); break;
+      case 'bills': Get.to(() => const BillsScreen()); break;
+      case 'Vendors / Suppliers': Get.to(() => const VendorsScreen()); break;
+      case 'Payments Received': Get.to(() => const PaymentsReceivedScreen()); break;
+      case 'Payments Made': Get.to(() => const PaymentsMadeScreen()); break;
+      case 'Credit Notes': Get.to(() => const CreditNotesScreen()); break;
+      case 'Fixed Assets': Get.to(() => const FixedAssetsScreen()); break;
+      case 'Loans & Borrowings': Get.to(() => const LoansBorrowingsScreen()); break;
+      case 'Capital / Equity': Get.to(() => const CapitalEquityScreen()); break;
+      case 'Contact Support': Get.to(() => const ContactScreen()); break;
+      case 'Report an Issue': Get.to(() => const ReportIssueScreen()); break;
+      case 'subscription': Get.to(() => const SelectPlanScreen()); break;
+      case 'User Guide': Get.to(() => const UserGuideScreen()); break;
+      case 'Feedback': Get.to(() => const FeedbackScreen()); break;
+      default:
+        Get.snackbar(item, '$item module coming soon',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: kPrimary,
+            colorText: Colors.white);
+    }
+  }
+
+  String _getIconForMenuItem(String item) {
+    switch (item) {
+      case 'Feedback': return Mdi.feedback;
+      case 'Chart of Accounts': return Mdi.chart_tree;
+      case 'Journal Entries': return Mdi.book_open_page_variant;
+      case 'General Ledger': return Mdi.book_open_blank_variant;
+      case 'Trial Balance': return Mdi.scale_balance;
+      case 'Bank Accounts': return Mdi.bank;
+      case 'Accounts Receivable': return Mdi.cash_plus;
+      case 'Accounts Payable': return Mdi.cash_minus;
+      case 'Income': return Mdi.trending_up;
+      case 'Expense': return Mdi.trending_down;
+      case 'bills': return Mdi.file_document_outline;
+      case 'Profit & Loss Statement': return Mdi.chart_line;
+      case 'Balance Sheet': return Mdi.clipboard_list_outline;
+      case 'Cash Flow Statement': return Mdi.cash;
+      case 'Aged Receivables': return Mdi.account_clock;
+      case 'Customers': return Mdi.account_group;
+      case 'Vendors / Suppliers': return Mdi.truck_delivery_outline;
+      case 'Payments Received': return Mdi.credit_card_outline;
+      case 'Payments Made': return Mdi.cash_check;
+      case 'Credit Notes': return Mdi.file_undo_outline;
+      case 'Fixed Assets': return Mdi.office_building_outline;
+      case 'Loans & Borrowings': return Mdi.hand_coin_outline;
+      case 'Capital / Equity': return Mdi.chart_donut;
+      case 'subscription': return Mdi.crown;
+      case 'My Profile': return Mdi.account_circle_outline;
+      case 'Change Password': return Mdi.lock_reset;
+      case 'User Guide': return Mdi.book_information_variant;
+      case 'Contact Support': return Mdi.headset;
+      case 'Report an Issue': return Mdi.bug_outline;
+      case 'About App': return Mdi.information_outline;
+      case 'Terms of Service': return Mdi.file_sign;
+      case 'Privacy Policy': return Mdi.shield_lock_outline;
+      default: return Mdi.circle_outline;
+    }
+  }
+
+

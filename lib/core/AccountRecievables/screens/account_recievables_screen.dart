@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/AccountRecievables/controllers/account_recievables_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,61 +14,126 @@ class AccountsReceivableScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(AccountsReceivableController());
 
-    return Scaffold(
-      backgroundColor: kBg,
-      appBar: _buildAppBar(controller),
-      body: Obx(() {
+    return Container(
+      color: kBg,
+      child: Obx(() {
         if (controller.isLoading.value) {
           return Center(
-            child:LoadingAnimationWidget.waveDots(
-                    color: kPrimary,
-                    size: 10.w,
-                  )
+            child: LoadingAnimationWidget.waveDots(
+              color: kPrimary,
+              size: ResponsiveUtils.isWeb(context) ? 60 : 40,
+            ),
           );
         }
 
-        return Column(
-          children: [
-            _buildSummaryCards(controller),
-            _buildFilterBar(controller),
-            Expanded(
-              child: _buildCustomersList(controller),
-            ),
-          ],
+        // Single ScrollView that scrolls everything together
+        return SingleChildScrollView(
+          padding: EdgeInsets.zero,
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(controller, context),
+              _buildSummaryCards(controller, context),
+              _buildFilterBar(controller, context),
+              _buildCustomersList(controller, context),
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       }),
-      floatingActionButton: _buildFAB(controller),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(AccountsReceivableController controller) {
-    return AppBar(
-      title: Text(
-        'Accounts Receivable',
-        style: TextStyle(
-          fontSize: 14.sp,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
+  // Custom Header without AppBar
+  Widget _buildHeader(AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        isWeb ? 24 : 16,
+        isWeb ? 20 : 16,
+        isWeb ? 24 : 16,
+        isWeb ? 16 : 12,
+      ),
+      decoration: BoxDecoration(
+        color: kPrimary,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
         ),
       ),
-      backgroundColor: kPrimary,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: Icon(Icons.download_outlined, color: Colors.white, size: 5.w),
-          onPressed: () => controller.exportReport(),
-        ),
-        IconButton(
-          icon: Icon(Icons.print_outlined, color: Colors.white, size: 5.w),
-          onPressed: () => controller.printReport(),
-        ),
-      ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Accounts Receivable',
+                  style: TextStyle(
+                    fontSize: isWeb ? 20 : 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Track customer payments and outstanding amounts',
+                  style: TextStyle(
+                    fontSize: isWeb ? 13 : 11,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Export Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => controller.exportReport(),
+            ),
+          ),
+          if (!isMobile) const SizedBox(width: 8),
+          // Print Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
+              onPressed: () => controller.printReport(),
+            ),
+          ),
+          if (!isMobile) const SizedBox(width: 8),
+          if (!isMobile)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: Icon(Icons.add, color: kPrimary, size: isWeb ? 22 : 20),
+                onPressed: () => _showAddCustomerDialog(Get.context!, controller, context),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSummaryCards(AccountsReceivableController controller) {
+  Widget _buildSummaryCards(AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() => Container(
-      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -77,39 +143,44 @@ class AccountsReceivableScreen extends StatelessWidget {
               _formatAmount(controller.totalOutstanding.value),
               kDanger,
               Icons.receipt,
-              28.w,
+              context,
+              width: isWeb ? 220 : 160,
             ),
-            SizedBox(width: 2.w),
+            SizedBox(width: isWeb ? 16 : 12),
             _buildSummaryCard(
               'Overdue',
               _formatAmount(controller.totalOverdue.value),
               kWarning,
               Icons.warning,
-              28.w,
+              context,
+              width: isWeb ? 220 : 160,
             ),
-            SizedBox(width: 2.w),
+            SizedBox(width: isWeb ? 16 : 12),
             _buildSummaryCard(
               'Due This Week',
               _formatAmount(controller.totalDueThisWeek.value),
               kPrimary,
               Icons.view_week,
-              28.w,
+              context,
+              width: isWeb ? 220 : 160,
             ),
-            SizedBox(width: 2.w),
+            SizedBox(width: isWeb ? 16 : 12),
             _buildSummaryCard(
               'Due This Month',
               _formatAmount(controller.totalDueThisMonth.value),
               kPrimary,
               Icons.calendar_month,
-              28.w,
+              context,
+              width: isWeb ? 220 : 160,
             ),
-            SizedBox(width: 2.w),
+            SizedBox(width: isWeb ? 16 : 12),
             _buildSummaryCard(
               'Active Customers',
               controller.activeCustomers.value.toString(),
               kSuccess,
               Icons.people,
-              28.w,
+              context,
+              width: isWeb ? 220 : 160,
               isNumber: true,
             ),
           ],
@@ -123,15 +194,18 @@ class AccountsReceivableScreen extends StatelessWidget {
     String amount,
     Color color,
     IconData icon,
-    double width, {
+    BuildContext context, {
+    double width = 160,
     bool isNumber = false,
   }) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Container(
       width: width,
-      padding: EdgeInsets.all(2.5.w),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -145,13 +219,13 @@ class AccountsReceivableScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 4.5.w, color: color),
-              SizedBox(width: 1.5.w),
+              Icon(icon, size: isWeb ? 24 : 20, color: color),
+              SizedBox(width: isWeb ? 8 : 6),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: isWeb ? 12 : 11,
                     color: kSubText,
                     fontWeight: FontWeight.w500,
                   ),
@@ -161,11 +235,11 @@ class AccountsReceivableScreen extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 1.h),
+          SizedBox(height: isWeb ? 8 : 6),
           Text(
             isNumber ? amount : amount,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isWeb ? 18 : 14,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -177,7 +251,8 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterBar(AccountsReceivableController controller) {
+  Widget _buildFilterBar(AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
     final List<String> filterOptions = [
       'All',
       'Overdue',
@@ -187,50 +262,50 @@ class AccountsReceivableScreen extends StatelessWidget {
     ];
 
     return Container(
-      width: 100.w,
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
       color: kCardBg,
       child: Row(
         children: [
           Expanded(
-            flex: 3,
+            flex: isWeb ? 3 : 2,
             child: Container(
-              height: 6.h,
+              height: isWeb ? 45 : 40,
               decoration: BoxDecoration(
                 color: kBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 border: Border.all(color: kBorder),
               ),
               child: TextField(
                 onChanged: (value) => controller.searchCustomers(value),
-                style: TextStyle(fontSize: 14.sp),
+                style: TextStyle(fontSize: isWeb ? 14 : 12),
                 decoration: InputDecoration(
-                  hintText: 'Search by name, email, or phone...',
-                  hintStyle: TextStyle(fontSize: 12.sp, color: kSubText),
-                  prefixIcon: Icon(Icons.search, size: 5.w),
+                  hintText: isWeb ? 'Search by name, email, or phone...' : 'Search...',
+                  hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                  prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 1.8.h),
+                  contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                 ),
               ),
             ),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           Expanded(
-            flex: 2,
+            flex: isWeb ? 2 : 1,
             child: Container(
-              height: 6.h,
+              height: isWeb ? 45 : 40,
               decoration: BoxDecoration(
                 color: kBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 border: Border.all(color: kBorder),
               ),
               child: DropdownButtonHideUnderline(
                 child: Obx(() => DropdownButton<String>(
                   value: controller.selectedFilter.value,
-                  icon: Icon(Icons.arrow_drop_down, size: 5.w),
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
                   isExpanded: true,
-                  style: TextStyle(fontSize: 14.sp, color: kText),
+                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
                   items: filterOptions.map((filter) {
                     return DropdownMenuItem(
                       value: filter,
@@ -249,323 +324,567 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomersList(AccountsReceivableController controller) {
+  Widget _buildCustomersList(AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Obx(() {
       final customers = controller.customers;
 
       if (customers.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.people_outline,
-                size: 15.w,
-                color: kSubText.withOpacity(0.5),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                'No customers found',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: kSubText,
-                  fontWeight: FontWeight.w500,
+        return Padding(
+          padding: EdgeInsets.all(isWeb ? 40 : 20),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: isWeb ? 80 : 64,
+                  color: kSubText.withOpacity(0.5),
                 ),
-              ),
-              SizedBox(height: 2.h),
-              ElevatedButton(
-                onPressed: () => _showAddCustomerDialog(Get.context!, controller),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimary,
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Add Customer',
+                SizedBox(height: isWeb ? 20 : 16),
+                Text(
+                  'No customers found',
                   style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
+                    fontSize: isWeb ? 18 : 16,
+                    color: kSubText,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: isWeb ? 20 : 16),
+                ElevatedButton(
+                  onPressed: () => _showAddCustomerDialog(Get.context!, controller, context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                    ),
+                  ),
+                  child: Text(
+                    'Add Customer',
+                    style: TextStyle(
+                      fontSize: isWeb ? 14 : 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       }
 
-      return ListView.builder(
-        padding: EdgeInsets.all(4.w),
-        itemCount: customers.length,
-        itemBuilder: (context, index) {
-          final customer = customers[index];
-          return _buildCustomerCard(customer, controller);
-        },
+      return Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 8),
+            child: Text(
+              'Customers',
+              style: TextStyle(
+                fontSize: isWeb ? 18 : 16,
+                fontWeight: FontWeight.w700,
+                color: kText,
+              ),
+            ),
+          ),
+          ...customers.map((customer) => Padding(
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 12, vertical: isWeb ? 8 : 6),
+            child: _buildCustomerCard(customer, controller, context),
+          )).toList(),
+        ],
       );
     });
   }
 
-  Widget _buildCustomerCard(Customer customer, AccountsReceivableController controller) {
+  Widget _buildCustomerCard(Customer customer, AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     int overdueCount = customer.invoices.where((inv) => inv.status == 'Overdue').length;
     int dueSoonCount = customer.invoices.where((inv) => _isDueSoon(inv.dueDate)).length;
     
     return Container(
-      margin: EdgeInsets.only(bottom: 2.h),
+      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showCustomerDetails(customer, controller),
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: EdgeInsets.all(4.w),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 14.w,
-                      height: 14.w,
-                      decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: Text(
-                          customer.name[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w800,
-                            color: kPrimary,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            customer.name,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w800,
-                              color: kText,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 0.5.h),
-                          Text(
-                            customer.email,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: kSubText,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 0.5.h),
-                          Text(
-                            customer.phone,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: kSubText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Outstanding',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: kSubText,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 0.5.h),
-                        Text(
-                          _formatAmount(customer.outstandingAmount),
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w800,
-                            color: kDanger,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 2.h),
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: 1.h),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatItem(
-                          'Total Invoices',
-                          customer.totalInvoices.toString(),
-                          Icons.receipt,
-                          kPrimary,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 4.h,
-                        color: kBorder,
-                      ),
-                      Expanded(
-                        child: _buildStatItem(
-                          'Total Amount',
-                          _formatAmount(customer.totalAmount),
-                          Icons.attach_money,
-                          kPrimary,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 4.h,
-                        color: kBorder,
-                      ),
-                      Expanded(
-                        child: _buildStatItem(
-                          'Paid',
-                          _formatAmount(customer.paidAmount),
-                          Icons.check_circle,
-                          kSuccess,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 1.h),
-                if (overdueCount > 0 || dueSoonCount > 0)
-                  Wrap(
-                    spacing: 2.w,
-                    runSpacing: 1.h,
-                    children: [
-                      if (overdueCount > 0)
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                          decoration: BoxDecoration(
-                            color: kDanger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.warning, size: 3.5.w, color: kDanger),
-                              SizedBox(width: 1.w),
-                              Text(
-                                '$overdueCount Overdue Invoice${overdueCount > 1 ? 's' : ''}',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: kDanger,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      if (dueSoonCount > 0)
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-                          decoration: BoxDecoration(
-                            color: kWarning.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.schedule, size: 3.5.w, color: kWarning),
-                              SizedBox(width: 1.w),
-                              Text(
-                                '$dueSoonCount Due Soon',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: kWarning,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                SizedBox(height: 2.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => controller.viewInvoices(customer),
-                        icon: Icon(Icons.receipt, size: 4.w),
-                        label: Text(
-                          'View Invoices',
-                          style: TextStyle(fontSize: 12.sp),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: kPrimary,
-                          side: BorderSide(color: kPrimary, width: 1),
-                          padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showPaymentDialog(customer, controller),
-                        icon: Icon(Icons.payment, size: 4.w, color: Colors.white),
-                        label: Text(
-                          'Record Payment',
-                          style: TextStyle(fontSize: 12.sp),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kSuccess,
-                          padding: EdgeInsets.symmetric(vertical: 1.2.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          onTap: () => _showCustomerDetails(customer, controller, context),
+          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
+          child: Padding(
+            padding: EdgeInsets.all(isWeb ? 16 : 12),
+            child: isMobile
+                ? _buildMobileCustomerCard(customer, controller, overdueCount, dueSoonCount, context)
+                : _buildDesktopCustomerCard(customer, controller, overdueCount, dueSoonCount, context),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildDesktopCustomerCard(Customer customer, AccountsReceivableController controller, int overdueCount, int dueSoonCount, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
     return Column(
       children: [
-        Icon(icon, size: 4.w, color: color),
-        SizedBox(height: 0.5.h),
+        Row(
+          children: [
+            Container(
+              width: isWeb ? 50 : 44,
+              height: isWeb ? 50 : 44,
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+              ),
+              child: Center(
+                child: Text(
+                  customer.name[0].toUpperCase(),
+                  style: TextStyle(
+                    fontSize: isWeb ? 20 : 16,
+                    fontWeight: FontWeight.w800,
+                    color: kPrimary,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: isWeb ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style: TextStyle(
+                      fontSize: isWeb ? 15 : 13,
+                      fontWeight: FontWeight.w800,
+                      color: kText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: isWeb ? 4 : 2),
+                  Text(
+                    customer.email,
+                    style: TextStyle(
+                      fontSize: isWeb ? 12 : 11,
+                      color: kSubText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: isWeb ? 4 : 2),
+                  Text(
+                    customer.phone,
+                    style: TextStyle(
+                      fontSize: isWeb ? 12 : 11,
+                      color: kSubText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Outstanding',
+                  style: TextStyle(
+                    fontSize: isWeb ? 11 : 10,
+                    color: kSubText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(height: isWeb ? 4 : 2),
+                Text(
+                  _formatAmount(customer.outstandingAmount),
+                  style: TextStyle(
+                    fontSize: isWeb ? 16 : 14,
+                    fontWeight: FontWeight.w800,
+                    color: kDanger,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        SizedBox(height: isWeb ? 16 : 12),
+        Container(
+          padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  'Total Invoices',
+                  customer.totalInvoices.toString(),
+                  Icons.receipt,
+                  kPrimary,
+                  isWeb,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: isWeb ? 32 : 24,
+                color: kBorder,
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  'Total Amount',
+                  _formatAmount(customer.totalAmount),
+                  Icons.attach_money,
+                  kPrimary,
+                  isWeb,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: isWeb ? 32 : 24,
+                color: kBorder,
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  'Paid',
+                  _formatAmount(customer.paidAmount),
+                  Icons.check_circle,
+                  kSuccess,
+                  isWeb,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: isWeb ? 8 : 6),
+        if (overdueCount > 0 || dueSoonCount > 0)
+          Wrap(
+            spacing: isWeb ? 12 : 8,
+            runSpacing: isWeb ? 8 : 6,
+            children: [
+              if (overdueCount > 0)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
+                  decoration: BoxDecoration(
+                    color: kDanger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(isWeb ? 6 : 4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning, size: isWeb ? 16 : 12, color: kDanger),
+                      SizedBox(width: isWeb ? 4 : 2),
+                      Text(
+                        '$overdueCount Overdue Invoice${overdueCount > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: isWeb ? 11 : 10,
+                          color: kDanger,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (dueSoonCount > 0)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
+                  decoration: BoxDecoration(
+                    color: kWarning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(isWeb ? 6 : 4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.schedule, size: isWeb ? 16 : 12, color: kWarning),
+                      SizedBox(width: isWeb ? 4 : 2),
+                      Text(
+                        '$dueSoonCount Due Soon',
+                        style: TextStyle(
+                          fontSize: isWeb ? 11 : 10,
+                          color: kWarning,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        SizedBox(height: isWeb ? 16 : 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => controller.viewInvoices(customer),
+                icon: Icon(Icons.receipt, size: isWeb ? 18 : 14),
+                label: Text(
+                  'View Invoices',
+                  style: TextStyle(fontSize: isWeb ? 12 : 10),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimary,
+                  side: BorderSide(color: kPrimary, width: 1),
+                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: isWeb ? 12 : 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _showPaymentDialog(customer, controller, context),
+                icon: Icon(Icons.payment, size: isWeb ? 18 : 14, color: Colors.white),
+                label: Text(
+                  'Record Payment',
+                  style: TextStyle(fontSize: isWeb ? 12 : 10),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kSuccess,
+                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileCustomerCard(Customer customer, AccountsReceivableController controller, int overdueCount, int dueSoonCount, BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  customer.name[0].toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: kPrimary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style:  TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: kText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    customer.email,
+                    style:  TextStyle(
+                      fontSize: 10,
+                      color: kSubText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    customer.phone,
+                    style:  TextStyle(
+                      fontSize: 10,
+                      color: kSubText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                 Text(
+                  'Outstanding',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: kSubText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatAmount(customer.outstandingAmount),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: kDanger,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                'Total Invoices',
+                customer.totalInvoices.toString(),
+                Icons.receipt,
+                kPrimary,
+                false,
+              ),
+            ),
+            Expanded(
+              child: _buildStatItem(
+                'Total Amount',
+                _formatAmount(customer.totalAmount),
+                Icons.attach_money,
+                kPrimary,
+                false,
+              ),
+            ),
+            Expanded(
+              child: _buildStatItem(
+                'Paid',
+                _formatAmount(customer.paidAmount),
+                Icons.check_circle,
+                kSuccess,
+                false,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (overdueCount > 0 || dueSoonCount > 0)
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              if (overdueCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: kDanger.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.warning, size: 12, color: kDanger),
+                      const SizedBox(width: 2),
+                      Text(
+                        '$overdueCount Overdue',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: kDanger,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (dueSoonCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: kWarning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.schedule, size: 12, color: kWarning),
+                      const SizedBox(width: 2),
+                      Text(
+                        '$dueSoonCount Due Soon',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: kWarning,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => controller.viewInvoices(customer),
+                icon: Icon(Icons.receipt, size: 14),
+                label: const Text(
+                  'View Invoices',
+                  style: TextStyle(fontSize: 9),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimary,
+                  side: const BorderSide(color: kPrimary, width: 1),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _showPaymentDialog(customer, controller, context),
+                icon: Icon(Icons.payment, size: 14, color: Colors.white),
+                label: const Text(
+                  'Record Payment',
+                  style: TextStyle(fontSize: 9),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kSuccess,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color, bool isWeb) {
+    return Column(
+      children: [
+        Icon(icon, size: isWeb ? 20 : 16, color: color),
+        SizedBox(height: isWeb ? 4 : 2),
         Text(
           value,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: isWeb ? 13 : 11,
             fontWeight: FontWeight.w700,
             color: kText,
           ),
@@ -573,7 +892,7 @@ class AccountsReceivableScreen extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10.sp,
+            fontSize: isWeb ? 10 : 8,
             color: kSubText,
           ),
         ),
@@ -581,16 +900,8 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFAB(AccountsReceivableController controller) {
-    return FloatingActionButton(
-      onPressed: () => _showAddCustomerDialog(Get.context!, controller),
-      backgroundColor: kPrimary,
-      child: Icon(Icons.add, color: Colors.white, size: 6.w),
-      elevation: 3,
-    );
-  }
-
-  void _showAddCustomerDialog(BuildContext context, AccountsReceivableController controller) {
+  void _showAddCustomerDialog(BuildContext context, AccountsReceivableController controller, BuildContext ctx) {
+    final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
     String name = '';
     String email = '';
@@ -604,21 +915,21 @@ class AccountsReceivableScreen extends StatelessWidget {
           return Dialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
-              width: 90.w,
-              constraints: BoxConstraints(maxHeight: 80.h),
-              padding: EdgeInsets.all(5.w),
+              width: isWeb ? 500 : double.infinity,
+              constraints: BoxConstraints(maxHeight: isWeb ? 600 : 500),
+              padding: EdgeInsets.all(isWeb ? 24 : 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Add New Customer',
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: isWeb ? 20 : 18,
                       fontWeight: FontWeight.w800,
                       color: kText,
                     ),
                   ),
-                  SizedBox(height: 2.h),
+                  SizedBox(height: isWeb ? 20 : 16),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Form(
@@ -631,47 +942,47 @@ class AccountsReceivableScreen extends StatelessWidget {
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                labelStyle: TextStyle(fontSize: 12.sp),
+                                labelStyle: TextStyle(fontSize: isWeb ? 12 : 11),
                               ),
-                              style: TextStyle(fontSize: 14.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               onChanged: (value) => name = value,
                               validator: (value) => value == null || value.isEmpty ? 'Name required' : null,
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Email',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                labelStyle: TextStyle(fontSize: 12.sp),
+                                labelStyle: TextStyle(fontSize: isWeb ? 12 : 11),
                               ),
-                              style: TextStyle(fontSize: 14.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               onChanged: (value) => email = value,
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Phone *',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                labelStyle: TextStyle(fontSize: 12.sp),
+                                labelStyle: TextStyle(fontSize: isWeb ? 12 : 11),
                               ),
-                              style: TextStyle(fontSize: 14.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               onChanged: (value) => phone = value,
                               validator: (value) => value == null || value.isEmpty ? 'Phone required' : null,
                             ),
-                            SizedBox(height: 2.h),
+                            SizedBox(height: isWeb ? 16 : 12),
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Address',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                labelStyle: TextStyle(fontSize: 12.sp),
+                                labelStyle: TextStyle(fontSize: isWeb ? 12 : 11),
                               ),
-                              style: TextStyle(fontSize: 14.sp),
+                              style: TextStyle(fontSize: isWeb ? 13 : 12),
                               maxLines: 2,
                               onChanged: (value) => address = value,
                             ),
@@ -680,22 +991,22 @@ class AccountsReceivableScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 2.h),
+                  SizedBox(height: isWeb ? 20 : 16),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                            padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text('Cancel', style: TextStyle(fontSize: 14.sp)),
+                          child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
                         ),
                       ),
-                      SizedBox(width: 3.w),
+                      SizedBox(width: isWeb ? 16 : 12),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
@@ -711,12 +1022,12 @@ class AccountsReceivableScreen extends StatelessWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimary,
-                            padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                            padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text('Add Customer', style: TextStyle(fontSize: 14.sp)),
+                          child: Text('Add Customer', style: TextStyle(fontSize: isWeb ? 14 : 12)),
                         ),
                       ),
                     ],
@@ -730,127 +1041,161 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  void _showCustomerDetails(Customer customer, AccountsReceivableController controller) {
-    showModalBottomSheet(
-      context: Get.context!,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(5.w),
-        constraints: BoxConstraints(maxHeight: 85.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+  void _showCustomerDetails(Customer customer, AccountsReceivableController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    
+    if (isWeb) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            child: _buildCustomerDetailsContent(customer, controller, ctx),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(20),
+          constraints: BoxConstraints(maxHeight: 85.h),
+          child: _buildCustomerDetailsContent(customer, controller, ctx),
+        ),
+      );
+    }
+  }
+
+  Widget _buildCustomerDetailsContent(Customer customer, AccountsReceivableController controller, BuildContext ctx) {
+    final isWeb = ResponsiveUtils.isWeb(ctx);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 14.w,
-                  height: 14.w,
-                  decoration: BoxDecoration(
-                    color: kPrimary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                    child: Text(
-                      customer.name[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.w800,
-                        color: kPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        customer.name,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w800,
-                          color: kText,
-                        ),
-                      ),
-                      Text(
-                        customer.email,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: kSubText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 2.h),
-            _buildDetailRow('Phone', customer.phone),
-            _buildDetailRow('Total Invoices', customer.totalInvoices.toString()),
-            _buildDetailRow('Total Amount', _formatAmount(customer.totalAmount)),
-            _buildDetailRow('Paid Amount', _formatAmount(customer.paidAmount)),
-            _buildDetailRow('Outstanding', _formatAmount(customer.outstandingAmount)),
-            if (customer.lastPaymentDate != null)
-              _buildDetailRow(
-                'Last Payment',
-                DateFormat('dd MMM yyyy').format(customer.lastPaymentDate!),
+            Container(
+              width: isWeb ? 60 : 50,
+              height: isWeb ? 60 : 50,
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isWeb ? 14 : 10),
               ),
-            SizedBox(height: 2.h),
-            Text(
-              'Recent Invoices',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
-                color: kText,
+              child: Center(
+                child: Text(
+                  customer.name[0].toUpperCase(),
+                  style: TextStyle(
+                    fontSize: isWeb ? 24 : 18,
+                    fontWeight: FontWeight.w800,
+                    color: kPrimary,
+                  ),
+                ),
               ),
             ),
-            SizedBox(height: 1.h),
-            ...customer.invoices.take(3).map((invoice) => _buildInvoiceItem(invoice)),
-            SizedBox(height: 2.h),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      controller.viewInvoices(customer);
-                    },
-                    icon: Icon(Icons.receipt, size: 4.5.w),
-                    label: Text('All Invoices', style: TextStyle(fontSize: 12.sp)),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 1.5.h),
+            SizedBox(width: isWeb ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style: TextStyle(
+                      fontSize: isWeb ? 18 : 16,
+                      fontWeight: FontWeight.w800,
+                      color: kText,
                     ),
                   ),
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showPaymentDialog(customer, controller);
-                    },
-                    icon: Icon(Icons.payment, size: 4.5.w),
-                    label: Text('Record Payment', style: TextStyle(fontSize: 12.sp)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kSuccess,
-                      padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                  Text(
+                    customer.email,
+                    style: TextStyle(
+                      fontSize: isWeb ? 13 : 12,
+                      color: kSubText,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
-      ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Container(
+          padding: EdgeInsets.all(isWeb ? 16 : 12),
+          decoration: BoxDecoration(
+            color: kBg,
+            borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+          ),
+          child: Column(
+            children: [
+              _buildDetailRow('Phone', customer.phone, isWeb),
+              _buildDetailRow('Total Invoices', customer.totalInvoices.toString(), isWeb),
+              _buildDetailRow('Total Amount', _formatAmount(customer.totalAmount), isWeb),
+              _buildDetailRow('Paid Amount', _formatAmount(customer.paidAmount), isWeb),
+              _buildDetailRow('Outstanding', _formatAmount(customer.outstandingAmount), isWeb),
+              if (customer.lastPaymentDate != null)
+                _buildDetailRow(
+                  'Last Payment',
+                  DateFormat('dd MMM yyyy').format(customer.lastPaymentDate!),
+                  isWeb,
+                ),
+            ],
+          ),
+        ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Text(
+          'Recent Invoices',
+          style: TextStyle(
+            fontSize: isWeb ? 16 : 14,
+            fontWeight: FontWeight.w700,
+            color: kText,
+          ),
+        ),
+        SizedBox(height: isWeb ? 12 : 8),
+        ...customer.invoices.take(3).map((invoice) => _buildInvoiceItem(invoice, isWeb)),
+        SizedBox(height: isWeb ? 20 : 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  controller.viewInvoices(customer);
+                },
+                icon: Icon(Icons.receipt, size: isWeb ? 20 : 16),
+                label: Text('All Invoices', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+                ),
+              ),
+            ),
+            SizedBox(width: isWeb ? 12 : 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showPaymentDialog(customer, controller, ctx);
+                },
+                icon: Icon(Icons.payment, size: isWeb ? 20 : 16),
+                label: Text('Record Payment', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kSuccess,
+                  padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  void _showPaymentDialog(Customer customer, AccountsReceivableController controller) {
+  void _showPaymentDialog(Customer customer, AccountsReceivableController controller, BuildContext context) {
     // For demo purposes, show a simple dialog
     // In production, this should be a full payment form
     Get.defaultDialog(
@@ -858,7 +1203,7 @@ class AccountsReceivableScreen extends StatelessWidget {
       content: Column(
         children: [
           Text('Customer: ${customer.name}'),
-          SizedBox(height: 1.h),
+          SizedBox(height: 10),
           Text('Outstanding: ${_formatAmount(customer.outstandingAmount)}'),
         ],
       ),
@@ -871,16 +1216,16 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, bool isWeb) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 1.5.h),
+      padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : 11,
               color: kSubText,
               fontWeight: FontWeight.w500,
             ),
@@ -888,7 +1233,7 @@ class AccountsReceivableScreen extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isWeb ? 13 : 12,
               color: kText,
               fontWeight: FontWeight.w600,
             ),
@@ -898,17 +1243,17 @@ class AccountsReceivableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInvoiceItem(Invoice invoice) {
+  Widget _buildInvoiceItem(Invoice invoice, bool isWeb) {
     Color statusColor = invoice.status == 'Paid' ? kSuccess : 
                         invoice.status == 'Overdue' ? kDanger : kWarning;
     double outstanding = invoice.amount - invoice.paidAmount;
     
     return Container(
-      margin: EdgeInsets.only(bottom: 1.h),
-      padding: EdgeInsets.all(2.w),
+      margin: EdgeInsets.only(bottom: isWeb ? 8 : 6),
+      padding: EdgeInsets.all(isWeb ? 12 : 10),
       decoration: BoxDecoration(
         color: kBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
       ),
       child: Row(
         children: [
@@ -919,7 +1264,7 @@ class AccountsReceivableScreen extends StatelessWidget {
                 Text(
                   invoice.id,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: isWeb ? 12 : 11,
                     fontWeight: FontWeight.w600,
                     color: kText,
                   ),
@@ -927,7 +1272,7 @@ class AccountsReceivableScreen extends StatelessWidget {
                 Text(
                   DateFormat('dd MMM yyyy').format(invoice.date),
                   style: TextStyle(
-                    fontSize: 10.sp,
+                    fontSize: isWeb ? 10 : 9,
                     color: kSubText,
                   ),
                 ),
@@ -937,22 +1282,22 @@ class AccountsReceivableScreen extends StatelessWidget {
           Text(
             _formatAmount(outstanding),
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: isWeb ? 13 : 11,
               fontWeight: FontWeight.w700,
               color: statusColor,
             ),
           ),
-          SizedBox(width: 2.w),
+          SizedBox(width: isWeb ? 8 : 6),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 1.5.w, vertical: 0.3.h),
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(isWeb ? 6 : 4),
             ),
             child: Text(
               invoice.status,
               style: TextStyle(
-                fontSize: 10.sp,
+                fontSize: isWeb ? 10 : 9,
                 color: statusColor,
                 fontWeight: FontWeight.w600,
               ),

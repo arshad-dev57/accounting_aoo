@@ -1,8 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:sizer/sizer.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -139,7 +139,6 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
         }
       }
       
-      // Update customer aging buckets
       customer.current = customerCurrent;
       customer.days1to30 = customer1to30;
       customer.days31to60 = customer31to60;
@@ -152,6 +151,9 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Scaffold(
       backgroundColor: kBg,
       appBar: _buildAppBar(),
@@ -159,7 +161,7 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
           ? Center(
               child: CircularProgressIndicator(
                 color: kPrimary,
-                strokeWidth: 3.w,
+                strokeWidth: 3,
               ),
             )
           : Column(
@@ -177,11 +179,14 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    final isMobile = ResponsiveUtils.isMobile(Get.context!);
+    
     return AppBar(
       title: Text(
         'Aged Receivables',
         style: TextStyle(
-          fontSize: 14.sp,
+          fontSize: isWeb ? 20 : 14,
           fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
@@ -190,19 +195,19 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
       elevation: 0,
       actions: [
         IconButton(
-          icon: Icon(Icons.calendar_today, color: Colors.white, size: 5.w),
+          icon: Icon(Icons.calendar_today, color: Colors.white, size: isWeb ? 22 : 20),
           onPressed: () => _selectAsAtDate(),
         ),
         IconButton(
-          icon: Icon(Icons.picture_as_pdf, color: Colors.white, size: 5.w),
+          icon: Icon(Icons.picture_as_pdf, color: Colors.white, size: isWeb ? 22 : 20),
           onPressed: () => _generateAndPrintPDF(),
         ),
         IconButton(
-          icon: Icon(Icons.print, color: Colors.white, size: 5.w),
+          icon: Icon(Icons.print, color: Colors.white, size: isWeb ? 22 : 20),
           onPressed: () => _printReport(),
         ),
         IconButton(
-          icon: Icon(Icons.download, color: Colors.white, size: 5.w),
+          icon: Icon(Icons.download, color: Colors.white, size: isWeb ? 22 : 20),
           onPressed: () => _exportToExcel(),
         ),
       ],
@@ -210,35 +215,37 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   Widget _buildDateSelector() {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return Container(
-      width: 100.w,
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
       color: kCardBg,
       child: Row(
         children: [
-          Icon(Icons.calendar_today, size: 5.w, color: kPrimary),
-          SizedBox(width: 2.w),
+          Icon(Icons.calendar_today, size: isWeb ? 20 : 16, color: kPrimary),
+          SizedBox(width: isWeb ? 8 : 6),
           Text(
             'As at:',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : 12,
               color: kSubText,
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(width: 2.w),
+          SizedBox(width: isWeb ? 8 : 6),
           GestureDetector(
             onTap: () => _selectAsAtDate(),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 10, vertical: isWeb ? 6 : 4),
               decoration: BoxDecoration(
                 color: kPrimary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
               ),
               child: Text(
                 DateFormat('dd MMM yyyy').format(_asAtDate),
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: isWeb ? 13 : 12,
                   color: kPrimary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -251,23 +258,25 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   Widget _buildSummaryCards() {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildSummaryCard('Current', _formatAmount(totalCurrent), kSuccess, Icons.access_time, 28.w),
-            SizedBox(width: 2.w),
-            _buildSummaryCard('1-30 Days', _formatAmount(total1to30), kWarning, Icons.calendar_view_month, 28.w),
-            SizedBox(width: 2.w),
-            _buildSummaryCard('31-60 Days', _formatAmount(total31to60), kWarning, Icons.calendar_view_month, 28.w),
-            SizedBox(width: 2.w),
-            _buildSummaryCard('61-90 Days', _formatAmount(total61to90), kDanger, Icons.calendar_view_month, 28.w),
-            SizedBox(width: 2.w),
-            _buildSummaryCard('90+ Days', _formatAmount(totalOver90), kDanger, Icons.warning, 28.w),
-            SizedBox(width: 2.w),
-            _buildSummaryCard('Total', _formatAmount(totalOutstanding), kPrimary, Icons.attach_money, 28.w),
+            _buildSummaryCard('Current', _formatAmount(totalCurrent), kSuccess, Icons.access_time, isWeb ? 180 : 150),
+            SizedBox(width: isWeb ? 16 : 12),
+            _buildSummaryCard('1-30 Days', _formatAmount(total1to30), kWarning, Icons.calendar_view_month, isWeb ? 180 : 150),
+            SizedBox(width: isWeb ? 16 : 12),
+            _buildSummaryCard('31-60 Days', _formatAmount(total31to60), kWarning, Icons.calendar_view_month, isWeb ? 180 : 150),
+            SizedBox(width: isWeb ? 16 : 12),
+            _buildSummaryCard('61-90 Days', _formatAmount(total61to90), kDanger, Icons.calendar_view_month, isWeb ? 180 : 150),
+            SizedBox(width: isWeb ? 16 : 12),
+            _buildSummaryCard('90+ Days', _formatAmount(totalOver90), kDanger, Icons.warning, isWeb ? 180 : 150),
+            SizedBox(width: isWeb ? 16 : 12),
+            _buildSummaryCard('Total', _formatAmount(totalOutstanding), kPrimary, Icons.attach_money, isWeb ? 180 : 150),
           ],
         ),
       ),
@@ -275,12 +284,14 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   Widget _buildSummaryCard(String title, String amount, Color color, IconData icon, double width) {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return Container(
       width: width,
-      padding: EdgeInsets.all(2.5.w),
+      padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -294,13 +305,13 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 4.5.w, color: color),
-              SizedBox(width: 1.5.w),
+              Icon(icon, size: isWeb ? 24 : 20, color: color),
+              SizedBox(width: isWeb ? 8 : 6),
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: isWeb ? 12 : 11,
                     color: kSubText,
                     fontWeight: FontWeight.w500,
                   ),
@@ -310,11 +321,11 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
               ),
             ],
           ),
-          SizedBox(height: 1.h),
+          SizedBox(height: isWeb ? 8 : 6),
           Text(
             amount,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isWeb ? 18 : 14,
               fontWeight: FontWeight.w800,
               color: color,
             ),
@@ -327,56 +338,58 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   Widget _buildFilterBar() {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return Container(
-      width: 100.w,
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
       color: kCardBg,
       child: Row(
         children: [
           Expanded(
-            flex: 3,
+            flex: isWeb ? 3 : 2,
             child: Container(
-              height: 6.h,
+              height: isWeb ? 45 : 40,
               decoration: BoxDecoration(
                 color: kBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 border: Border.all(color: kBorder),
               ),
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) => _filterCustomers(),
-                style: TextStyle(fontSize: 14.sp),
+                style: TextStyle(fontSize: isWeb ? 14 : 12),
                 decoration: InputDecoration(
-                  hintText: 'Search by customer name, email, or phone...',
-                  hintStyle: TextStyle(fontSize: 12.sp, color: kSubText),
-                  prefixIcon: Icon(Icons.search, size: 5.w),
+                  hintText: isWeb ? 'Search by customer name, email, or phone...' : 'Search...',
+                  hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                  prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 1.8.h),
+                  contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                 ),
               ),
             ),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : 12),
           Expanded(
-            flex: 2,
+            flex: isWeb ? 2 : 1,
             child: Container(
-              height: 6.h,
+              height: isWeb ? 45 : 40,
               decoration: BoxDecoration(
                 color: kBg,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                 border: Border.all(color: kBorder),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedFilter,
-                  icon: Icon(Icons.arrow_drop_down, size: 5.w),
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
+                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
                   isExpanded: true,
-                  style: TextStyle(fontSize: 14.sp, color: kText),
+                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
                   items: _filterOptions.map((filter) {
                     return DropdownMenuItem(
                       value: filter,
-                      child: Text(filter),
+                      child: Text(filter, style: TextStyle(fontSize: isWeb ? 13 : 12)),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -396,18 +409,19 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
 
   Widget _buildAgedReceivablesTable() {
     List<AgedCustomer> filteredCustomers = _getFilteredCustomers();
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
     
     if (filteredCustomers.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.people_outline, size: 15.w, color: kSubText.withOpacity(0.5)),
-            SizedBox(height: 2.h),
+            Icon(Icons.people_outline, size: isWeb ? 80 : 64, color: kSubText.withOpacity(0.5)),
+            SizedBox(height: isWeb ? 20 : 16),
             Text(
               'No customers found',
               style: TextStyle(
-                fontSize: 14.sp,
+                fontSize: isWeb ? 18 : 14,
                 color: kSubText,
                 fontWeight: FontWeight.w500,
               ),
@@ -418,21 +432,26 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : 12),
       itemCount: filteredCustomers.length,
       itemBuilder: (context, index) {
         final customer = filteredCustomers[index];
-        return _buildCustomerRow(customer);
+        return Padding(
+          padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
+          child: _buildCustomerRow(customer),
+        );
       },
     );
   }
 
   Widget _buildCustomerRow(AgedCustomer customer) {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    final isMobile = ResponsiveUtils.isMobile(Get.context!);
+    
     return Container(
-      margin: EdgeInsets.only(bottom: 1.5.h),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -445,143 +464,166 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showCustomerDetails(customer),
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            children: [
-              // Customer Header
-              Container(
-                padding: EdgeInsets.all(3.w),
-                decoration: BoxDecoration(
-                  color: kBg,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
+          child: Padding(
+            padding: EdgeInsets.all(isWeb ? 16 : 12),
+            child: Column(
+              children: [
+                // Customer Header
+                Container(
+                  padding: EdgeInsets.all(isWeb ? 16 : 12),
+                  decoration: BoxDecoration(
+                    color: kBg,
+                    borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12.w,
-                      height: 12.w,
-                      decoration: BoxDecoration(
-                        color: kPrimary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Center(
-                        child: Text(
-                          customer.name[0].toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w800,
-                            color: kPrimary,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: isWeb ? 50 : 44,
+                        height: isWeb ? 50 : 44,
+                        decoration: BoxDecoration(
+                          color: kPrimary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            customer.name[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: isWeb ? 20 : 16,
+                              fontWeight: FontWeight.w800,
+                              color: kPrimary,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            customer.name,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              color: kText,
+                      SizedBox(width: isWeb ? 16 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              customer.name,
+                              style: TextStyle(
+                                fontSize: isWeb ? 15 : 13,
+                                fontWeight: FontWeight.w700,
+                                color: kText,
+                              ),
                             ),
-                          ),
-                          Text(
-                            customer.email,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: kSubText,
+                            SizedBox(height: isWeb ? 4 : 2),
+                            Text(
+                              customer.email,
+                              style: TextStyle(
+                                fontSize: isWeb ? 12 : 11,
+                                color: kSubText,
+                              ),
                             ),
-                          ),
-                          Text(
-                            customer.phone,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: kSubText,
+                            SizedBox(height: isWeb ? 4 : 2),
+                            Text(
+                              customer.phone,
+                              style: TextStyle(
+                                fontSize: isWeb ? 12 : 11,
+                                color: kSubText,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Total Outstanding',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: kSubText,
-                          ),
+                          ],
                         ),
+                      ),
+                      if (!isMobile)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Total Outstanding',
+                              style: TextStyle(
+                                fontSize: isWeb ? 11 : 10,
+                                color: kSubText,
+                              ),
+                            ),
+                            SizedBox(height: isWeb ? 4 : 2),
+                            Text(
+                              _formatAmount(customer.totalOutstanding),
+                              style: TextStyle(
+                                fontSize: isWeb ? 16 : 14,
+                                fontWeight: FontWeight.w800,
+                                color: kDanger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      if (isMobile)
                         Text(
                           _formatAmount(customer.totalOutstanding),
                           style: TextStyle(
-                            fontSize: 14.sp,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: kDanger,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Aging Table Row
-              Container(
-                padding: EdgeInsets.all(3.w),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('Current', _formatAmount(customer.current), customer.current > 0 ? kSuccess : kSubText),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('1-30 Days', _formatAmount(customer.days1to30), customer.days1to30 > 0 ? kWarning : kSubText),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('31-60 Days', _formatAmount(customer.days31to60), customer.days31to60 > 0 ? kWarning : kSubText),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('61-90 Days', _formatAmount(customer.days61to90), customer.days61to90 > 0 ? kDanger : kSubText),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('90+ Days', _formatAmount(customer.daysOver90), customer.daysOver90 > 0 ? kDanger : kSubText),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgingCell('Total', _formatAmount(customer.totalOutstanding), kPrimary, isBold: true),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Action Buttons
-              Container(
-                padding: EdgeInsets.all(2.w),
-                decoration: BoxDecoration(
-                  color: kBg,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+                    ],
                   ),
                 ),
-                child: Row(
+                
+                SizedBox(height: isWeb ? 16 : 12),
+                
+                // Aging Table Row
+                if (!isMobile)
+                  Container(
+                    padding: EdgeInsets.symmetric(vertical: isWeb ? 16 : 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('Current', _formatAmount(customer.current), customer.current > 0 ? kSuccess : kSubText),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('1-30 Days', _formatAmount(customer.days1to30), customer.days1to30 > 0 ? kWarning : kSubText),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('31-60 Days', _formatAmount(customer.days31to60), customer.days31to60 > 0 ? kWarning : kSubText),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('61-90 Days', _formatAmount(customer.days61to90), customer.days61to90 > 0 ? kDanger : kSubText),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('90+ Days', _formatAmount(customer.daysOver90), customer.daysOver90 > 0 ? kDanger : kSubText),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgingCell('Total', _formatAmount(customer.totalOutstanding), kPrimary, isBold: true),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                // Mobile Aging Cells
+                if (isMobile)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildMobileAgingCell('Current', _formatAmount(customer.current), customer.current > 0 ? kSuccess : kSubText),
+                      _buildMobileAgingCell('1-30', _formatAmount(customer.days1to30), customer.days1to30 > 0 ? kWarning : kSubText),
+                      _buildMobileAgingCell('31-60', _formatAmount(customer.days31to60), customer.days31to60 > 0 ? kWarning : kSubText),
+                      _buildMobileAgingCell('61-90', _formatAmount(customer.days61to90), customer.days61to90 > 0 ? kDanger : kSubText),
+                      _buildMobileAgingCell('90+', _formatAmount(customer.daysOver90), customer.daysOver90 > 0 ? kDanger : kSubText),
+                      _buildMobileAgingCell('Total', _formatAmount(customer.totalOutstanding), kPrimary, isBold: true),
+                    ],
+                  ),
+                
+                SizedBox(height: isWeb ? 16 : 12),
+                
+                // Action Buttons
+                Row(
                   children: [
                     Expanded(
                       child: TextButton.icon(
                         onPressed: () => _viewInvoices(customer),
-                        icon: Icon(Icons.receipt, size: 4.w),
-                        label: Text('View Invoices', style: TextStyle(fontSize: 12.sp)),
+                        icon: Icon(Icons.receipt, size: isWeb ? 18 : 14),
+                        label: Text('View Invoices', style: TextStyle(fontSize: isWeb ? 12 : 10)),
                         style: TextButton.styleFrom(
                           foregroundColor: kPrimary,
                         ),
@@ -590,8 +632,8 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
                     Expanded(
                       child: TextButton.icon(
                         onPressed: () => _sendReminder(customer),
-                        icon: Icon(Icons.email, size: 4.w),
-                        label: Text('Send Reminder', style: TextStyle(fontSize: 12.sp)),
+                        icon: Icon(Icons.email, size: isWeb ? 18 : 14),
+                        label: Text('Send Reminder', style: TextStyle(fontSize: isWeb ? 12 : 10)),
                         style: TextButton.styleFrom(
                           foregroundColor: kPrimary,
                         ),
@@ -600,22 +642,21 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _recordPayment(customer),
-                        icon: Icon(Icons.payment, size: 4.w, color: Colors.white),
-                        label: Text('Record Payment', style: TextStyle(fontSize: 12
-                        .sp)),
+                        icon: Icon(Icons.payment, size: isWeb ? 18 : 14, color: Colors.white),
+                        label: Text('Record Payment', style: TextStyle(fontSize: isWeb ? 12 : 10)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kSuccess,
-                          padding: EdgeInsets.symmetric(vertical: 1.h),
+                          padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 6),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -623,21 +664,23 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   Widget _buildAgingCell(String label, String amount, Color color, {bool isBold = false}) {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return Column(
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 12.sp,
+            fontSize: isWeb ? 12 : 10,
             color: kSubText,
             fontWeight: FontWeight.w500,
           ),
         ),
-        SizedBox(height: 0.5.h),
+        SizedBox(height: isWeb ? 4 : 2),
         Text(
           amount,
           style: TextStyle(
-            fontSize: isBold ? 12.sp : 12.sp,
+            fontSize: isWeb ? (isBold ? 13 : 12) : (isBold ? 12 : 11),
             fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
             color: color,
           ),
@@ -646,22 +689,52 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
     );
   }
 
+  Widget _buildMobileAgingCell(String label, String amount, Color color, {bool isBold = false}) {
+    return Container(
+      width: 100,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: kSubText,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: isBold ? 12 : 11,
+              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFAB() {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
     return FloatingActionButton(
       onPressed: () => _exportToExcel(),
       backgroundColor: kPrimary,
-      child: Icon(Icons.download, color: Colors.white, size: 6.w),
+      child: Icon(Icons.download, color: Colors.white, size: isWeb ? 24 : 20),
       elevation: 3,
     );
   }
 
-  // ==================== PDF Generation Logic ====================
+  // ==================== PDF Generation Logic (Unchanged) ====================
   Future<void> _generateAndPrintPDF() async {
     try {
       Get.dialog(
         Center(
           child: Container(
-            padding: EdgeInsets.all(5.w),
+            padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: kCardBg,
               borderRadius: BorderRadius.circular(16),
@@ -669,11 +742,11 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: kPrimary, strokeWidth: 3.w),
-                SizedBox(height: 2.h),
+                CircularProgressIndicator(color: kPrimary, strokeWidth: 3),
+                const SizedBox(height: 16),
                 Text(
                   'Generating PDF...',
-                  style: TextStyle(fontSize: 12.sp, color: kText),
+                  style:  TextStyle(fontSize: 12, color: kText),
                 ),
               ],
             ),
@@ -791,67 +864,69 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
       ),
     );
   }
-pw.Widget _buildPdfTableHeader() {
-  return pw.Container(
-    padding: pw.EdgeInsets.all(8),
-    decoration: pw.BoxDecoration(
-      color: PdfColors.grey300,
-      borderRadius: pw.BorderRadius.circular(5),
-    ),
-    child: pw.Row(
-      children: [
-        pw.Expanded(flex: 3, child: pw.Text('Customer', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold))),
-        pw.Expanded(flex: 2, child: pw.Text('Current', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text('1-30', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text('31-60', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text('61-90', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text('90+', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text('Total', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-      ],
-    ),
-  );
-}  
 
-pw.Widget _buildPdfCustomerRow(AgedCustomer customer) {
-  return pw.Container(
-    padding: pw.EdgeInsets.all(6),
-    decoration: pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
-    ),
-    child: pw.Row(
-      children: [
-        pw.Expanded(flex: 3, child: pw.Text(customer.name, style: pw.TextStyle(fontSize: 12))),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.current), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days1to30), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days31to60), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days61to90), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.daysOver90), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.totalOutstanding), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-      ],
-    ),
-  );
-}
+  pw.Widget _buildPdfTableHeader() {
+    return pw.Container(
+      padding: pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey300,
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(flex: 3, child: pw.Text('Customer', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold))),
+          pw.Expanded(flex: 2, child: pw.Text('Current', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text('1-30', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text('31-60', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text('61-90', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text('90+', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text('Total', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+        ],
+      ),
+    );
+  }
 
-pw.Widget _buildPdfTotalRow() {
-  return pw.Container(
-    padding: pw.EdgeInsets.all(8),
-    decoration: pw.BoxDecoration(
-      color: PdfColors.grey200,
-      borderRadius: pw.BorderRadius.circular(5),
-    ),
-    child: pw.Row(
-      children: [
-        pw.Expanded(flex: 3, child: pw.Text('TOTAL', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold))),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalCurrent), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total1to30), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total31to60), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total61to90), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalOver90), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-        pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalOutstanding), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
-      ],
-    ),
-  );
-}
+  pw.Widget _buildPdfCustomerRow(AgedCustomer customer) {
+    return pw.Container(
+      padding: pw.EdgeInsets.all(6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(flex: 3, child: pw.Text(customer.name, style: pw.TextStyle(fontSize: 12))),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.current), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days1to30), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days31to60), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.days61to90), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.daysOver90), style: pw.TextStyle(fontSize: 12), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(customer.totalOutstanding), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildPdfTotalRow() {
+    return pw.Container(
+      padding: pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey200,
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(flex: 3, child: pw.Text('TOTAL', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold))),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalCurrent), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total1to30), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total31to60), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(total61to90), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalOver90), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+          pw.Expanded(flex: 2, child: pw.Text(_formatAmountForPdf(totalOutstanding), style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.right)),
+        ],
+      ),
+    );
+  }
+
   pw.Widget _buildPdfFooter() {
     return pw.Column(
       children: [
@@ -872,7 +947,7 @@ pw.Widget _buildPdfTotalRow() {
       Get.dialog(
         Center(
           child: Container(
-            padding: EdgeInsets.all(5.w),
+            padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: kCardBg,
               borderRadius: BorderRadius.circular(16),
@@ -880,11 +955,11 @@ pw.Widget _buildPdfTotalRow() {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: kPrimary, strokeWidth: 3.w),
-                SizedBox(height: 2.h),
+                CircularProgressIndicator(color: kPrimary, strokeWidth: 3),
+                const SizedBox(height: 16),
                 Text(
                   'Preparing print...',
-                  style: TextStyle(fontSize: 12.sp, color: kText),
+                  style:  TextStyle(fontSize: 12, color: kText),
                 ),
               ],
             ),
@@ -1004,128 +1079,162 @@ pw.Widget _buildPdfTotalRow() {
   }
 
   void _showCustomerDetails(AgedCustomer customer) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(5.w),
-        constraints: BoxConstraints(maxHeight: 70.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    final isMobile = ResponsiveUtils.isMobile(Get.context!);
+    
+    if (isWeb) {
+      showDialog(
+        context: context,
+        builder: (ctx) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            width: 500,
+            padding: const EdgeInsets.all(24),
+            child: _buildCustomerDetailsContent(customer),
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(20),
+          constraints: const BoxConstraints(maxHeight: 70, maxWidth: 500),
+          child: _buildCustomerDetailsContent(customer),
+        ),
+      );
+    }
+  }
+
+  Widget _buildCustomerDetailsContent(AgedCustomer customer) {
+    final isWeb = ResponsiveUtils.isWeb(Get.context!);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 12.w,
-                  height: 12.w,
-                  decoration: BoxDecoration(
-                    color: kPrimary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      customer.name[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w800,
-                        color: kPrimary,
-                      ),
-                    ),
+            Container(
+              width: isWeb ? 60 : 50,
+              height: isWeb ? 60 : 50,
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isWeb ? 14 : 10),
+              ),
+              child: Center(
+                child: Text(
+                  customer.name[0].toUpperCase(),
+                  style: TextStyle(
+                    fontSize: isWeb ? 24 : 18,
+                    fontWeight: FontWeight.w800,
+                    color: kPrimary,
                   ),
                 ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        customer.name,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w800,
-                          color: kText,
-                        ),
-                      ),
-                      Text(
-                        customer.email,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: kSubText,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 2.h),
-            _buildDetailRow('Phone', customer.phone),
-            _buildDetailRow('Total Outstanding', _formatAmount(customer.totalOutstanding)),
-            _buildDetailRow('Current', _formatAmount(customer.current)),
-            _buildDetailRow('1-30 Days', _formatAmount(customer.days1to30)),
-            _buildDetailRow('31-60 Days', _formatAmount(customer.days31to60)),
-            _buildDetailRow('61-90 Days', _formatAmount(customer.days61to90)),
-            _buildDetailRow('90+ Days', _formatAmount(customer.daysOver90)),
-            SizedBox(height: 2.h),
-            Text(
-              'Invoices',
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
-                color: kText,
               ),
             ),
-            SizedBox(height: 1.h),
-            ...customer.invoices.map((invoice) => _buildInvoiceItem(invoice)),
-            SizedBox(height: 2.h),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _viewInvoices(customer);
-                    },
-                    icon: Icon(Icons.receipt, size: 4.5.w),
-                    label: Text('View All', style: TextStyle(fontSize: 12.sp)),
-                  ),
-                ),
-                SizedBox(width: 3.w),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _recordPayment(customer);
-                    },
-                    icon: Icon(Icons.payment, size: 4.5.w),
-                    label: Text('Record Payment', style: TextStyle(fontSize: 12.sp)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kSuccess,
+            SizedBox(width: isWeb ? 16 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name,
+                    style: TextStyle(
+                      fontSize: isWeb ? 18 : 16,
+                      fontWeight: FontWeight.w800,
+                      color: kText,
                     ),
                   ),
-                ),
-              ],
+                  Text(
+                    customer.email,
+                    style: TextStyle(
+                      fontSize: isWeb ? 13 : 12,
+                      color: kSubText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Container(
+          padding: EdgeInsets.all(isWeb ? 16 : 12),
+          decoration: BoxDecoration(
+            color: kBg,
+            borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+          ),
+          child: Column(
+            children: [
+              _buildDetailRow('Phone', customer.phone, isWeb),
+              _buildDetailRow('Total Outstanding', _formatAmount(customer.totalOutstanding), isWeb),
+              _buildDetailRow('Current', _formatAmount(customer.current), isWeb),
+              _buildDetailRow('1-30 Days', _formatAmount(customer.days1to30), isWeb),
+              _buildDetailRow('31-60 Days', _formatAmount(customer.days31to60), isWeb),
+              _buildDetailRow('61-90 Days', _formatAmount(customer.days61to90), isWeb),
+              _buildDetailRow('90+ Days', _formatAmount(customer.daysOver90), isWeb),
+            ],
+          ),
+        ),
+        SizedBox(height: isWeb ? 20 : 16),
+        Text(
+          'Invoices',
+          style: TextStyle(
+            fontSize: isWeb ? 16 : 14,
+            fontWeight: FontWeight.w700,
+            color: kText,
+          ),
+        ),
+        SizedBox(height: isWeb ? 12 : 8),
+        ...customer.invoices.map((invoice) => _buildInvoiceItem(invoice, isWeb)),
+        SizedBox(height: isWeb ? 20 : 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(Get.context!);
+                  _viewInvoices(customer);
+                },
+                icon: Icon(Icons.receipt, size: isWeb ? 20 : 16),
+                label: Text('View All', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+              ),
+            ),
+            SizedBox(width: isWeb ? 12 : 8),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(Get.context!);
+                  _recordPayment(customer);
+                },
+                icon: Icon(Icons.payment, size: isWeb ? 20 : 16),
+                label: Text('Record Payment', style: TextStyle(fontSize: isWeb ? 14 : 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kSuccess,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, bool isWeb) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 1.5.h),
+      padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : 11,
               color: kSubText,
               fontWeight: FontWeight.w500,
             ),
@@ -1133,7 +1242,7 @@ pw.Widget _buildPdfTotalRow() {
           Text(
             value,
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isWeb ? 13 : 12,
               color: kText,
               fontWeight: FontWeight.w600,
             ),
@@ -1143,18 +1252,18 @@ pw.Widget _buildPdfTotalRow() {
     );
   }
 
-  Widget _buildInvoiceItem(AgedInvoice invoice) {
+  Widget _buildInvoiceItem(AgedInvoice invoice, bool isWeb) {
     double outstanding = invoice.amount - invoice.paidAmount;
     int daysOverdue = _asAtDate.difference(invoice.dueDate).inDays;
     Color statusColor = daysOverdue <= 0 ? kSuccess :
                         daysOverdue <= 30 ? kWarning : kDanger;
     
     return Container(
-      margin: EdgeInsets.only(bottom: 1.h),
-      padding: EdgeInsets.all(2.w),
+      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
+      padding: EdgeInsets.all(isWeb ? 12 : 10),
       decoration: BoxDecoration(
         color: kBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
       ),
       child: Row(
         children: [
@@ -1165,7 +1274,7 @@ pw.Widget _buildPdfTotalRow() {
                 Text(
                   invoice.id,
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: isWeb ? 13 : 12,
                     fontWeight: FontWeight.w600,
                     color: kText,
                   ),
@@ -1173,7 +1282,7 @@ pw.Widget _buildPdfTotalRow() {
                 Text(
                   'Due: ${DateFormat('dd MMM yyyy').format(invoice.dueDate)}',
                   style: TextStyle(
-                    fontSize: 12.sp,
+                    fontSize: isWeb ? 11 : 10,
                     color: kSubText,
                   ),
                 ),
@@ -1183,22 +1292,22 @@ pw.Widget _buildPdfTotalRow() {
           Text(
             _formatAmount(outstanding),
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: isWeb ? 14 : 12,
               fontWeight: FontWeight.w700,
               color: statusColor,
             ),
           ),
-          SizedBox(width: 2.w),
+          SizedBox(width: isWeb ? 8 : 6),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 1.5.w, vertical: 0.3.h),
+            padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
             decoration: BoxDecoration(
               color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(isWeb ? 6 : 4),
             ),
             child: Text(
-              daysOverdue <= 0 ? 'Current' : '$daysOverdue days overdue',
+              daysOverdue <= 0 ? 'Current' : '$daysOverdue days',
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: isWeb ? 10 : 9,
                 color: statusColor,
                 fontWeight: FontWeight.w600,
               ),

@@ -3,6 +3,7 @@ import 'package:LedgerPro_app/core/BusinessSetup/Views/business_setup_view.dart'
 import 'package:LedgerPro_app/core/Onboarding/views/Onboarding_screen.dart';
 import 'package:LedgerPro_app/core/Register/Views/register_screen.dart';
 import 'package:LedgerPro_app/core/Splash/screen/splash_screen.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashboard_screen_web.dart';
 import 'package:LedgerPro_app/core/plans/controllers/subscription_controller.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
 import 'package:flutter/material.dart';
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
           themeMode: Get.find<ThemeController>().isDarkMode.value 
               ? ThemeMode.dark 
               : ThemeMode.light,
-          home:  SplashScreen(),
+          home:  WebDashboardScreen(),
         );
       },
     );
