@@ -6,19 +6,18 @@ import 'package:LedgerPro_app/core/Splash/screen/splash_screen.dart';
 import 'package:LedgerPro_app/core/dashboard/Screens/dashboard_screen_web.dart';
 import 'package:LedgerPro_app/core/plans/controllers/subscription_controller.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
+import 'package:LedgerPro_app/core/plans/views/payment_cancel_screen.dart';
+import 'package:LedgerPro_app/core/plans/views/payment_sucess_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sizer/sizer.dart';
 
-// Theme Controller for managing dark mode
 class ThemeController extends GetxController {
   var isDarkMode = false.obs;
 
   void toggleDarkMode() {
     isDarkMode.value = !isDarkMode.value;
     print('Dark mode: ${isDarkMode.value}');
-    
-    // This will change theme for ENTIRE APP
     if (isDarkMode.value) {
       Get.changeThemeMode(ThemeMode.dark);
     } else {
@@ -29,12 +28,8 @@ class ThemeController extends GetxController {
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize subscription controller early
   Get.put(SubscriptionController(), permanent: true);
-  // Initialize theme controller
   Get.put(ThemeController(), permanent: true);
-
   runApp(const MyApp());
 }
 
@@ -50,16 +45,31 @@ class MyApp extends StatelessWidget {
           title: 'LedgerPro App',
           theme: _buildLightTheme(),
           darkTheme: _buildDarkTheme(),
-          themeMode: Get.find<ThemeController>().isDarkMode.value 
-              ? ThemeMode.dark 
+          themeMode: Get.find<ThemeController>().isDarkMode.value
+              ? ThemeMode.dark
               : ThemeMode.light,
-          home:  WebDashboardScreen(),
+
+          // ✅ home hata ke initialRoute use karo
+          initialRoute: '/',
+          getPages: [
+            GetPage(
+              name: '/',
+              page: () => WebDashboardScreen(),
+            ),
+            GetPage(
+              name: '/payment-success',
+              page: () => const PaymentSuccessScreen(),
+            ),
+            GetPage(
+              name: '/payment-cancel',
+              page: () => const PaymentCancelScreen(),
+            ),
+          ],
         );
       },
     );
   }
 
-  // Light Theme
   ThemeData _buildLightTheme() {
     return ThemeData(
       brightness: Brightness.light,
@@ -100,26 +110,37 @@ class MyApp extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1AB4F5), width: 2),
+          borderSide:
+              const BorderSide(color: Color(0xFF1AB4F5), width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFE74C3C)),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+        contentPadding:
+            EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
       ),
       textTheme: TextTheme(
-        headlineLarge: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800, color: Colors.black87),
-        headlineMedium: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.black87),
-        titleLarge: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.black87),
+        headlineLarge: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w800,
+            color: Colors.black87),
+        headlineMedium: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87),
+        titleLarge: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87),
         bodyLarge: TextStyle(fontSize: 14.sp, color: Colors.black87),
         bodyMedium: TextStyle(fontSize: 12.sp, color: Colors.black87),
-        labelSmall: TextStyle(fontSize: 10.sp, color: Colors.black54),
+        labelSmall:
+            TextStyle(fontSize: 10.sp, color: Colors.black54),
       ),
     );
   }
 
-  // Dark Theme - ENTIRE APP will use this when dark mode is ON
   ThemeData _buildDarkTheme() {
     return ThemeData(
       brightness: Brightness.dark,
@@ -160,21 +181,34 @@ class MyApp extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1AB4F5), width: 2),
+          borderSide:
+              const BorderSide(color: Color(0xFF1AB4F5), width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFE74C3C)),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+        contentPadding:
+            EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
       ),
       textTheme: TextTheme(
-        headlineLarge: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.w800, color: Colors.white),
-        headlineMedium: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700, color: Colors.white),
-        titleLarge: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.white),
+        headlineLarge: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w800,
+            color: Colors.white),
+        headlineMedium: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w700,
+            color: Colors.white),
+        titleLarge: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white),
         bodyLarge: TextStyle(fontSize: 14.sp, color: Colors.white70),
-        bodyMedium: TextStyle(fontSize: 12.sp, color: Colors.white70),
-        labelSmall: TextStyle(fontSize: 10.sp, color: Colors.white60),
+        bodyMedium:
+            TextStyle(fontSize: 12.sp, color: Colors.white70),
+        labelSmall:
+            TextStyle(fontSize: 10.sp, color: Colors.white60),
       ),
     );
   }
