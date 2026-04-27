@@ -95,6 +95,8 @@ class SubscriptionService {
           };
         }
 
+
+
         if (!checkoutUrl.toString().startsWith('http')) {
           print("❌ Invalid URL Schema => $checkoutUrl");
           return {
