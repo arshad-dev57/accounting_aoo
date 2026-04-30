@@ -1,8 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/companyprofile/controller/profile_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:sizer/sizer.dart';
 import 'package:iconify_flutter/iconify_flutter.dart';
 import 'package:iconify_flutter/icons/mdi.dart';
 
@@ -12,20 +12,26 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.put(ProfileController());
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
 
     return Scaffold(
       backgroundColor: kBg,
-      appBar: _buildAppBar(controller),
-      body: _buildBody(controller),
+      appBar: _buildAppBar(controller, context),
+      body: _buildBody(controller, context),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(ProfileController controller) {
+  PreferredSizeWidget _buildAppBar(ProfileController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return AppBar(
       title: Text(
         'Profile',
         style: TextStyle(
-          fontSize: 15.sp,
+          fontSize: ResponsiveUtils.getHeadingFontSize(context),
           fontWeight: FontWeight.w800,
           color: Colors.white,
           letterSpacing: -0.3,
@@ -33,7 +39,7 @@ class ProfileScreen extends StatelessWidget {
       ),
       backgroundColor: kPrimary,
       elevation: 0,
-      centerTitle: false,
+      centerTitle: isMobile,
       actions: [
         Obx(() {
           if (!controller.isEditing.value && !controller.isLoading.value) {
@@ -42,7 +48,7 @@ class ProfileScreen extends StatelessWidget {
               child: Text(
                 'Edit',
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -55,7 +61,7 @@ class ProfileScreen extends StatelessWidget {
               child: Text(
                 'Cancel',
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                   fontWeight: FontWeight.w600,
                   color: Colors.white70,
                 ),
@@ -64,12 +70,15 @@ class ProfileScreen extends StatelessWidget {
           }
           return const SizedBox.shrink();
         }),
-        SizedBox(width: 2.w),
+        SizedBox(width: isWeb ? 16 : 8),
       ],
     );
   }
 
-  Widget _buildBody(ProfileController controller) {
+  Widget _buildBody(ProfileController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Obx(() {
       if (controller.isLoading.value) {
         return Center(
@@ -80,11 +89,11 @@ class ProfileScreen extends StatelessWidget {
                 color: kPrimary,
                 strokeWidth: 3,
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: ResponsiveUtils.getButtonHeight(context) / 3),
               Text(
                 'Loading profile...',
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                   color: kSubText,
                 ),
               ),
@@ -94,87 +103,105 @@ class ProfileScreen extends StatelessWidget {
       }
       
       return SingleChildScrollView(
-        padding: EdgeInsets.all(4.w),
-        child: Column(
-          children: [
-            SizedBox(height: 2.h),
-            _buildProfileHeader(controller),
-            SizedBox(height: 4.h),
-            _buildProfileForm(controller),
-            SizedBox(height: 4.h),
-            if (controller.isEditing.value) _buildSaveButton(controller),
-          ],
+        padding: ResponsiveUtils.getScreenPadding(context),
+        child: Center(
+          child: SizedBox(
+            width: ResponsiveUtils.getFormWidth(context),
+            child: Column(
+              children: [
+                SizedBox(height: ResponsiveUtils.isMobile(context) ? 8 : 16),
+                _buildProfileHeader(controller, context),
+                SizedBox(height: ResponsiveUtils.isMobile(context) ? 24 : 32),
+                _buildProfileForm(controller, context),
+                SizedBox(height: ResponsiveUtils.isMobile(context) ? 24 : 32),
+                if (controller.isEditing.value) _buildSaveButton(controller, context),
+              ],
+            ),
+          ),
         ),
       );
     });
   }
 
-  Widget _buildProfileHeader(ProfileController controller) {
+  Widget _buildProfileHeader(ProfileController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Obx(() => Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 24 : isTablet ? 20 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [kPrimary, kPrimaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: kPrimary.withOpacity(0.3),
-            blurRadius: 20,
+            blurRadius: isWeb ? 20 : 15,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: EdgeInsets.all(3.w),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Iconify(
-              Mdi.account_circle,
-              color: Colors.white,
-              size: 12.w,
-            ),
-          ),
-          SizedBox(height: 1.5.h),
-          Text(
-            controller.organizationName.value.isEmpty 
-                ? 'Your Organization' 
-                : controller.organizationName.value,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 0.5.h),
-          Text(
-            controller.personName.value.isEmpty 
-                ? 'Profile' 
-                : controller.personName.value,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.white.withOpacity(0.8),
-            ),
+          Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Iconify(
+                  Mdi.account_circle,
+                  color: kPrimary,
+                  size: isWeb ? 80 : isTablet ? 60 : 50,
+                ),
+              ),
+              SizedBox(height: isWeb ? 16 : isTablet ? 12 : 10),
+              Text(
+                controller.organizationName.value.isEmpty 
+                    ? 'Your Organization' 
+                    : controller.organizationName.value,
+                style: TextStyle(
+                  fontSize: isWeb ? 20 : isTablet ? 18 : 16,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.3,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: isWeb ? 8 : isTablet ? 6 : 4),
+              Text(
+                controller.personName.value.isEmpty 
+                    ? 'Profile' 
+                    : controller.personName.value,
+                style: TextStyle(
+                  fontSize: isWeb ? 14 : isTablet ? 13 : 12,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     ));
   }
 
-  Widget _buildProfileForm(ProfileController controller) {
+  Widget _buildProfileForm(ProfileController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 24 : isTablet ? 20 : 16),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -189,13 +216,13 @@ class ProfileScreen extends StatelessWidget {
           Text(
             'Organization Information',
             style: TextStyle(
-              fontSize: 14.sp,
+              fontSize: isWeb ? 18 : isTablet ? 16 : 14,
               fontWeight: FontWeight.w800,
               color: kText,
               letterSpacing: -0.3,
             ),
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 24 : isTablet ? 20 : 16),
           
           // Organization Name
           _buildTextField(
@@ -204,9 +231,10 @@ class ProfileScreen extends StatelessWidget {
             icon: Mdi.domain,
             controller: controller.orgNameController,
             enabled: controller.isEditing.value,
+            context: context,
           ),
           
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 20 : isTablet ? 16 : 12),
           
           // Person Name
           _buildTextField(
@@ -215,9 +243,10 @@ class ProfileScreen extends StatelessWidget {
             icon: Mdi.account,
             controller: controller.personNameController,
             enabled: controller.isEditing.value,
+            context: context,
           ),
           
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 20 : isTablet ? 16 : 12),
           
           // Address
           _buildTextField(
@@ -227,9 +256,10 @@ class ProfileScreen extends StatelessWidget {
             controller: controller.addressController,
             enabled: controller.isEditing.value,
             maxLines: 2,
+            context: context,
           ),
           
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 20 : isTablet ? 16 : 12),
           
           // Email Id
           _buildTextField(
@@ -239,9 +269,10 @@ class ProfileScreen extends StatelessWidget {
             controller: controller.emailController,
             enabled: controller.isEditing.value,
             keyboardType: TextInputType.emailAddress,
+            context: context,
           ),
           
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 20 : isTablet ? 16 : 12),
           
           // Contact No
           _buildTextField(
@@ -251,9 +282,10 @@ class ProfileScreen extends StatelessWidget {
             controller: controller.contactNoController,
             enabled: controller.isEditing.value,
             keyboardType: TextInputType.phone,
+            context: context,
           ),
           
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 20 : isTablet ? 16 : 12),
           
           // Website Link
           _buildTextField(
@@ -263,6 +295,7 @@ class ProfileScreen extends StatelessWidget {
             controller: controller.websiteController,
             enabled: controller.isEditing.value,
             keyboardType: TextInputType.url,
+            context: context,
           ),
         ],
       ),
@@ -275,59 +308,64 @@ class ProfileScreen extends StatelessWidget {
     required String icon,
     required TextEditingController controller,
     required bool enabled,
+    required BuildContext context,
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Iconify(icon, size: 4.w, color: kPrimary),
-            SizedBox(width: 2.w),
+            Iconify(icon, size: isWeb ? 20 : isTablet ? 18 : 16, color: kPrimary),
+            SizedBox(width: isWeb ? 8 : isTablet ? 6 : 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: isWeb ? 13 : isTablet ? 12 : 11,
                 fontWeight: FontWeight.w600,
                 color: kSubText,
               ),
             ),
           ],
         ),
-        SizedBox(height: 1.h),
+        SizedBox(height: isWeb ? 8 : isTablet ? 6 : 4),
         TextFormField(
           controller: controller,
           enabled: enabled,
           maxLines: maxLines,
           keyboardType: keyboardType,
           style: TextStyle(
-            fontSize: 13.sp,
+            fontSize: isWeb ? 14 : isTablet ? 13 : 12,
             color: kText,
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : isTablet ? 12 : 11,
               color: Colors.grey[400],
             ),
             filled: true,
             fillColor: enabled ? Colors.white : kBg.withOpacity(0.5),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(2.w),
+              borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(2.w),
+              borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               borderSide: BorderSide(color: kBorder.withOpacity(0.5)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(2.w),
+              borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               borderSide: const BorderSide(color: kPrimary, width: 2),
             ),
             contentPadding: EdgeInsets.symmetric(
-              horizontal: 3.w,
-              vertical: maxLines > 1 ? 2.h : 1.5.h,
+              horizontal: isWeb ? 16 : isTablet ? 14 : 12,
+              vertical: maxLines > 1 ? (isWeb ? 16 : isTablet ? 14 : 12) : (isWeb ? 14 : isTablet ? 12 : 10),
             ),
           ),
         ),
@@ -335,10 +373,13 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSaveButton(ProfileController controller) {
+  Widget _buildSaveButton(ProfileController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Obx(() => SizedBox(
       width: double.infinity,
-      height: 7.h,
+      height: ResponsiveUtils.getButtonHeight(context),
       child: ElevatedButton(
         onPressed: controller.isSaving.value 
             ? null 
@@ -352,13 +393,13 @@ class ProfileScreen extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(2.w),
+            borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
           ),
         ),
         child: controller.isSaving.value
             ? SizedBox(
-                height: 4.w,
-                width: 4.w,
+                height: isWeb ? 24 : isTablet ? 20 : 18,
+                width: isWeb ? 24 : isTablet ? 20 : 18,
                 child: const CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -367,7 +408,7 @@ class ProfileScreen extends StatelessWidget {
             : Text(
                 'Save Changes',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: isWeb ? 16 : isTablet ? 15 : 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -375,3 +416,5 @@ class ProfileScreen extends StatelessWidget {
     ));
   }
 }
+
+

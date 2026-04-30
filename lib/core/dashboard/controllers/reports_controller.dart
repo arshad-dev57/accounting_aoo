@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -236,16 +237,24 @@ class ReportsController extends GetxController {
   
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void exportReport() {
-    Get.snackbar('Export', 'Exporting report to Excel...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.success(
+      kPrimary,
+      'Export',
+      'Exporting report to Excel...',
+      duration: const Duration(seconds: 3),
+    );
   }
   
   void printReport() {
-    Get.snackbar('Print', 'Preparing report for print...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.success(
+      kPrimary,
+      'Print',
+      'Preparing report for print...',
+      duration: const Duration(seconds: 3),
+    );
   }
 }

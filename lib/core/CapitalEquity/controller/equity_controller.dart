@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/CapitalEquity/models/equity_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,7 +74,7 @@ class EquityController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   // ==================== LOAD EQUITY ACCOUNTS ====================
@@ -182,12 +185,10 @@ class EquityController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
+          AppSnackbar.success(
+            Colors.green,
             'Success',
             'Capital of ${formatAmount(amount)} added successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
           await loadEquityAccounts();
@@ -236,12 +237,11 @@ class EquityController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
+          AppSnackbar.success(
+            Colors.green,
             'Success',
             'Drawings of ${formatAmount(amount)} recorded successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
+            
             duration: const Duration(seconds: 3),
           );
           await loadEquityAccounts();
@@ -288,12 +288,11 @@ class EquityController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
+          AppSnackbar.success(
+            Colors.green,
             'Success',
             '${formatAmount(amount)} transferred to retained earnings\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
+            
             duration: const Duration(seconds: 3),
           );
           await loadEquityAccounts();
@@ -358,9 +357,10 @@ class EquityController extends GetxController {
       ),
     );
   }
-  
   Future<void> exportToPdf() async {
-    try {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -375,44 +375,68 @@ class EquityController extends GetxController {
         ),
         barrierDismissible: false,
       );
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfEquityAccountsSection(),
+          pw.SizedBox(height: 16),
+          _pdfTransactionsSection(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'equity_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      final pdf = pw.Document();
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfEquityAccountsSection(),
-            pw.SizedBox(height: 16),
-            _pdfTransactionsSection(),
-          ],
-        ),
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Equity report exported to PDF',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Equity report exported to PDF',
+        duration: const Duration(seconds: 2),
       );
       
-      final dir = await getTemporaryDirectory();
-      final fileName = 'equity_report_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', 'Equity report exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
   }
-  
+}
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -731,15 +755,18 @@ class EquityController extends GetxController {
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', 'Equity report exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Equity report exported to Excel',
+        
+        duration: const Duration(seconds: 2),
+      );
           
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -772,12 +799,11 @@ class EquityController extends GetxController {
   }
   
   void printEquity() {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.green,
       'Print',
       'Preparing equity report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      
       duration: const Duration(seconds: 2),
     );
   }
@@ -812,7 +838,7 @@ class EquityController extends GetxController {
                         TextFormField(
                           decoration: InputDecoration(
                             labelText: 'Amount *',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -926,7 +952,7 @@ class EquityController extends GetxController {
                         TextFormField(
                           decoration: InputDecoration(
                             labelText: 'Amount *',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -1037,7 +1063,7 @@ class EquityController extends GetxController {
                         TextFormField(
                           decoration: InputDecoration(
                             labelText: 'Amount *',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -1179,7 +1205,7 @@ class EquityController extends GetxController {
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Amount *',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 fillColor: kCardBg,
                                 filled: true,
@@ -1515,10 +1541,10 @@ class EquityController extends GetxController {
   
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 
   void _showError(String message) {
-    Get.snackbar('Error', message, snackPosition: SnackPosition.BOTTOM, backgroundColor: kWarning, colorText: Colors.white);
+    AppSnackbar.error(Colors.red, 'Error', message);
   }
 }

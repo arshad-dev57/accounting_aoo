@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../Utils/colors.dart';
+import '../../Utils/toast_utils.dart';
 
 class ContactSupportScreen extends StatefulWidget {
   const ContactSupportScreen({super.key});
@@ -46,9 +48,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
 
   Future<void> _submitSupportRequest() async {
     if (_messageController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please describe your issue',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Please describe your issue');
       return;
     }
 
@@ -73,9 +73,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar('Success', 'Your request has been sent!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.success(kSuccess, 'Success', 'Your request has been sent!');
         _messageController.clear();
         _subjectController.clear();
         Future.delayed(const Duration(seconds: 2), () => Get.back());
@@ -83,9 +81,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
         throw Exception('Failed to send');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to send. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Failed to send. Please try again.');
     } finally {
       setState(() => _isSubmitting = false);
     }
@@ -141,9 +137,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
 
   Widget _buildContactOption(IconData icon, String label, String value) {
     return GestureDetector(
-      onTap: () => Get.snackbar(label, value,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.white, colorText: Colors.black),
+      onTap: () => AppSnackbar.info(label, value),
       child: Column(
         children: [
           Container(

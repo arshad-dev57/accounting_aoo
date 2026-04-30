@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/Invoice/controller/invoice_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -1216,7 +1217,7 @@ class InvoicesScreen extends StatelessWidget {
                                           child: TextFormField(
                                             decoration: _inputDecoration(
                                                 'Unit Price',
-                                                prefix: '₨ '),
+                                                prefix: '\$ '),
                                             style: TextStyle(fontSize: 14.sp),
                                             keyboardType:
                                                 TextInputType.number,
@@ -1250,7 +1251,7 @@ class InvoicesScreen extends StatelessWidget {
                             TextFormField(
                               decoration: _inputDecoration(
                                   'Discount Amount',
-                                  prefix: '₨ '),
+                                  prefix: '\$ '),
                               style: TextStyle(fontSize: 14.sp),
                               keyboardType: TextInputType.number,
                               onChanged: (v) {
@@ -1531,7 +1532,7 @@ class InvoicesScreen extends StatelessWidget {
                           initialValue: amount.toString(),
                           decoration: InputDecoration(
                             labelText: 'Payment Amount *',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1730,10 +1731,7 @@ class InvoicesScreen extends StatelessWidget {
                               : () async {
                                   if (formKey.currentState!.validate()) {
                                     if (paymentMethod == 'Bank Transfer' && selectedBankAccountId.isEmpty) {
-                                      Get.snackbar('Error', 'Please select a bank account',
-                                          snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: kWarning,
-                                          colorText: Colors.white);
+                                      AppSnackbar.error(kWarning, 'Error', 'Please select a bank account');
                                       return;
                                     }
                                     Navigator.pop(context);
@@ -1894,6 +1892,6 @@ class InvoicesScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

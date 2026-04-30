@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -63,7 +64,7 @@ class InvoiceController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
 
   // Fetch bank accounts for dropdown
@@ -116,27 +117,14 @@ class InvoiceController extends GetxController {
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        Get.snackbar(
-          'Success',
-          data['message'] ?? 'Payment recorded successfully!\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
+        AppSnackbar.success(kSuccess, 'Success', data['message'] ?? 'Payment recorded successfully!\nJournal entry created');
         await fetchInvoices();
       } else {
         final errorData = jsonDecode(response.body);
-        Get.snackbar(
-          'Error',
-          errorData['message'] ?? 'Failed to record payment',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', errorData['message'] ?? 'Failed to record payment');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to record payment: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to record payment: $e');
     } finally {
       isProcessingPayment(false);
     }
@@ -212,7 +200,7 @@ class InvoiceController extends GetxController {
         _handleSessionExpired();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load invoices: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to load invoices: $e');
     } finally {
       isLoading(false);
     }
@@ -238,27 +226,14 @@ class InvoiceController extends GetxController {
       );
 
       if (response.statusCode == 201) {
-        Get.snackbar(
-          'Success',
-          'Invoice created successfully!\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
+        AppSnackbar.success(kSuccess, 'Success', 'Invoice created successfully!\nJournal entry created');
         await fetchInvoices();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
-          'Error',
-          data['message'] ?? 'Failed to create invoice',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', data['message'] ?? 'Failed to create invoice');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create invoice: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to create invoice: $e');
     } finally {
       isCreating(false);
     }
@@ -273,26 +248,14 @@ class InvoiceController extends GetxController {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar(
-          'Success',
-          'Invoice $invoiceNumber deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-        );
+        AppSnackbar.success(kSuccess, 'Success', 'Invoice $invoiceNumber deleted successfully');
         await fetchInvoices();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
-          'Error',
-          data['message'] ?? 'Failed to delete invoice',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', data['message'] ?? 'Failed to delete invoice');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete invoice: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to delete invoice: $e');
     }
   }
 
@@ -408,15 +371,12 @@ Future<void> exportSingleInvoiceToPdf(Invoice invoice) async {
     
     if (Get.isDialogOpen ?? false) Get.back();
     
-    Get.snackbar('Success', 'Invoice ${invoice.invoiceNumber} exported to PDF',
-        backgroundColor: const Color(0xFF2ECC71),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2));
+    AppSnackbar.success(kSuccess, 'Success', 'Invoice ${invoice.invoiceNumber} exported to PDF');
     
     await OpenFile.open(file.path);
   } catch (e) {
     if (Get.isDialogOpen ?? false) Get.back();
-    Get.snackbar('Error', 'Failed to export PDF: $e');
+    AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
   }
 }
 
@@ -671,15 +631,12 @@ Future<void> exportSingleInvoiceToExcel(Invoice invoice) async {
     
     if (Get.isDialogOpen ?? false) Get.back();
     
-    Get.snackbar('Success', 'Invoice ${invoice.invoiceNumber} exported to Excel',
-        backgroundColor: const Color(0xFF2ECC71),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2));
+    AppSnackbar.success(kSuccess, 'Success', 'Invoice ${invoice.invoiceNumber} exported to Excel');
         
     await OpenFile.open(file.path);
   } catch (e) {
     if (Get.isDialogOpen ?? false) Get.back();
-    Get.snackbar('Error', 'Failed to export Excel: $e');
+    AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
   }
 }
   
@@ -723,15 +680,12 @@ Future<void> exportSingleInvoiceToExcel(Invoice invoice) async {
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', '${invoices.length} invoices exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', '${invoices.length} invoices exported to PDF');
       
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
     }
   }
   
@@ -1023,15 +977,12 @@ Future<void> exportSingleInvoiceToExcel(Invoice invoice) async {
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', '${invoices.length} invoices exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', '${invoices.length} invoices exported to Excel');
           
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -1064,35 +1015,15 @@ Future<void> exportSingleInvoiceToExcel(Invoice invoice) async {
   }
   
   void printInvoices() {
-    Get.snackbar(
-      'Print',
-      'Preparing invoices report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
+    AppSnackbar.info('Print', 'Preparing invoices report...');
   }
   
   void printSingleInvoice(Invoice invoice) {
-    Get.snackbar(
-      'Print',
-      'Printing invoice ${invoice.invoiceNumber}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
+    AppSnackbar.info('Print', 'Printing invoice ${invoice.invoiceNumber}');
   }
 
   void _handleSessionExpired() {
-    Get.snackbar(
-      'Session Expired',
-      'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
-    );
+    AppSnackbar.error(kWarning, 'Session Expired', 'Please login again');
   }
 }
 

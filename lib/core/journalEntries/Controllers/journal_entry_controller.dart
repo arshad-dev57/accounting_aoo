@@ -1,3 +1,4 @@
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,21 @@ class JournalEntryController extends GetxController {
   var totalPages = 1.obs;
   var hasMore = true.obs;
   final int pageSize = 10;
+// Add these properties and methods to your controller
 
+Future<void> loadPreviousPage() async {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    await fetchJournalEntries();
+  }
+}
+
+Future<void> loadNextPage() async {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    await fetchJournalEntries();
+  }
+}
   // Summary totals
   var totalDebit = 0.0.obs;
   var totalCredit = 0.0.obs;
@@ -166,7 +181,7 @@ class JournalEntryController extends GetxController {
       }
     } catch (e) {
       print('Error fetching journal entries: $e');
-      Get.snackbar('Error', 'Failed to load journal entries: $e');
+      AppSnackbar.error(Colors.red,'Error', 'Failed to load journal entries: $e');
     } finally {
       isLoading.value = false;
     }
@@ -252,19 +267,18 @@ class JournalEntryController extends GetxController {
             await postJournalEntry(entryId);
           }
           _resetAndReload();
-          Get.snackbar(
+          AppSnackbar.success(
+            Colors.green,
             'Success',
             postNow ? 'Journal entry posted successfully' : 'Journal entry saved as draft',
-            backgroundColor: const Color(0xFF2ECC71),
-            colorText: Colors.white,
           );
         }
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar('Error', data['message'] ?? 'Failed to create entry');
+        AppSnackbar.error(Colors.red, 'Error', data['message'] ?? 'Failed to create entry');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create journal entry: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to create journal entry: $e');
     } finally {
       isLoading.value = false;
     }
@@ -279,10 +293,10 @@ class JournalEntryController extends GetxController {
 
       if (response.statusCode != 200) {
         final data = jsonDecode(response.body);
-        Get.snackbar('Error', data['message'] ?? 'Failed to post entry');
+        AppSnackbar.error(Colors.red, 'Error', data['message'] ?? 'Failed to post entry');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to post journal entry: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to post journal entry: $e');
     }
   }
 
@@ -295,13 +309,13 @@ class JournalEntryController extends GetxController {
 
       if (response.statusCode == 200) {
         _resetAndReload();
-        Get.snackbar('Success', 'Journal entry deleted');
+        AppSnackbar.success(Colors.green, 'Success', 'Journal entry deleted');
       } else {
         final errorData = jsonDecode(response.body);
-        Get.snackbar('Error', errorData['message'] ?? 'Failed to delete');
+        AppSnackbar.error(Colors.red, 'Error', errorData['message'] ?? 'Failed to delete');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to delete: $e');
     }
   }
 
@@ -328,12 +342,10 @@ class JournalEntryController extends GetxController {
   }
 
   void _handleSessionExpired() {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Session Expired',
       'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFE74C3C),
-      colorText: Colors.white,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/journalEntries/Controllers/journal_entries_exportservice.dart';
 import 'package:LedgerPro_app/core/journalEntries/Controllers/journal_entry_controller.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,9 @@ class JournalEntriesScreen extends StatelessWidget {
           child: Column(
             children: [
               _buildFilterBar(controller, context),
-              _buildSummaryCards(controller, context),
+              // Mobile: summary cards above the list
+              if (!ResponsiveUtils.isWeb(context))
+                _buildSummaryCards(controller, context),
               Expanded(
                 child: _buildJournalEntriesList(controller, context),
               ),
@@ -53,9 +56,10 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, JournalEntryController controller) {
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, JournalEntryController controller) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return AppBar(
       title: Text(
         'Journal Entries',
@@ -79,7 +83,8 @@ class JournalEntriesScreen extends StatelessWidget {
         if (!ResponsiveUtils.isMobile(context))
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
-            onPressed: () => _showAddJournalEntryDialog(Get.context!, controller),
+            onPressed: () =>
+                _showAddJournalEntryDialog(Get.context!, controller),
           ),
         IconButton(
           icon: const Icon(Icons.download_outlined, color: Colors.white),
@@ -90,14 +95,16 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  void _showExportBottomSheet(BuildContext context, JournalEntryController controller) {
+  void _showExportBottomSheet(
+      BuildContext context, JournalEntryController controller) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     if (isWeb) {
       showDialog(
         context: context,
         builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Container(
             width: 500,
             padding: const EdgeInsets.all(24),
@@ -120,9 +127,10 @@ class JournalEntriesScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildExportContent(JournalEntryController controller, BuildContext ctx) {
+  Widget _buildExportContent(
+      JournalEntryController controller, BuildContext ctx) {
     final isWeb = ResponsiveUtils.isWeb(ctx);
-    
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,11 +182,13 @@ class JournalEntriesScreen extends StatelessWidget {
                       'postedCount': controller.postedCount.value,
                       'draftCount': controller.draftCount.value,
                     };
-                    await JournalExportService.exportToPdf(controller.journalEntries, summary);
+                    await JournalExportService.exportToPdf(
+                        controller.journalEntries, summary);
                     Get.back();
                   } catch (e) {
                     Get.back();
-                    Get.snackbar('Error', 'Failed to export PDF: $e');
+                    AppSnackbar.error(
+                        Colors.red, 'Error', 'Failed to export PDF: $e');
                   }
                 },
               ),
@@ -203,11 +213,13 @@ class JournalEntriesScreen extends StatelessWidget {
                       'postedCount': controller.postedCount.value,
                       'draftCount': controller.draftCount.value,
                     };
-                    await JournalExportService.exportToExcel(controller.journalEntries, summary);
+                    await JournalExportService.exportToExcel(
+                        controller.journalEntries, summary);
                     Get.back();
                   } catch (e) {
                     Get.back();
-                    Get.snackbar('Error', 'Failed to export Excel: $e');
+                    AppSnackbar.error(
+                        Colors.red, 'Error', 'Failed to export Excel: $e');
                   }
                 },
               ),
@@ -227,11 +239,12 @@ class JournalEntriesScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final isWeb = ResponsiveUtils.isWeb(Get.context!);
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: isWeb ? 24 : 20, horizontal: isWeb ? 16 : 12),
+        padding: EdgeInsets.symmetric(
+            vertical: isWeb ? 24 : 20, horizontal: isWeb ? 16 : 12),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(isWeb ? 20 : 16),
@@ -259,7 +272,8 @@ class JournalEntriesScreen extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(fontSize: isWeb ? 11 : 10, color: color.withOpacity(0.7)),
+              style:
+                  TextStyle(fontSize: isWeb ? 11 : 10, color: color.withOpacity(0.7)),
             ),
           ],
         ),
@@ -278,7 +292,8 @@ class JournalEntriesScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message,
-              style:  TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kText),
+              style:
+                  TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: kText),
             ),
           ],
         ),
@@ -287,9 +302,10 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterBar(JournalEntryController controller, BuildContext context) {
+  Widget _buildFilterBar(
+      JournalEntryController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     void showDateRangePicker_(JournalEntryController c) async {
       final picked = await showDateRangePicker(
         context: context,
@@ -300,7 +316,8 @@ class JournalEntriesScreen extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
+      padding: EdgeInsets.symmetric(
+          horizontal: isWeb ? 24 : 16, vertical: isWeb ? 16 : 12),
       color: kCardBg,
       child: Column(
         children: [
@@ -319,10 +336,13 @@ class JournalEntriesScreen extends StatelessWidget {
                     style: TextStyle(fontSize: isWeb ? 14 : 13),
                     decoration: InputDecoration(
                       hintText: 'Search by ID, description, or reference...',
-                      hintStyle: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText),
-                      prefixIcon: Icon(Icons.search, size: isWeb ? 22 : 20, color: kSubText),
+                      hintStyle:
+                          TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText),
+                      prefixIcon: Icon(Icons.search,
+                          size: isWeb ? 22 : 20, color: kSubText),
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 14 : 12),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: isWeb ? 14 : 12),
                     ),
                   ),
                 ),
@@ -330,7 +350,8 @@ class JournalEntriesScreen extends StatelessWidget {
               SizedBox(width: isWeb ? 16 : 12),
               Container(
                 height: isWeb ? 48 : 45,
-                padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
+                padding:
+                    EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
                 decoration: BoxDecoration(
                   color: kBg,
                   borderRadius: BorderRadius.circular(isWeb ? 14 : 12),
@@ -339,13 +360,20 @@ class JournalEntriesScreen extends StatelessWidget {
                 child: DropdownButtonHideUnderline(
                   child: Obx(() => DropdownButton<String>(
                         value: controller.selectedFilter.value,
-                        icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 22),
-                        style: TextStyle(fontSize: isWeb ? 14 : 13, color: kText),
+                        icon: Icon(Icons.arrow_drop_down,
+                            size: isWeb ? 24 : 22),
+                        style: TextStyle(
+                            fontSize: isWeb ? 14 : 13, color: kText),
                         items: const [
-                          DropdownMenuItem(value: 'All', child: Text('All')),
-                          DropdownMenuItem(value: 'Posted', child: Text('Posted')),
-                          DropdownMenuItem(value: 'Draft', child: Text('Draft')),
-                          DropdownMenuItem(value: 'Custom Range', child: Text('Custom Range')),
+                          DropdownMenuItem(
+                              value: 'All', child: Text('All')),
+                          DropdownMenuItem(
+                              value: 'Posted', child: Text('Posted')),
+                          DropdownMenuItem(
+                              value: 'Draft', child: Text('Draft')),
+                          DropdownMenuItem(
+                              value: 'Custom Range',
+                              child: Text('Custom Range')),
                         ],
                         onChanged: (value) {
                           if (value != null) {
@@ -367,7 +395,9 @@ class JournalEntriesScreen extends StatelessWidget {
               return Padding(
                 padding: EdgeInsets.only(top: isWeb ? 16 : 12),
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isWeb ? 16 : 12,
+                      vertical: isWeb ? 10 : 8),
                   decoration: BoxDecoration(
                     color: kPrimary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
@@ -377,7 +407,8 @@ class JournalEntriesScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.date_range, size: isWeb ? 18 : 16, color: kPrimary),
+                          Icon(Icons.date_range,
+                              size: isWeb ? 18 : 16, color: kPrimary),
                           SizedBox(width: isWeb ? 10 : 8),
                           Text(
                             '${DateFormat('MMM dd, yyyy').format(range.start)} - ${DateFormat('MMM dd, yyyy').format(range.end)}',
@@ -391,7 +422,8 @@ class JournalEntriesScreen extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () => controller.setDateRange(null),
-                        child: Icon(Icons.close, size: isWeb ? 18 : 16, color: kPrimary),
+                        child: Icon(Icons.close,
+                            size: isWeb ? 18 : 16, color: kPrimary),
                       ),
                     ],
                   ),
@@ -405,50 +437,53 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCards(JournalEntryController controller, BuildContext context) {
+  Widget _buildSummaryCards(
+      JournalEntryController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 20 : 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildSummaryCard(
-              'Total Debit',
-              _formatAmount(controller.totalDebit.value),
-              kSuccess,
-              Icons.trending_up,
-              context,
-            ),
+
+    return Obx(() => Container(
+          padding: EdgeInsets.symmetric(
+              horizontal: isWeb ? 24 : 16, vertical: isWeb ? 20 : 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Debit',
+                  _formatAmount(controller.totalDebit.value),
+                  kSuccess,
+                  Icons.trending_up,
+                  context,
+                ),
+              ),
+              SizedBox(width: isWeb ? 20 : 12),
+              Expanded(
+                child: _buildSummaryCard(
+                  'Total Credit',
+                  _formatAmount(controller.totalCredit.value),
+                  kDanger,
+                  Icons.trending_down,
+                  context,
+                ),
+              ),
+              SizedBox(width: isWeb ? 20 : 12),
+              Expanded(
+                child: _buildSummaryCard(
+                  'Difference',
+                  _formatAmount(controller.difference.value),
+                  controller.difference.value < 0.01 ? kSuccess : kWarning,
+                  Icons.balance,
+                  context,
+                ),
+              ),
+            ],
           ),
-          SizedBox(width: isWeb ? 20 : 12),
-          Expanded(
-            child: _buildSummaryCard(
-              'Total Credit',
-              _formatAmount(controller.totalCredit.value),
-              kDanger,
-              Icons.trending_down,
-              context,
-            ),
-          ),
-          SizedBox(width: isWeb ? 20 : 12),
-          Expanded(
-            child: _buildSummaryCard(
-              'Difference',
-              _formatAmount(controller.difference.value),
-              controller.difference.value < 0.01 ? kSuccess : kWarning,
-              Icons.balance,
-              context,
-            ),
-          ),
-        ],
-      ),
-    );
+        ));
   }
 
-  Widget _buildSummaryCard(String title, String amount, Color color, IconData icon, BuildContext context) {
+  Widget _buildSummaryCard(String title, String amount, Color color,
+      IconData icon, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isWeb ? 16 : 12),
       decoration: BoxDecoration(
@@ -469,12 +504,15 @@ class JournalEntriesScreen extends StatelessWidget {
             children: [
               Icon(icon, size: isWeb ? 18 : 14, color: color),
               SizedBox(width: isWeb ? 8 : 4),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: isWeb ? 13 : 11,
-                  color: kSubText,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isWeb ? 13 : 11,
+                    color: kSubText,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -493,16 +531,22 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildJournalEntriesList(JournalEntryController controller, BuildContext context) {
+  // ✅ FIX: Use LayoutBuilder to give bounded width constraints to Expanded children
+  // inside the horizontal SingleChildScrollView. This resolves:
+  //   - "RenderFlex children have non-zero flex but incoming width constraints are unbounded"
+  //   - All box.dart:2251 assertion failures
+  //   - "Cannot hit test a render box with no size"
+  Widget _buildJournalEntriesList(
+      JournalEntryController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    final isTablet = ResponsiveUtils.isTablet(context);
-    
+
     if (controller.journalEntries.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.book_outlined, size: isWeb ? 80 : 64, color: kSubText.withOpacity(0.5)),
+            Icon(Icons.book_outlined,
+                size: isWeb ? 80 : 64, color: kSubText.withOpacity(0.5)),
             const SizedBox(height: 16),
             Text(
               'No journal entries found',
@@ -514,7 +558,8 @@ class JournalEntriesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => _showAddJournalEntryDialog(context, controller),
+              onPressed: () =>
+                  _showAddJournalEntryDialog(context, controller),
               child: Text(
                 'Create your first journal entry',
                 style: TextStyle(fontSize: isWeb ? 14 : 13),
@@ -525,9 +570,303 @@ class JournalEntriesScreen extends StatelessWidget {
       );
     }
 
+    // ✅ Web — LayoutBuilder gives us a concrete maxWidth so Expanded
+    //    children inside the horizontal scroll have bounded constraints.
+    if (isWeb) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Use the available width or a minimum of 1100px for the table.
+          final double contentWidth =
+              constraints.maxWidth > 1100 ? constraints.maxWidth : 1100;
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    // ✅ KEY FIX: Concrete width — breaks the "unbounded" chain
+                    width: contentWidth,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Summary cards scroll together with the table
+                          _buildSummaryCards(controller, context),
+                          _buildWebTableView(controller, context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Pagination stays fixed at the bottom
+              _buildWebPagination(controller, context),
+            ],
+          );
+        },
+      );
+    }
+
+    // Mobile: card view with infinite scroll — unchanged
+    return _buildMobileCardView(controller, context);
+  }
+
+  // Web Table — unchanged
+  Widget _buildWebTableView(
+      JournalEntryController controller, BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      decoration: BoxDecoration(
+        color: kCardBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: DataTable(
+          columnSpacing: 20,
+          horizontalMargin: 20,
+          headingRowColor: WidgetStateProperty.resolveWith(
+              (states) => kPrimary.withOpacity(0.05)),
+          columns: const [
+            DataColumn(
+                label: SizedBox(
+                    width: 100,
+                    child: Text('ID',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 110,
+                    child: Text('Date',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 200,
+                    child: Text('Description',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 100,
+                    child: Text('Reference',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 120,
+                    child: Text('Total Debit',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 120,
+                    child: Text('Total Credit',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 90,
+                    child: Text('Status',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 100,
+                    child: Text('Created By',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+            DataColumn(
+                label: SizedBox(
+                    width: 130,
+                    child: Text('Actions',
+                        style: TextStyle(fontWeight: FontWeight.bold)))),
+          ],
+          rows: controller.journalEntries.map((entry) {
+            return DataRow(
+              cells: [
+                DataCell(SizedBox(
+                    width: 100,
+                    child: Text(entry.entryNumber,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.w500)))),
+                DataCell(SizedBox(
+                    width: 110,
+                    child: Text(
+                        DateFormat('dd MMM yyyy').format(entry.date)))),
+                DataCell(SizedBox(
+                    width: 200,
+                    child: Text(entry.description,
+                        maxLines: 2, overflow: TextOverflow.ellipsis))),
+                DataCell(SizedBox(
+                    width: 100,
+                    child: Text(
+                        entry.reference.isEmpty ? '-' : entry.reference))),
+                DataCell(SizedBox(
+                    width: 120,
+                    child: Text(_formatAmount(entry.totalDebit),
+                        style: const TextStyle(
+                            color: kSuccess, fontWeight: FontWeight.w600)))),
+                DataCell(SizedBox(
+                    width: 120,
+                    child: Text(_formatAmount(entry.totalCredit),
+                        style: const TextStyle(
+                            color: kDanger, fontWeight: FontWeight.w600)))),
+                DataCell(SizedBox(
+                    width: 90,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: entry.status == 'Posted'
+                            ? kSuccess.withOpacity(0.1)
+                            : kWarning.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(entry.status,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: entry.status == 'Posted'
+                                  ? kSuccess
+                                  : kWarning,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12)),
+                    ))),
+                DataCell(
+                    SizedBox(width: 100, child: Text(entry.createdBy))),
+                DataCell(SizedBox(
+                  width: 130,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        onPressed: () => _viewJournalEntryDetails(entry),
+                        icon: const Icon(Icons.remove_red_eye, size: 18),
+                        tooltip: 'View Details',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      if (entry.status == 'Draft') ...[
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () =>
+                              _postJournalEntry(entry, controller),
+                          icon: const Icon(Icons.check_circle,
+                              size: 18, color: kSuccess),
+                          tooltip: 'Post',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () =>
+                              _deleteJournalEntry(entry, controller),
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: kDanger),
+                          tooltip: 'Delete',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ],
+                  ),
+                )),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // ✅ FIX: Pagination — wrapped in SingleChildScrollView so Next button never clips
+  Widget _buildWebPagination(
+      JournalEntryController controller, BuildContext context) {
+    return Obx(() {
+      if (controller.isLoadingMore.value) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: LoadingAnimationWidget.waveDots(color: kPrimary, size: 40),
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+        decoration: BoxDecoration(
+          color: kCardBg,
+          border: Border(top: BorderSide(color: kBorder)),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: controller.currentPage.value > 1
+                    ? () => controller.loadPreviousPage()
+                    : null,
+                icon: const Icon(Icons.chevron_left, size: 18),
+                label: const Text('Previous'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kCardBg,
+                  foregroundColor: kPrimary,
+                  disabledBackgroundColor: kBorder,
+                  disabledForegroundColor: kSubText,
+                  elevation: 0,
+                  side: BorderSide(color: kBorder),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: kPrimary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Obx(() => Text(
+                      'Page ${controller.currentPage.value} of ${controller.totalPages.value}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kPrimary,
+                      ),
+                    )),
+              ),
+              const SizedBox(width: 16),
+              ElevatedButton.icon(
+                onPressed: controller.currentPage.value <
+                        controller.totalPages.value
+                    ? () => controller.loadNextPage()
+                    : null,
+                icon: const Icon(Icons.chevron_right, size: 18),
+                label: const Text('Next'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kCardBg,
+                  foregroundColor: kPrimary,
+                  disabledBackgroundColor: kBorder,
+                  disabledForegroundColor: kSubText,
+                  elevation: 0,
+                  side: BorderSide(color: kBorder),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  // Mobile/Tablet: Card View with Infinite Scroll
+  Widget _buildMobileCardView(
+      JournalEntryController controller, BuildContext context) {
+    final isTablet = ResponsiveUtils.isTablet(context);
+
     return NotificationListener<ScrollNotification>(
       onNotification: (scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 100) {
+        if (scrollInfo.metrics.pixels >=
+            scrollInfo.metrics.maxScrollExtent - 100) {
           if (controller.hasMore.value && !controller.isLoadingMore.value) {
             controller.loadMoreJournalEntries();
           }
@@ -536,14 +875,15 @@ class JournalEntriesScreen extends StatelessWidget {
       },
       child: GridView.builder(
         controller: controller.scrollController,
-        padding: EdgeInsets.all(isWeb ? 24 : 16),
+        padding: EdgeInsets.all(isTablet ? 20 : 16),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: isWeb ? 2 : (isTablet ? 2 : 1),
-          crossAxisSpacing: isWeb ? 24 : 16,
-          mainAxisSpacing: isWeb ? 24 : 16,
-          childAspectRatio: isWeb ? 1.1 : 1.1,
+          crossAxisCount: isTablet ? 2 : 1,
+          crossAxisSpacing: isTablet ? 20 : 16,
+          mainAxisSpacing: isTablet ? 20 : 16,
+          childAspectRatio: 1.1,
         ),
-        itemCount: controller.journalEntries.length + (controller.hasMore.value ? 1 : 0),
+        itemCount: controller.journalEntries.length +
+            (controller.hasMore.value ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == controller.journalEntries.length) {
             return _buildLoadingMoreIndicator(context);
@@ -557,18 +897,20 @@ class JournalEntriesScreen extends StatelessWidget {
 
   Widget _buildLoadingMoreIndicator(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: isWeb ? 24 : 16),
-        child: LoadingAnimationWidget.waveDots(color: kPrimary, size: isWeb ? 50 : 40),
+        child: LoadingAnimationWidget.waveDots(
+            color: kPrimary, size: isWeb ? 50 : 40),
       ),
     );
   }
 
-  Widget _buildJournalEntryCard(JournalEntry entry, JournalEntryController controller, BuildContext context) {
+  Widget _buildJournalEntryCard(JournalEntry entry,
+      JournalEntryController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: kCardBg,
@@ -605,38 +947,50 @@ class JournalEntriesScreen extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: isWeb ? 10 : 8, vertical: isWeb ? 6 : 4),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: isWeb ? 10 : 8,
+                                vertical: isWeb ? 6 : 4),
                             decoration: BoxDecoration(
                               color: entry.status == 'Posted'
                                   ? kSuccess.withOpacity(0.2)
                                   : kWarning.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                              borderRadius:
+                                  BorderRadius.circular(isWeb ? 8 : 6),
                             ),
                             child: Text(
                               entry.entryNumber,
                               style: TextStyle(
                                 fontSize: isWeb ? 13 : 12,
                                 fontWeight: FontWeight.w700,
-                                color: entry.status == 'Posted' ? kSuccess : kWarning,
+                                color: entry.status == 'Posted'
+                                    ? kSuccess
+                                    : kWarning,
                               ),
                             ),
                           ),
                           SizedBox(width: isWeb ? 10 : 8),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: isWeb ? 10 : 8, vertical: isWeb ? 6 : 4),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: isWeb ? 10 : 8,
+                                vertical: isWeb ? 6 : 4),
                             decoration: BoxDecoration(
                               color: entry.status == 'Posted'
                                   ? kSuccess.withOpacity(0.1)
                                   : kWarning.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                              borderRadius:
+                                  BorderRadius.circular(isWeb ? 8 : 6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  entry.status == 'Posted' ? Icons.check_circle_outline : Icons.edit_outlined,
+                                  entry.status == 'Posted'
+                                      ? Icons.check_circle_outline
+                                      : Icons.edit_outlined,
                                   size: isWeb ? 16 : 12,
-                                  color: entry.status == 'Posted' ? kSuccess : kWarning,
+                                  color: entry.status == 'Posted'
+                                      ? kSuccess
+                                      : kWarning,
                                 ),
                                 SizedBox(width: isWeb ? 6 : 4),
                                 Text(
@@ -644,7 +998,9 @@ class JournalEntriesScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: isWeb ? 12 : 11,
                                     fontWeight: FontWeight.w600,
-                                    color: entry.status == 'Posted' ? kSuccess : kWarning,
+                                    color: entry.status == 'Posted'
+                                        ? kSuccess
+                                        : kWarning,
                                   ),
                                 ),
                               ],
@@ -670,19 +1026,24 @@ class JournalEntriesScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: isWeb ? 10 : 8, vertical: isWeb ? 6 : 4),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isWeb ? 10 : 8,
+                          vertical: isWeb ? 6 : 4),
                       decoration: BoxDecoration(
                         color: kBg,
-                        borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+                        borderRadius:
+                            BorderRadius.circular(isWeb ? 8 : 6),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.calendar_today, size: isWeb ? 16 : 12, color: kSubText),
+                          Icon(Icons.calendar_today,
+                              size: isWeb ? 16 : 12, color: kSubText),
                           SizedBox(width: isWeb ? 6 : 4),
                           Text(
                             DateFormat('dd MMM yyyy').format(entry.date),
-                            style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                            style: TextStyle(
+                                fontSize: isWeb ? 12 : 11, color: kSubText),
                           ),
                         ],
                       ),
@@ -691,7 +1052,8 @@ class JournalEntriesScreen extends StatelessWidget {
                     if (entry.reference.isNotEmpty)
                       Text(
                         'Ref: ${entry.reference}',
-                        style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                        style: TextStyle(
+                            fontSize: isWeb ? 12 : 11, color: kSubText),
                       ),
                   ],
                 ),
@@ -703,9 +1065,11 @@ class JournalEntriesScreen extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
+                  padding:
+                      EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: kBorder, width: 1)),
+                    border: Border(
+                        bottom: BorderSide(color: kBorder, width: 1)),
                   ),
                   child: Row(
                     children: [
@@ -748,65 +1112,80 @@ class JournalEntriesScreen extends StatelessWidget {
                   ),
                 ),
                 ...entry.lines.take(3).map((line) => Container(
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: kBorder.withOpacity(0.5))),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              line.accountName,
+                      padding: EdgeInsets.symmetric(
+                          vertical: isWeb ? 12 : 10),
+                      decoration: BoxDecoration(
+                        border: Border(
+                            bottom: BorderSide(
+                                color: kBorder.withOpacity(0.5))),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  line.accountName,
+                                  style: TextStyle(
+                                    fontSize: isWeb ? 14 : 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: kText,
+                                  ),
+                                ),
+                                Text(
+                                  line.accountCode,
+                                  style: TextStyle(
+                                      fontSize: isWeb ? 11 : 10,
+                                      color: kSubText),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              line.debit > 0
+                                  ? _formatAmount(line.debit)
+                                  : '-',
+                              textAlign: TextAlign.right,
                               style: TextStyle(
                                 fontSize: isWeb ? 14 : 13,
-                                fontWeight: FontWeight.w500,
-                                color: kText,
+                                fontWeight: FontWeight.w600,
+                                color: line.debit > 0
+                                    ? kSuccess
+                                    : kSubText,
                               ),
                             ),
-                            Text(
-                              line.accountCode,
-                              style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              line.credit > 0
+                                  ? _formatAmount(line.credit)
+                                  : '-',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: isWeb ? 14 : 13,
+                                fontWeight: FontWeight.w600,
+                                color: line.credit > 0
+                                    ? kDanger
+                                    : kSubText,
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          line.debit > 0 ? _formatAmount(line.debit) : '-',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontSize: isWeb ? 14 : 13,
-                            fontWeight: FontWeight.w600,
-                            color: line.debit > 0 ? kSuccess : kSubText,
                           ),
-                        ),
+                        ],
                       ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          line.credit > 0 ? _formatAmount(line.credit) : '-',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontSize: isWeb ? 14 : 13,
-                            fontWeight: FontWeight.w600,
-                            color: line.credit > 0 ? kDanger : kSubText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
+                    )),
                 if (entry.lines.length > 3)
                   Padding(
                     padding: EdgeInsets.only(top: isWeb ? 8 : 6),
                     child: Text(
                       '+ ${entry.lines.length - 3} more lines',
-                      style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                      style: TextStyle(
+                          fontSize: isWeb ? 12 : 11, color: kSubText),
                     ),
                   ),
                 Container(
@@ -868,18 +1247,22 @@ class JournalEntriesScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.person_outline, size: isWeb ? 16 : 14, color: kSubText),
+                    Icon(Icons.person_outline,
+                        size: isWeb ? 16 : 14, color: kSubText),
                     SizedBox(width: isWeb ? 6 : 4),
                     Text(
                       entry.createdBy,
-                      style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                      style: TextStyle(
+                          fontSize: isWeb ? 12 : 11, color: kSubText),
                     ),
                     SizedBox(width: isWeb ? 16 : 12),
-                    Icon(Icons.access_time, size: isWeb ? 16 : 14, color: kSubText),
+                    Icon(Icons.access_time,
+                        size: isWeb ? 16 : 14, color: kSubText),
                     SizedBox(width: isWeb ? 6 : 4),
                     Text(
                       DateFormat('hh:mm a').format(entry.createdAt),
-                      style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                      style: TextStyle(
+                          fontSize: isWeb ? 12 : 11, color: kSubText),
                     ),
                   ],
                 ),
@@ -887,20 +1270,26 @@ class JournalEntriesScreen extends StatelessWidget {
                   children: [
                     if (entry.status == 'Draft')
                       TextButton.icon(
-                        onPressed: () => _postJournalEntry(entry, controller),
-                        icon: Icon(Icons.check_circle, size: isWeb ? 20 : 18),
-                        label: Text('Post'),
-                        style: TextButton.styleFrom(foregroundColor: kSuccess),
+                        onPressed: () =>
+                            _postJournalEntry(entry, controller),
+                        icon: Icon(Icons.check_circle,
+                            size: isWeb ? 20 : 18),
+                        label: const Text('Post'),
+                        style: TextButton.styleFrom(
+                            foregroundColor: kSuccess),
                       ),
                     IconButton(
                       onPressed: () => _viewJournalEntryDetails(entry),
-                      icon: Icon(Icons.remove_red_eye, size: isWeb ? 22 : 20),
+                      icon: Icon(Icons.remove_red_eye,
+                          size: isWeb ? 22 : 20),
                       tooltip: 'View Details',
                     ),
                     if (entry.status == 'Draft')
                       IconButton(
-                        onPressed: () => _deleteJournalEntry(entry, controller),
-                        icon: Icon(Icons.delete_outline, size: isWeb ? 22 : 20, color: kDanger),
+                        onPressed: () =>
+                            _deleteJournalEntry(entry, controller),
+                        icon: Icon(Icons.delete_outline,
+                            size: isWeb ? 22 : 20, color: kDanger),
                         tooltip: 'Delete',
                       ),
                   ],
@@ -913,13 +1302,15 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  void _showAddJournalEntryDialog(BuildContext context, JournalEntryController controller) {
+  void _showAddJournalEntryDialog(
+      BuildContext context, JournalEntryController controller) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 24 : 20)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isWeb ? 24 : 20)),
         child: Container(
           width: isWeb ? 800 : double.infinity,
           constraints: BoxConstraints(
@@ -931,13 +1322,16 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  void _postJournalEntry(JournalEntry entry, JournalEntryController controller) {
+  void _postJournalEntry(
+      JournalEntry entry, JournalEntryController controller) {
     Get.dialog(
       AlertDialog(
         title: const Text('Post Journal Entry'),
-        content: const Text('Are you sure you want to post this journal entry? This action cannot be undone.'),
+        content: const Text(
+            'Are you sure you want to post this journal entry? This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Get.back();
@@ -952,13 +1346,16 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  void _deleteJournalEntry(JournalEntry entry, JournalEntryController controller) {
+  void _deleteJournalEntry(
+      JournalEntry entry, JournalEntryController controller) {
     Get.dialog(
       AlertDialog(
         title: const Text('Delete Journal Entry'),
-        content: const Text('Are you sure you want to delete this journal entry?'),
+        content: const Text(
+            'Are you sure you want to delete this journal entry?'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Get.back();
@@ -974,18 +1371,20 @@ class JournalEntriesScreen extends StatelessWidget {
 
   void _viewJournalEntryDetails(JournalEntry entry) {
     final isWeb = ResponsiveUtils.isWeb(Get.context!);
-    
+
     if (isWeb) {
       showDialog(
         context: Get.context!,
         builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Container(
             width: 600,
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
-            child: JournalEntryDetailsSheet(entry: entry, scrollController: ScrollController()),
+            child: JournalEntryDetailsSheet(
+                entry: entry, scrollController: ScrollController()),
           ),
         ),
       );
@@ -1010,10 +1409,11 @@ class JournalEntriesScreen extends StatelessWidget {
     }
   }
 
-  void _showSearchDialog(BuildContext context, JournalEntryController controller) {
+  void _showSearchDialog(
+      BuildContext context, JournalEntryController controller) {
     final isWeb = ResponsiveUtils.isWeb(context);
     TextEditingController searchController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1035,7 +1435,9 @@ class JournalEntriesScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               controller.searchEntries(searchController.text);
@@ -1048,7 +1450,8 @@ class JournalEntriesScreen extends StatelessWidget {
     );
   }
 
-  void _showFilterDialog(BuildContext context, JournalEntryController controller) {
+  void _showFilterDialog(
+      BuildContext context, JournalEntryController controller) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1073,13 +1476,16 @@ class JournalEntriesScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
         ],
       ),
     );
   }
 
-  String _formatAmount(double amount) => '₨ ${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) =>
+      '\$ ${amount.toStringAsFixed(2)}';
 }
 
 // ==================== ADD JOURNAL ENTRY DIALOG ====================
@@ -1088,7 +1494,8 @@ class AddJournalEntryDialog extends StatefulWidget {
   const AddJournalEntryDialog({super.key, required this.controller});
 
   @override
-  State<AddJournalEntryDialog> createState() => _AddJournalEntryDialogState();
+  State<AddJournalEntryDialog> createState() =>
+      _AddJournalEntryDialogState();
 }
 
 class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
@@ -1151,7 +1558,8 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                       contentPadding: EdgeInsets.zero,
                       leading: Icon(Icons.calendar_today, color: kPrimary),
                       title: const Text('Journal Date'),
-                      subtitle: Text(DateFormat('EEEE, MMMM d, yyyy').format(_selectedDate)),
+                      subtitle: Text(DateFormat('EEEE, MMMM d, yyyy')
+                          .format(_selectedDate)),
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -1159,7 +1567,8 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
                         );
-                        if (picked != null) setState(() => _selectedDate = picked);
+                        if (picked != null)
+                          setState(() => _selectedDate = picked);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -1172,7 +1581,9 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                       ),
                       maxLines: 2,
                       onChanged: (v) => _description = v,
-                      validator: (v) => v == null || v.isEmpty ? 'Description required' : null,
+                      validator: (v) => v == null || v.isEmpty
+                          ? 'Description required'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -1199,8 +1610,11 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                         TextButton.icon(
                           onPressed: _addLine,
                           icon: Icon(Icons.add, size: isWeb ? 20 : 18),
-                          label: Text('Add Line', style: TextStyle(fontSize: isWeb ? 13 : 12)),
-                          style: TextButton.styleFrom(foregroundColor: kPrimary),
+                          label: Text('Add Line',
+                              style: TextStyle(
+                                  fontSize: isWeb ? 13 : 12)),
+                          style: TextButton.styleFrom(
+                              foregroundColor: kPrimary),
                         ),
                       ],
                     ),
@@ -1213,7 +1627,8 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                         padding: EdgeInsets.all(isWeb ? 16 : 12),
                         decoration: BoxDecoration(
                           color: kBg,
-                          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
+                          borderRadius:
+                              BorderRadius.circular(isWeb ? 16 : 12),
                           border: Border.all(color: kBorder),
                         ),
                         child: Column(
@@ -1221,27 +1636,41 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Obx(() => DropdownButtonFormField<String>(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Account *',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    value: line.accountId.isEmpty ? null : line.accountId,
-                                    items: widget.controller.accounts.map((account) => DropdownMenuItem<String>(
-                                      value: account['_id'].toString(),
-                                      child: Text('${account['code']} - ${account['name']}'),
-                                    )).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        line.accountId = value!;
-                                        final selected = widget.controller.accounts.firstWhere(
-                                          (a) => a['_id'].toString() == value,
-                                        );
-                                        line.accountName = selected['name'];
-                                        line.accountCode = selected['code'];
-                                      });
-                                    },
-                                  )),
+                                  child: Obx(() =>
+                                      DropdownButtonFormField<String>(
+                                        decoration: const InputDecoration(
+                                          labelText: 'Account *',
+                                          border: OutlineInputBorder(),
+                                        ),
+                                        value: line.accountId.isEmpty
+                                            ? null
+                                            : line.accountId,
+                                        items: widget.controller.accounts
+                                            .map((account) =>
+                                                DropdownMenuItem<String>(
+                                                  value: account['_id']
+                                                      .toString(),
+                                                  child: Text(
+                                                      '${account['code']} - ${account['name']}'),
+                                                ))
+                                            .toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            line.accountId = value!;
+                                            final selected = widget
+                                                .controller.accounts
+                                                .firstWhere(
+                                              (a) =>
+                                                  a['_id'].toString() ==
+                                                  value,
+                                            );
+                                            line.accountName =
+                                                selected['name'];
+                                            line.accountCode =
+                                                selected['code'];
+                                          });
+                                        },
+                                      )),
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
@@ -1258,12 +1687,13 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                                     decoration: const InputDecoration(
                                       labelText: 'Debit',
                                       border: OutlineInputBorder(),
-                                      prefixText: '₨ ',
+                                      prefixText: '\$ ',
                                     ),
                                     keyboardType: TextInputType.number,
                                     onChanged: (value) {
                                       setState(() {
-                                        double val = double.tryParse(value) ?? 0;
+                                        double val =
+                                            double.tryParse(value) ?? 0;
                                         line.debit = val;
                                         if (line.debit > 0) line.credit = 0;
                                       });
@@ -1276,12 +1706,13 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                                     decoration: const InputDecoration(
                                       labelText: 'Credit',
                                       border: OutlineInputBorder(),
-                                      prefixText: '₨ ',
+                                      prefixText: '\$ ',
                                     ),
                                     keyboardType: TextInputType.number,
                                     onChanged: (value) {
                                       setState(() {
-                                        double val = double.tryParse(value) ?? 0;
+                                        double val =
+                                            double.tryParse(value) ?? 0;
                                         line.credit = val;
                                         if (line.credit > 0) line.debit = 0;
                                       });
@@ -1293,23 +1724,38 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                     const SizedBox(height: 16),
                     Container(
                       padding: EdgeInsets.all(isWeb ? 16 : 12),
                       decoration: BoxDecoration(
-                        color: isBalanced ? kSuccess.withOpacity(0.1) : kDanger.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
+                        color: isBalanced
+                            ? kSuccess.withOpacity(0.1)
+                            : kDanger.withOpacity(0.1),
+                        borderRadius:
+                            BorderRadius.circular(isWeb ? 16 : 12),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total Debit = Total Credit?', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text('Total Debit = Total Credit?',
+                              style:
+                                  TextStyle(fontWeight: FontWeight.w600)),
                           Row(
                             children: [
-                              Icon(isBalanced ? Icons.check_circle : Icons.warning, color: isBalanced ? kSuccess : kDanger, size: 20),
+                              Icon(
+                                  isBalanced
+                                      ? Icons.check_circle
+                                      : Icons.warning,
+                                  color: isBalanced ? kSuccess : kDanger,
+                                  size: 20),
                               const SizedBox(width: 8),
-                              Text(isBalanced ? 'Balanced' : 'Not Balanced', style: TextStyle(color: isBalanced ? kSuccess : kDanger, fontWeight: FontWeight.w600)),
+                              Text(
+                                  isBalanced ? 'Balanced' : 'Not Balanced',
+                                  style: TextStyle(
+                                      color:
+                                          isBalanced ? kSuccess : kDanger,
+                                      fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ],
@@ -1326,7 +1772,9 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: OutlinedButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12)),
                   child: const Text('Cancel'),
                 ),
               ),
@@ -1334,12 +1782,15 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (_formKey.currentState!.validate() && _lines.isNotEmpty) {
-                      final linesData = _lines.map((line) => ({
-                        'accountId': line.accountId,
-                        'debit': line.debit,
-                        'credit': line.credit,
-                      })).toList();
+                    if (_formKey.currentState!.validate() &&
+                        _lines.isNotEmpty) {
+                      final linesData = _lines
+                          .map((line) => ({
+                                'accountId': line.accountId,
+                                'debit': line.debit,
+                                'credit': line.credit,
+                              }))
+                          .toList();
                       Navigator.pop(context);
                       await widget.controller.createJournalEntry(
                         date: _selectedDate,
@@ -1349,10 +1800,14 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                         postNow: false,
                       );
                     } else {
-                      Get.snackbar('Error', 'Please add at least one journal line');
+                      AppSnackbar.error(Colors.red, 'Error',
+                          'Please add at least one journal line');
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary, padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12)),
                   child: const Text('Save as Draft'),
                 ),
               ),
@@ -1360,13 +1815,16 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (_formKey.currentState!.validate() && _lines.isNotEmpty) {
+                    if (_formKey.currentState!.validate() &&
+                        _lines.isNotEmpty) {
                       if (isBalanced) {
-                        final linesData = _lines.map((line) => ({
-                          'accountId': line.accountId,
-                          'debit': line.debit,
-                          'credit': line.credit,
-                        })).toList();
+                        final linesData = _lines
+                            .map((line) => ({
+                                  'accountId': line.accountId,
+                                  'debit': line.debit,
+                                  'credit': line.credit,
+                                }))
+                            .toList();
                         Navigator.pop(context);
                         await widget.controller.createJournalEntry(
                           date: _selectedDate,
@@ -1376,11 +1834,15 @@ class _AddJournalEntryDialogState extends State<AddJournalEntryDialog> {
                           postNow: true,
                         );
                       } else {
-                        Get.snackbar('Error', 'Total Debit must equal Total Credit');
+                        AppSnackbar.error(Colors.red, 'Error',
+                            'Total Debit must equal Total Credit');
                       }
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: kSuccess, padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: kSuccess,
+                      padding:
+                          const EdgeInsets.symmetric(vertical: 12)),
                   child: const Text('Post Entry'),
                 ),
               ),
@@ -1414,7 +1876,7 @@ class JournalEntryDetailsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isWeb ? 24 : 20),
       child: Column(
@@ -1457,7 +1919,7 @@ class JournalEntryDetailsSheet extends StatelessWidget {
 
   Widget _buildInfoCard(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isWeb ? 20 : 16),
       decoration: BoxDecoration(
@@ -1468,9 +1930,13 @@ class JournalEntryDetailsSheet extends StatelessWidget {
       child: Column(
         children: [
           _buildDetailRow('Journal ID', entry.entryNumber, context),
-          _buildDetailRow('Date', DateFormat('EEEE, MMMM d, yyyy').format(entry.date), context),
+          _buildDetailRow('Date',
+              DateFormat('EEEE, MMMM d, yyyy').format(entry.date), context),
           _buildDetailRow('Description', entry.description, context),
-          _buildDetailRow('Reference', entry.reference.isEmpty ? 'N/A' : entry.reference, context),
+          _buildDetailRow(
+              'Reference',
+              entry.reference.isEmpty ? 'N/A' : entry.reference,
+              context),
           _buildDetailRow('Status', entry.status, context),
         ],
       ),
@@ -1479,7 +1945,7 @@ class JournalEntryDetailsSheet extends StatelessWidget {
 
   Widget _buildLinesTable(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isWeb ? 20 : 16),
       decoration: BoxDecoration(
@@ -1504,59 +1970,75 @@ class JournalEntryDetailsSheet extends StatelessWidget {
             decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: kBorder)),
             ),
-            child: Row(
-              children: const [
-                Expanded(flex: 3, child: Text('Account', style: TextStyle(fontWeight: FontWeight.w600))),
-                Expanded(flex: 2, child: Text('Debit', textAlign: TextAlign.right)),
-                Expanded(flex: 2, child: Text('Credit', textAlign: TextAlign.right)),
+            child: const Row(
+              children: [
+                Expanded(
+                    flex: 3,
+                    child: Text('Account',
+                        style: TextStyle(fontWeight: FontWeight.w600))),
+                Expanded(
+                    flex: 2,
+                    child: Text('Debit', textAlign: TextAlign.right)),
+                Expanded(
+                    flex: 2,
+                    child: Text('Credit', textAlign: TextAlign.right)),
               ],
             ),
           ),
           ...entry.lines.map((line) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(line.accountName, style: const TextStyle(fontWeight: FontWeight.w500)),
-                      Text(line.accountCode, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(line.accountName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w500)),
+                          Text(line.accountCode,
+                              style: TextStyle(
+                                  fontSize: isWeb ? 12 : 11,
+                                  color: kSubText)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        line.debit > 0 ? _formatAmount(line.debit) : '-',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        line.credit > 0 ? _formatAmount(line.credit) : '-',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    line.debit > 0 ? _formatAmount(line.debit) : '-',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    line.credit > 0 ? _formatAmount(line.credit) : '-',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          )).toList(),
+              )),
           const Divider(),
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Row(
               children: [
-                const Expanded(flex: 3, child: Text('Total', style: TextStyle(fontWeight: FontWeight.w800))),
+                const Expanded(
+                    flex: 3,
+                    child: Text('Total',
+                        style: TextStyle(fontWeight: FontWeight.w800))),
                 Expanded(
                   flex: 2,
                   child: Text(
                     _formatAmount(entry.totalDebit),
                     textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: kSuccess),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, color: kSuccess),
                   ),
                 ),
                 Expanded(
@@ -1564,7 +2046,8 @@ class JournalEntryDetailsSheet extends StatelessWidget {
                   child: Text(
                     _formatAmount(entry.totalCredit),
                     textAlign: TextAlign.right,
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: kDanger),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, color: kDanger),
                   ),
                 ),
               ],
@@ -1577,7 +2060,7 @@ class JournalEntryDetailsSheet extends StatelessWidget {
 
   Widget _buildAuditInfo(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Container(
       padding: EdgeInsets.all(isWeb ? 20 : 16),
       decoration: BoxDecoration(
@@ -1598,19 +2081,26 @@ class JournalEntryDetailsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _buildDetailRow('Created By', entry.createdBy, context),
-          _buildDetailRow('Created At', DateFormat('dd MMM yyyy, hh:mm a').format(entry.createdAt), context),
+          _buildDetailRow(
+              'Created At',
+              DateFormat('dd MMM yyyy, hh:mm a').format(entry.createdAt),
+              context),
           if (entry.postedBy != null) ...[
             _buildDetailRow('Posted By', entry.postedBy!, context),
-            _buildDetailRow('Posted At', DateFormat('dd MMM yyyy, hh:mm a').format(entry.postedAt!), context),
+            _buildDetailRow(
+                'Posted At',
+                DateFormat('dd MMM yyyy, hh:mm a').format(entry.postedAt!),
+                context),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, BuildContext context) {
+  Widget _buildDetailRow(
+      String label, String value, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1642,5 +2132,6 @@ class JournalEntryDetailsSheet extends StatelessWidget {
     );
   }
 
-  String _formatAmount(double amount) => '₨ ${amount.toStringAsFixed(2)}';
+  String _formatAmount(double amount) =>
+      '\$ ${amount.toStringAsFixed(2)}';
 }

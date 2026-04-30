@@ -1,5 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -15,6 +18,7 @@ import 'package:excel/excel.dart';
 
 class AccountsReceivableController extends GetxController {
   var customers = <Customer>[].obs;
+  var filteredCustomers = <Customer>[].obs;  // For local search
   var isLoading = true.obs;
   var selectedFilter = 'All'.obs;
   var searchQuery = ''.obs;
@@ -58,7 +62,7 @@ class AccountsReceivableController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   @override
@@ -104,12 +108,9 @@ class AccountsReceivableController extends GetxController {
       String url = '$baseUrl/api/accounts-receivable/customers';
       List<String> queryParams = [];
       
+      // Only filter, no search in API
       if (selectedFilter.value != 'All') {
         queryParams.add('filter=${selectedFilter.value}');
-      }
-      
-      if (searchQuery.value.isNotEmpty) {
-        queryParams.add('search=${searchQuery.value}');
       }
       
       if (queryParams.isNotEmpty) {
@@ -125,14 +126,34 @@ class AccountsReceivableController extends GetxController {
           customers.value = (data['data'] as List)
               .map((e) => Customer.fromJson(e))
               .toList();
+          // Apply local search after data loads
+          _applyLocalSearch();
         }
       } else if (response.statusCode == 401) {
         _handleSessionExpired();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load customers: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to load customers: $e');
     } finally {
       isLoading(false);
+    }
+  }
+  
+  // Local search method - NO API CALL
+  void searchCustomers(String query) {
+    searchQuery.value = query;
+    _applyLocalSearch();
+  }
+  
+  void _applyLocalSearch() {
+    if (searchQuery.value.isEmpty) {
+      filteredCustomers.value = customers;
+    } else {
+      filteredCustomers.value = customers.where((customer) =>
+        customer.name.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+        customer.email.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+        customer.phone.contains(searchQuery.value)
+      ).toList();
     }
   }
   
@@ -148,27 +169,23 @@ class AccountsReceivableController extends GetxController {
       );
       
       if (response.statusCode == 201) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Customer added successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
         );
         await fetchCustomers();
         await fetchSummary();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to add customer',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
         );
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add customer: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to add customer: $e');
     } finally {
       isLoading(false);
     }
@@ -202,28 +219,24 @@ class AccountsReceivableController extends GetxController {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Payment recorded successfully!\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
         await fetchCustomers();
         await fetchSummary();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to record payment',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
         );
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to record payment: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to record payment: $e');
     } finally {
       isLoading(false);
     }
@@ -234,35 +247,34 @@ class AccountsReceivableController extends GetxController {
     fetchCustomers();
   }
   
-  void searchCustomers(String query) {
-    searchQuery.value = query;
-    fetchCustomers();
-  }
-  
   void viewInvoices(Customer customer) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Invoices',
       'Viewing invoices for ${customer.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
   void showRecordPayment(Customer customer) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.green,
       'Record Payment',
       'Recording payment for ${customer.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kSuccess,
-      colorText: Colors.white,
     );
+  }
+  
+  // Getter for displaying customers (filtered or all)
+  List<Customer> get displayCustomers {
+    if (searchQuery.value.isNotEmpty) {
+      return filteredCustomers;
+    }
+    return customers;
   }
   
   // ─────────────────────── EXPORT FUNCTIONS ───────────────────────
   
   void exportReport() {
-    // Show export options bottom sheet
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -273,19 +285,19 @@ class AccountsReceivableController extends GetxController {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-           Text(
+            Text(
               'Export Accounts Receivable',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-           Text(
+            Text(
               'Choose export format',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             ListTile(
               leading: Icon(Icons.picture_as_pdf, color: Color(0xFFE53935)),
-              title:Text('Export as PDF'),
+              title: Text('Export as PDF'),
               onTap: () {
                 Get.back();
                 exportToPdf();
@@ -293,7 +305,7 @@ class AccountsReceivableController extends GetxController {
             ),
             ListTile(
               leading: Icon(Icons.table_chart, color: Color(0xFF2E7D32)),
-              title:Text('Export as Excel'),
+              title: Text('Export as Excel'),
               onTap: () {
                 Get.back();
                 exportToExcel();
@@ -310,21 +322,23 @@ class AccountsReceivableController extends GetxController {
   
   Future<void> exportToPdf() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Generating PDF...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final pdf = pw.Document();
       
@@ -342,22 +356,46 @@ class AccountsReceivableController extends GetxController {
         ),
       );
       
-      final dir = await getTemporaryDirectory();
+      final bytes = await pdf.save();
       final fileName = 'accounts_receivable_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${customers.length} customers exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download using HTML anchor tag
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${displayCustomers.length} customers exported to PDF',
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        // MOBILE: Save to file and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${displayCustomers.length} customers exported to PDF',
+          duration: const Duration(seconds: 2),
+        );
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
     }
   }
   
@@ -438,7 +476,7 @@ class AccountsReceivableController extends GetxController {
             mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
             children: [
               _pdfSummaryItem('Active Customers', activeCustomers.value.toString(), PdfColors.green700),
-              _pdfSummaryItem('Total Customers', customers.length.toString(), PdfColors.grey700),
+              _pdfSummaryItem('Total Customers', displayCustomers.length.toString(), PdfColors.grey700),
               _pdfSummaryItem('Filter', selectedFilter.value, PdfColors.grey700),
             ],
           ),
@@ -459,6 +497,7 @@ class AccountsReceivableController extends GetxController {
   }
   
   pw.Widget _pdfCustomersSection() {
+    final dataToExport = displayCustomers;
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -471,15 +510,15 @@ class AccountsReceivableController extends GetxController {
               border: pw.Border(
                   bottom: pw.BorderSide(color: PdfColors.grey300, width: 1))),
           child: pw.Row(children: [
-            pw.Expanded(flex: 3, child: pw.Text('Customer Name', style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text('Phone', style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text('Total Invoices', textAlign: pw.TextAlign.right, style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text('Total Amount', textAlign: pw.TextAlign.right, style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text('Paid', textAlign: pw.TextAlign.right, style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text('Outstanding', textAlign: pw.TextAlign.right, style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 3, child: pw.Text('Customer Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Phone', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Total Invoices', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Total Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Paid', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Outstanding', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
           ]),
         ),
-        ...customers.map((customer) => pw.Container(
+        ...dataToExport.map((customer) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 6),
           decoration: const pw.BoxDecoration(
               border: pw.Border(
@@ -497,12 +536,12 @@ class AccountsReceivableController extends GetxController {
         pw.Padding(
           padding: const pw.EdgeInsets.only(top: 8),
           child: pw.Row(children: [
-            pw.Expanded(flex: 7, child: pw.Text('Total', style:  pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(customers.fold(0.0, (sum, c) => sum + c.totalAmount)),
+            pw.Expanded(flex: 7, child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(dataToExport.fold(0.0, (sum, c) => sum + c.totalAmount)),
                 textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.indigo700))),
-            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(customers.fold(0.0, (sum, c) => sum + c.paidAmount)),
+            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(dataToExport.fold(0.0, (sum, c) => sum + c.paidAmount)),
                 textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green700))),
-            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(customers.fold(0.0, (sum, c) => sum + c.outstandingAmount)),
+            pw.Expanded(flex: 2, child: pw.Text(_formatAmount(dataToExport.fold(0.0, (sum, c) => sum + c.outstandingAmount)),
                 textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red700))),
           ]),
         ),
@@ -512,23 +551,26 @@ class AccountsReceivableController extends GetxController {
   
   Future<void> exportToExcel() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final excel = Excel.createExcel();
+      final dataToExport = displayCustomers;
       
       // Summary Sheet
       final summarySheet = excel['Summary'];
@@ -556,7 +598,7 @@ class AccountsReceivableController extends GetxController {
         ['Due This Week', _formatAmount(totalDueThisWeek.value)],
         ['Due This Month', _formatAmount(totalDueThisMonth.value)],
         ['Active Customers', activeCustomers.value.toString()],
-        ['Total Customers', customers.length.toString()],
+        ['Total Customers', dataToExport.length.toString()],
       ];
       
       for (int r = 0; r < summaryRows.length; r++) {
@@ -581,7 +623,7 @@ class AccountsReceivableController extends GetxController {
       }
       
       int row = 1;
-      for (final customer in customers) {
+      for (final customer in dataToExport) {
         final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
         _excelSetCell(customersSheet, row, 0, customer.name, bgColor: bg);
         _excelSetCell(customersSheet, row, 1, customer.email, bgColor: bg);
@@ -598,11 +640,11 @@ class AccountsReceivableController extends GetxController {
       
       // Totals row
       _excelSetCell(customersSheet, row, 3, 'TOTAL', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(customersSheet, row, 4, customers.fold(0.0, (sum, c) => sum + c.totalAmount), 
+      _excelSetCell(customersSheet, row, 4, dataToExport.fold(0.0, (sum, c) => sum + c.totalAmount), 
           bold: true, bgColor: 'E8EAF6', fontColor: '1A237E');
-      _excelSetCell(customersSheet, row, 5, customers.fold(0.0, (sum, c) => sum + c.paidAmount), 
+      _excelSetCell(customersSheet, row, 5, dataToExport.fold(0.0, (sum, c) => sum + c.paidAmount), 
           bold: true, bgColor: 'E8EAF6', fontColor: '2E7D32');
-      _excelSetCell(customersSheet, row, 6, customers.fold(0.0, (sum, c) => sum + c.outstandingAmount), 
+      _excelSetCell(customersSheet, row, 6, dataToExport.fold(0.0, (sum, c) => sum + c.outstandingAmount), 
           bold: true, bgColor: 'E8EAF6', fontColor: 'C62828');
       
       final colWidths = [30.0, 25.0, 15.0, 12.0, 15.0, 15.0, 15.0, 15.0];
@@ -622,7 +664,7 @@ class AccountsReceivableController extends GetxController {
       }
       
       int invoiceRow = 1;
-      for (final customer in customers) {
+      for (final customer in dataToExport) {
         for (final invoice in customer.invoices) {
           final bg = invoiceRow.isEven ? 'F5F5F5' : 'FFFFFF';
           double outstanding = invoice.amount - invoice.paidAmount;
@@ -650,22 +692,45 @@ class AccountsReceivableController extends GetxController {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Excel save failed');
       
-      final dir = await getTemporaryDirectory();
       final fileName = 'accounts_receivable_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${customers.length} customers exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download Excel
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${dataToExport.length} customers exported to Excel',
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${dataToExport.length} customers exported to Excel',
+          duration: const Duration(seconds: 2),
+        );
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -698,22 +763,20 @@ class AccountsReceivableController extends GetxController {
   }
   
   void printReport() {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.green,
       'Print',
       'Preparing Accounts Receivable report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
   void _handleSessionExpired() {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Session Expired',
       'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
@@ -769,7 +832,7 @@ class AccountsReceivableController extends GetxController {
   }
 }
 
-// Models
+// Models (Customer and Invoice classes remain the same)
 class Customer {
   final String id;
   final String name;

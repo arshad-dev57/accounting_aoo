@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/balancesheet/screens/balance_sheet_screen.dart';
 import 'package:LedgerPro_app/core/cashflowstatement/screen/cash_flow_statement_screen.dart';
 import 'package:LedgerPro_app/core/dashboard/controllers/reports_controller.dart';
@@ -492,13 +493,7 @@ class ReportsScreen extends StatelessWidget {
           break;
         default:
           // Show error snackbar
-          Get.snackbar(
-            'Navigation Error',
-            'Unable to navigate to the selected report',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-          );
+          AppSnackbar.error(kPrimary, 'Navigation Error', 'Unable to navigate to the selected report');
       }
     }
   }

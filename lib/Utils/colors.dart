@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // Sab kuch CONSTANT hi rahega - Koi error nahi aayega
-const Color kPrimary = Color(0xFF1AB4F5);
+const Color kPrimary = Color(0xff00ffbe);
 const Color kPrimaryDark = Color(0xFF0FA3E0);
 const Color kSuccess = Color(0xFF2ECC71);
 const Color kDanger = Color(0xFFE74C3C);
@@ -26,6 +26,6 @@ const Color kBorderDark = Color(0xFF424242);
 // Sirf dark mode toggle karne par ye automatically change ho jayenge
 Color get kBg => Get.isDarkMode ? kBgDark : kBgLight;
 Color get kCardBg => Get.isDarkMode ? kCardBgDark : kCardBgLight;
-Color get kText => Get.isDarkMode ? kTextDark : kTextLight;
+  Color  get kText => Get.isDarkMode ? kTextDark : kTextLight;
 Color get kSubText => Get.isDarkMode ? kSubTextDark : kSubTextLight;
 Color get kBorder => Get.isDarkMode ? kBorderDark : kBorderLight;

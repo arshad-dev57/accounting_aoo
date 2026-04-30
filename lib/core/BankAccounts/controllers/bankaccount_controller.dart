@@ -1,5 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -21,7 +24,7 @@ class BankAccountController extends GetxController {
   
   // Summary totals
   var totalBalance = 0.0.obs;
-  var totalPKR = 0.0.obs;
+  var total$ = 0.0.obs;
   var totalUSD = 0.0.obs;
   var activeCount = 0.obs;
   
@@ -74,7 +77,7 @@ class BankAccountController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   @override
@@ -118,7 +121,7 @@ class BankAccountController extends GetxController {
           
           final summary = data['summary'] ?? {};
           totalBalance.value = _toDouble(summary['totalBalance']);
-          totalPKR.value = _toDouble(summary['totalPKR']);
+          total$.value = _toDouble(summary['total\$']);
           totalUSD.value = _toDouble(summary['totalUSD']);
           activeCount.value = (summary['activeCount'] ?? 0).toInt();
         }
@@ -126,11 +129,21 @@ class BankAccountController extends GetxController {
         _handleSessionExpired();
       } else {
         final errorData = jsonDecode(response.body);
-        Get.snackbar('Error', errorData['message'] ?? 'Failed to load accounts');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          errorData['message'] ?? 'Failed to load accounts',
+          duration: const Duration(seconds: 2),
+        );
       }
     } catch (e) {
       print('Error fetching bank accounts: $e');
-      Get.snackbar('Error', 'Failed to load bank accounts: $e');
+      AppSnackbar.error(
+        Colors.red,
+        'Error',
+        'Failed to load bank accounts: $e',
+        duration: const Duration(seconds: 2),
+      );
     } finally {
       isLoading(false);
     }
@@ -148,28 +161,31 @@ class BankAccountController extends GetxController {
       );
       
       if (response.statusCode == 201) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Bank account added successfully\nJournal entry created for opening balance',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
+       
         await fetchBankAccounts();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to create account',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFE74C3C),
-          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
         );
       }
     } catch (e) {
       print('Error creating bank account: $e');
-      Get.snackbar('Error', 'Failed to create account: $e');
+      AppSnackbar.error(
+        Colors.red,
+        'Error',
+        'Failed to create account: $e',
+        duration: const Duration(seconds: 2),
+      );
     } finally {
       isLoading(false);
     }
@@ -187,27 +203,31 @@ class BankAccountController extends GetxController {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Bank account updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
         );
+        
         await fetchBankAccounts();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to update account',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFE74C3C),
-          colorText: Colors.white,
+         
         );
       }
     } catch (e) {
       print('Error updating bank account: $e');
-      Get.snackbar('Error', 'Failed to update account: $e');
+      AppSnackbar.error(
+        Colors.red,
+        'Error',
+        'Failed to update account: $e',
+        duration: const Duration(seconds: 2),
+      );
     } finally {
       isLoading(false);
     }
@@ -222,27 +242,30 @@ class BankAccountController extends GetxController {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Bank account "$accountName" deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
         );
         await fetchBankAccounts();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to delete account',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFE74C3C),
-          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
         );
       }
     } catch (e) {
       print('Error deleting bank account: $e');
-      Get.snackbar('Error', 'Failed to delete account: $e');
+      AppSnackbar.error(
+        Colors.red,
+        'Error',
+        'Failed to delete account: $e',
+        duration: const Duration(seconds: 2),
+      );
     }
   }
   
@@ -257,12 +280,11 @@ class BankAccountController extends GetxController {
   }
   
   void syncAccounts() {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Sync',
       'Syncing bank accounts...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
@@ -317,21 +339,23 @@ class BankAccountController extends GetxController {
   
   Future<void> exportToPdf() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Generating PDF...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final pdf = pw.Document();
       
@@ -349,22 +373,51 @@ class BankAccountController extends GetxController {
         ),
       );
       
-      final dir = await getTemporaryDirectory();
+      final bytes = await pdf.save();
       final fileName = 'bank_accounts_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${bankAccounts.length} accounts exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download using HTML anchor tag
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${bankAccounts.length} accounts exported to PDF',
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        // MOBILE: Save to file and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${bankAccounts.length} accounts exported to PDF',
+          duration: const Duration(seconds: 2),
+        );
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(
+        Colors.red,
+        'Error',
+        'Failed to export PDF: $e',
+        duration: const Duration(seconds: 2),
+      );
     }
   }
   
@@ -433,7 +486,7 @@ class BankAccountController extends GetxController {
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
           _pdfSummaryItem('Total Balance', _formatAmount(totalBalance.value), PdfColors.green700),
-          _pdfSummaryItem('PKR Balance', _formatAmount(totalPKR.value), PdfColors.indigo700),
+          _pdfSummaryItem('\$ Balance', _formatAmount(total$.value), PdfColors.indigo700),
           _pdfSummaryItem('USD Balance', _formatAmount(totalUSD.value), PdfColors.orange700),
           _pdfSummaryItem('Active Accounts', activeCount.value.toString(), PdfColors.indigo700),
           _pdfSummaryItem('Total Accounts', bankAccounts.length.toString(), PdfColors.grey700),
@@ -507,21 +560,23 @@ class BankAccountController extends GetxController {
   
   Future<void> exportToExcel() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final excel = Excel.createExcel();
       
@@ -547,7 +602,7 @@ class BankAccountController extends GetxController {
       
       final summaryRows = [
         ['Total Balance (All Currencies)', _formatAmount(totalBalance.value)],
-        ['PKR Balance', _formatAmount(totalPKR.value)],
+        ['\$ Balance', _formatAmount(total$.value)],
         ['USD Balance', _formatAmount(totalUSD.value)],
         ['Active Accounts', activeCount.value.toString()],
         ['Total Accounts', bankAccounts.length.toString()],
@@ -605,22 +660,45 @@ class BankAccountController extends GetxController {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Excel save failed');
       
-      final dir = await getTemporaryDirectory();
       final fileName = 'bank_accounts_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${bankAccounts.length} accounts exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download Excel
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${bankAccounts.length} accounts exported to Excel',
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(
+          Colors.green,
+          'Success',
+          '${bankAccounts.length} accounts exported to Excel',
+          duration: const Duration(seconds: 2),
+        );
+            
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e', duration: const Duration(seconds: 2));
     }
   }
   
@@ -653,42 +731,39 @@ class BankAccountController extends GetxController {
   }
   
   void reconcileAccount(BankAccount account) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Reconcile',
       'Reconciling ${account.accountName}...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
+  
   }
   
   void viewTransactions(BankAccount account) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Transactions',
       'Viewing transactions for ${account.accountName}...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
   void transferMoney(BankAccount account) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Transfer',
       'Transfer from ${account.accountName}...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
   
   void _handleSessionExpired() {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Session Expired',
       'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFE74C3C),
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 }
@@ -757,7 +832,7 @@ class BankAccount {
       bankName: json['bankName'].toString(),
       branchCode: json['branchCode']?.toString() ?? '',
       accountType: json['accountType']?.toString() ?? 'Current',
-      currency: json['currency']?.toString() ?? 'PKR',
+      currency: json['currency']?.toString() ?? '\$',
       openingBalance: (json['openingBalance'] ?? 0).toDouble(),
       currentBalance: (json['currentBalance'] ?? 0).toDouble(),
       status: json['status']?.toString() ?? 'Active',

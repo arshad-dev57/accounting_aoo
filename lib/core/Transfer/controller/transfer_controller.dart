@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -75,7 +76,7 @@ class TransferController extends GetxController {
         _handleSessionExpired();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load bank accounts: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to load bank accounts: $e');
     } finally {
       isLoading(false);
     }
@@ -136,13 +137,7 @@ class TransferController extends GetxController {
   
   Future<void> transfer() async {
     if (!canTransfer) {
-      Get.snackbar(
-        'Cannot Transfer',
-        'Please check: From Account, To Account, and Amount',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: kDanger,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error(kWarning, 'Cannot Transfer', 'Please check: From Account, To Account, and Amount');
       return;
     }
     
@@ -169,14 +164,7 @@ class TransferController extends GetxController {
       
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        Get.snackbar(
-          'Success',
-          data['message'] ?? 'Transfer completed successfully!',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
+        AppSnackbar.success(kSuccess, 'Success', data['message'] ?? 'Transfer completed successfully!');
         
         // Reset form
         fromAccountId.value = '';
@@ -192,16 +180,10 @@ class TransferController extends GetxController {
         Get.back();
       } else {
         final errorData = jsonDecode(response.body);
-        Get.snackbar(
-          'Error',
-          errorData['message'] ?? 'Transfer failed',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kDanger,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', errorData['message'] ?? 'Transfer failed');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Transfer failed: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Transfer failed: $e');
     } finally {
       isTransferring(false);
     }
@@ -217,13 +199,7 @@ class TransferController extends GetxController {
   }
   
   void _handleSessionExpired() {
-    Get.snackbar(
-      'Session Expired',
-      'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
-    );
+    AppSnackbar.error(kDanger, 'Session Expired', 'Please login again');
   }
 }
 
@@ -250,7 +226,7 @@ class BankAccountForTransfer {
       name: json['accountName'],
       number: json['accountNumber'],
       balance: (json['currentBalance'] ?? 0).toDouble(),
-      currency: json['currency'] ?? 'PKR',
+      currency: json['currency'] ?? '\$',
       color: json['color'] ?? '#1AB4F5',
     );
   }

@@ -1,9 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
-import 'package:LedgerPro_app/core/BusinessSetup/Views/business_setup_view.dart';
 import 'package:LedgerPro_app/core/Onboarding/views/Onboarding_screen.dart';
 import 'package:LedgerPro_app/core/Register/Views/register_screen.dart';
 import 'package:LedgerPro_app/core/Splash/screen/splash_screen.dart';
-import 'package:LedgerPro_app/core/dashboard/Screens/dashboard_screen_web.dart';
+import 'package:LedgerPro_app/core/dashboard/Screens/dashbaord_screen.dart';
 import 'package:LedgerPro_app/core/login/screen/login_screen.dart';
 import 'package:LedgerPro_app/core/plans/controllers/subscription_controller.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
@@ -21,9 +20,7 @@ class ThemeController extends GetxController {
   void toggleDarkMode() {
     isDarkMode.value = !isDarkMode.value;
     print('Dark mode: ${isDarkMode.value}');
-    
-    // This will change theme for ENTIRE APP
-    if (isDarkMode.value) {
+        if (isDarkMode.value) {
       Get.changeThemeMode(ThemeMode.dark);
     } else {
       Get.changeThemeMode(ThemeMode.light);
@@ -33,7 +30,7 @@ class ThemeController extends GetxController {
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  usePathUrlStrategy(); // ✅ NEW — # hata do URL se
+  usePathUrlStrategy(); 
 
   // Initialize subscription controller early
   Get.put(SubscriptionController(), permanent: true);
@@ -60,7 +57,8 @@ class MyApp extends StatelessWidget {
               : ThemeMode.light,
           initialRoute: '/',
           getPages: [
-            GetPage(name: '/', page: () => LoginScreen()),
+            GetPage(name: '/', page: () => SplashScreen()),
+                        GetPage(name: '/dashboard', page: () => const DashboardScreen()),
             GetPage(name: '/payment-success', page: () => const PaymentSuccessScreen()),
             GetPage(name: '/payment-cancel', page: () => const PaymentCancelScreen()),
           ],

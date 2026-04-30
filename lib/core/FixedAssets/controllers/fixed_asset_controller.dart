@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:LedgerPro_app/core/FixedAssets/models/fixed_asset_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -76,11 +79,11 @@ class FixedAssetController extends GetxController {
   // ==================== FORMAT AMOUNT ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   String _formatAmountSimple(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   // ==================== LOAD FIXED ASSETS FROM API ====================
@@ -208,12 +211,10 @@ class FixedAssetController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back(); // Close dialog
-          Get.snackbar(
+          AppSnackbar.success(
+            kSuccess,
             'Success',
             'Fixed asset added successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
           
@@ -281,12 +282,10 @@ class FixedAssetController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back(); // Close dialog
-          Get.snackbar(
+          AppSnackbar.success(
+            kSuccess,
             'Success',
             'Fixed asset updated successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
           
@@ -329,12 +328,10 @@ class FixedAssetController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           final data = responseData['data'];
-          Get.snackbar(
+          AppSnackbar.success(
+            kSuccess,
             'Depreciation Complete',
             'Depreciation of ${formatAmount(data['asset']['depreciationAmount'])} recorded for ${asset.name}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
           
@@ -376,12 +373,10 @@ class FixedAssetController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           final data = responseData['data'];
-          Get.snackbar(
+          AppSnackbar.success(
+            kSuccess,
             'Monthly Depreciation Complete',
             'Depreciation processed for ${data['processed']} assets',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
           
@@ -459,12 +454,10 @@ class FixedAssetController extends GetxController {
 
           print("📢 Snackbar Message: $message");
 
-          Get.snackbar(
+          AppSnackbar.success(
+            gainLoss >= 0 ? kSuccess : kWarning,
             'Asset Disposed',
             message,
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: gainLoss >= 0 ? kSuccess : kWarning,
-            colorText: Colors.white,
             duration: const Duration(seconds: 3),
           );
 
@@ -504,12 +497,10 @@ class FixedAssetController extends GetxController {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.success(
+          kSuccess,
           'Success',
           'Fixed asset $name deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
           duration: const Duration(seconds: 2),
         );
         
@@ -581,9 +572,12 @@ class FixedAssetController extends GetxController {
       ),
     );
   }
-  
-  Future<void> exportToPdf() async {
-    try {
+  // ==================== REPLACE THESE TWO METHODS ONLY ====================
+
+Future<void> exportToPdf() async {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -598,44 +592,251 @@ class FixedAssetController extends GetxController {
         ),
         barrierDismissible: false,
       );
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfAssetsTable(),
+          pw.SizedBox(height: 16),
+          _pdfCategoryBreakdown(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'fixed_assets_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      final pdf = pw.Document();
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfAssetsTable(),
-            pw.SizedBox(height: 16),
-            _pdfCategoryBreakdown(),
-          ],
-        ),
+      AppSnackbar.success(
+        const Color(0xFF2ECC71),
+        'Success',
+        'PDF exported successfully',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        const Color(0xFF2ECC71),
+        'Success',
+        'PDF exported successfully',
+        duration: const Duration(seconds: 2),
       );
       
-      final dir = await getTemporaryDirectory();
-      final fileName = 'fixed_assets_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', 'PDF exported successfully',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
   }
-  
+}
+
+Future<void> exportToExcel() async {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
+      Get.dialog(
+        AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Building Excel...', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        barrierDismissible: false,
+      );
+    }
+    
+    final excel = Excel.createExcel();
+    
+    // Summary Sheet
+    final summarySheet = excel['Summary'];
+    excel.setDefaultSheet('Summary');
+    
+    _excelSetCell(summarySheet, 0, 0, 'Fixed Assets Report',
+        bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(summarySheet, 1, 0,
+        'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+        fontSize: 9, fontColor: '757575');
+    
+    if (selectedFilter.value != 'All') {
+      _excelSetCell(summarySheet, 2, 0, 'Filter: ${selectedFilter.value}',
+          fontSize: 10, fontColor: '1A237E');
+    }
+    if (searchQuery.value.isNotEmpty) {
+      _excelSetCell(summarySheet, 3, 0, 'Search: ${searchQuery.value}',
+          fontSize: 10, fontColor: '1A237E');
+    }
+    
+    _excelSetCell(summarySheet, 5, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    
+    final summaryRows = [
+      ['Total Assets', totalAssets.value.toString()],
+      ['Total Cost', _formatAmountSimple(totalCost.value)],
+      ['Total Accumulated Depreciation', _formatAmountSimple(totalDepreciation.value)],
+      ['Total Net Book Value', _formatAmountSimple(totalNetBookValue.value)],
+    ];
+    
+    for (int r = 0; r < summaryRows.length; r++) {
+      for (int c = 0; c < 2; c++) {
+        _excelSetCell(summarySheet, 6 + r, c, summaryRows[r][c],
+            bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
+      }
+    }
+    summarySheet.setColumnWidth(0, 25);
+    summarySheet.setColumnWidth(1, 20);
+    
+    // Fixed Assets Sheet
+    final assetsSheet = excel['Fixed Assets'];
+    final headers = [
+      'Asset Code', 'Asset Name', 'Category', 'Status', 
+      'Purchase Date', 'Purchase Cost', 'Useful Life', 
+      'Salvage Value', 'Depreciation Method', 'Monthly Depreciation',
+      'Accumulated Depreciation', 'Net Book Value', 'Location', 'Supplier'
+    ];
+    
+    for (int i = 0; i < headers.length; i++) {
+      _excelSetCell(assetsSheet, 0, i, headers[i],
+          bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
+    }
+    
+    int row = 1;
+    for (final asset in assets) {
+      final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(assetsSheet, row, 0, asset.assetCode, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 1, asset.name, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 2, asset.category, bgColor: bg);
+      
+      final statusColor = asset.status == 'Active' ? '2E7D32' :
+                         asset.status == 'Fully Depreciated' ? 'F57C00' : 'C62828';
+      _excelSetCell(assetsSheet, row, 3, asset.status, bgColor: bg, fontColor: statusColor);
+      
+      _excelSetCell(assetsSheet, row, 4, DateFormat('dd MMM yyyy').format(asset.purchaseDate), bgColor: bg);
+      _excelSetCell(assetsSheet, row, 5, asset.purchaseCost, bgColor: bg, fontColor: '2E7D32');
+      _excelSetCell(assetsSheet, row, 6, asset.usefulLife, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 7, asset.salvageValue, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 8, asset.depreciationMethod, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 9, asset.currentDepreciation, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 10, asset.accumulatedDepreciation, bgColor: bg, fontColor: 'F57C00');
+      _excelSetCell(assetsSheet, row, 11, asset.netBookValue, bgColor: bg, fontColor: '1A237E');
+      _excelSetCell(assetsSheet, row, 12, asset.location, bgColor: bg);
+      _excelSetCell(assetsSheet, row, 13, asset.supplier, bgColor: bg);
+      row++;
+    }
+    
+    final colWidths = [12.0, 25.0, 15.0, 12.0, 12.0, 15.0, 10.0, 12.0, 15.0, 15.0, 18.0, 15.0, 15.0, 20.0];
+    for (int i = 0; i < colWidths.length; i++) {
+      assetsSheet.setColumnWidth(i, colWidths[i]);
+    }
+    
+    // Category Breakdown Sheet
+    final categorySheet = excel['Category Breakdown'];
+    final catHeaders = ['Category', 'Count', 'Total Cost', 'Net Book Value'];
+    
+    for (int i = 0; i < catHeaders.length; i++) {
+      _excelSetCell(categorySheet, 0, i, catHeaders[i],
+          bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
+    }
+    
+    Map<String, int> categoryCount = {};
+    Map<String, double> categoryCost = {};
+    Map<String, double> categoryNBV = {};
+    
+    for (var asset in assets) {
+      categoryCount[asset.category] = (categoryCount[asset.category] ?? 0) + 1;
+      categoryCost[asset.category] = (categoryCost[asset.category] ?? 0) + asset.purchaseCost;
+      categoryNBV[asset.category] = (categoryNBV[asset.category] ?? 0) + asset.netBookValue;
+    }
+    
+    int catRow = 1;
+    for (var category in categoryCount.keys) {
+      final bg = catRow.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(categorySheet, catRow, 0, category, bgColor: bg);
+      _excelSetCell(categorySheet, catRow, 1, categoryCount[category]!, bgColor: bg);
+      _excelSetCell(categorySheet, catRow, 2, categoryCost[category]!, bgColor: bg, fontColor: '2E7D32');
+      _excelSetCell(categorySheet, catRow, 3, categoryNBV[category]!, bgColor: bg, fontColor: '1A237E');
+      catRow++;
+    }
+    
+    categorySheet.setColumnWidth(0, 20);
+    categorySheet.setColumnWidth(1, 10);
+    categorySheet.setColumnWidth(2, 18);
+    categorySheet.setColumnWidth(3, 18);
+    
+    excel.delete('Sheet1');
+    
+    final bytes = excel.save();
+    if (bytes == null) throw Exception('Excel save failed');
+    
+    final fileName = 'fixed_assets_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+    
+    if (kIsWeb) {
+      // WEB: Download Excel
+      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        const Color(0xFF2ECC71),
+        'Success',
+        'Excel exported successfully',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        const Color(0xFF2ECC71),
+        'Success',
+        'Excel exported successfully',
+        duration: const Duration(seconds: 2),
+      );
+          
+      await OpenFile.open(file.path);
+    }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
+  }
+}
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -842,167 +1043,6 @@ class FixedAssetController extends GetxController {
     );
   }
   
-  Future<void> exportToExcel() async {
-    try {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
-          ),
-        ),
-        barrierDismissible: false,
-      );
-      
-      final excel = Excel.createExcel();
-      
-      // Summary Sheet
-      final summarySheet = excel['Summary'];
-      excel.setDefaultSheet('Summary');
-      
-      _excelSetCell(summarySheet, 0, 0, 'Fixed Assets Report',
-          bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(summarySheet, 1, 0,
-          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
-          fontSize: 9, fontColor: '757575');
-      
-      if (selectedFilter.value != 'All') {
-        _excelSetCell(summarySheet, 2, 0, 'Filter: ${selectedFilter.value}',
-            fontSize: 10, fontColor: '1A237E');
-      }
-      if (searchQuery.value.isNotEmpty) {
-        _excelSetCell(summarySheet, 3, 0, 'Search: ${searchQuery.value}',
-            fontSize: 10, fontColor: '1A237E');
-      }
-      
-      _excelSetCell(summarySheet, 5, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
-      
-      final summaryRows = [
-        ['Total Assets', totalAssets.value.toString()],
-        ['Total Cost', _formatAmountSimple(totalCost.value)],
-        ['Total Accumulated Depreciation', _formatAmountSimple(totalDepreciation.value)],
-        ['Total Net Book Value', _formatAmountSimple(totalNetBookValue.value)],
-      ];
-      
-      for (int r = 0; r < summaryRows.length; r++) {
-        for (int c = 0; c < 2; c++) {
-          _excelSetCell(summarySheet, 6 + r, c, summaryRows[r][c],
-              bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
-        }
-      }
-      summarySheet.setColumnWidth(0, 25);
-      summarySheet.setColumnWidth(1, 20);
-      
-      // Fixed Assets Sheet
-      final assetsSheet = excel['Fixed Assets'];
-      final headers = [
-        'Asset Code', 'Asset Name', 'Category', 'Status', 
-        'Purchase Date', 'Purchase Cost', 'Useful Life', 
-        'Salvage Value', 'Depreciation Method', 'Monthly Depreciation',
-        'Accumulated Depreciation', 'Net Book Value', 'Location', 'Supplier'
-      ];
-      
-      for (int i = 0; i < headers.length; i++) {
-        _excelSetCell(assetsSheet, 0, i, headers[i],
-            bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
-      }
-      
-      int row = 1;
-      for (final asset in assets) {
-        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(assetsSheet, row, 0, asset.assetCode, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 1, asset.name, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 2, asset.category, bgColor: bg);
-        
-        // Status with color
-        final statusColor = asset.status == 'Active' ? '2E7D32' :
-                           asset.status == 'Fully Depreciated' ? 'F57C00' : 'C62828';
-        _excelSetCell(assetsSheet, row, 3, asset.status, bgColor: bg, fontColor: statusColor);
-        
-        _excelSetCell(assetsSheet, row, 4, DateFormat('dd MMM yyyy').format(asset.purchaseDate), bgColor: bg);
-        _excelSetCell(assetsSheet, row, 5, asset.purchaseCost, bgColor: bg, fontColor: '2E7D32');
-        _excelSetCell(assetsSheet, row, 6, asset.usefulLife, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 7, asset.salvageValue, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 8, asset.depreciationMethod, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 9, asset.currentDepreciation, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 10, asset.accumulatedDepreciation, bgColor: bg, fontColor: 'F57C00');
-        _excelSetCell(assetsSheet, row, 11, asset.netBookValue, bgColor: bg, fontColor: '1A237E');
-        _excelSetCell(assetsSheet, row, 12, asset.location, bgColor: bg);
-        _excelSetCell(assetsSheet, row, 13, asset.supplier, bgColor: bg);
-        row++;
-      }
-      
-      // Set column widths
-      final colWidths = [12.0, 25.0, 15.0, 12.0, 12.0, 15.0, 10.0, 12.0, 15.0, 15.0, 18.0, 15.0, 15.0, 20.0];
-      for (int i = 0; i < colWidths.length; i++) {
-        assetsSheet.setColumnWidth(i, colWidths[i]);
-      }
-      
-      // Category Breakdown Sheet
-      final categorySheet = excel['Category Breakdown'];
-      final catHeaders = ['Category', 'Count', 'Total Cost', 'Net Book Value'];
-      
-      for (int i = 0; i < catHeaders.length; i++) {
-        _excelSetCell(categorySheet, 0, i, catHeaders[i],
-            bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
-      }
-      
-      // Calculate category totals
-      Map<String, int> categoryCount = {};
-      Map<String, double> categoryCost = {};
-      Map<String, double> categoryNBV = {};
-      
-      for (var asset in assets) {
-        categoryCount[asset.category] = (categoryCount[asset.category] ?? 0) + 1;
-        categoryCost[asset.category] = (categoryCost[asset.category] ?? 0) + asset.purchaseCost;
-        categoryNBV[asset.category] = (categoryNBV[asset.category] ?? 0) + asset.netBookValue;
-      }
-      
-      int catRow = 1;
-      for (var category in categoryCount.keys) {
-        final bg = catRow.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(categorySheet, catRow, 0, category, bgColor: bg);
-        _excelSetCell(categorySheet, catRow, 1, categoryCount[category]!, bgColor: bg);
-        _excelSetCell(categorySheet, catRow, 2, categoryCost[category]!, bgColor: bg, fontColor: '2E7D32');
-        _excelSetCell(categorySheet, catRow, 3, categoryNBV[category]!, bgColor: bg, fontColor: '1A237E');
-        catRow++;
-      }
-      
-      categorySheet.setColumnWidth(0, 20);
-      categorySheet.setColumnWidth(1, 10);
-      categorySheet.setColumnWidth(2, 18);
-      categorySheet.setColumnWidth(3, 18);
-      
-      // Delete default sheet
-      excel.delete('Sheet1');
-      
-      final bytes = excel.save();
-      if (bytes == null) throw Exception('Excel save failed');
-      
-      final dir = await getTemporaryDirectory();
-      final fileName = 'fixed_assets_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', 'Excel exported successfully',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
-    }
-  }
-  
   void _excelSetCell(
     Sheet sheet,
     int row,
@@ -1032,12 +1072,10 @@ class FixedAssetController extends GetxController {
   }
   
   void printAssets() {
-    Get.snackbar(
+    AppSnackbar.success(
+      kPrimary,
       'Print',
       'Preparing fixed assets report for printing...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );
   }
@@ -1180,7 +1218,7 @@ class FixedAssetController extends GetxController {
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Purchase Cost *',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1217,7 +1255,7 @@ class FixedAssetController extends GetxController {
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Salvage Value',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1560,7 +1598,7 @@ class FixedAssetController extends GetxController {
                               initialValue: purchaseCost.toString(),
                               decoration: InputDecoration(
                                 labelText: 'Purchase Cost *',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1597,7 +1635,7 @@ class FixedAssetController extends GetxController {
                               initialValue: salvageValue.toString(),
                               decoration: InputDecoration(
                                 labelText: 'Salvage Value',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1855,7 +1893,7 @@ class FixedAssetController extends GetxController {
                           initialValue: disposalAmount.toString(),
                           decoration: InputDecoration(
                             labelText: 'Disposal Amount *',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             labelStyle: TextStyle(fontSize: 12.sp),
                             fillColor: kCardBg,
@@ -2094,13 +2132,6 @@ class FixedAssetController extends GetxController {
   }
   
   void _showError(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kWarning,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.error(kWarning, 'Error', message);
   }
 }

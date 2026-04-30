@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -62,29 +63,24 @@ class OTPController extends GetxController {
         email.value = emailController.text.trim();
         isOtpSent.value = true;
         _startTimer();
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           data['message'] ?? 'OTP sent to your email',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
+          
         );
       } else {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.red,
           'Error',
           data['message'] ?? 'Failed to send OTP',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
         );
       }
     } catch (e) {
-      Get.snackbar(
+      AppSnackbar.success(
+        Colors.red,
         'Error',
         'Network error. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
       );
     } finally {
       isLoading.value = false;
@@ -132,33 +128,28 @@ class OTPController extends GetxController {
         isOtpVerified.value = true;
         _stopTimer();
         
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           data['message'] ?? 'OTP verified successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
         );
         
         // ✅ Navigation will happen from the screen widget
       } else {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.red,
           'Error',
           data['message'] ?? 'Invalid OTP',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
         );
       }
     } catch (e) {
       print('Verify OTP Error: $e');
-      Get.snackbar(
+      AppSnackbar.success(
+        Colors.red,
         'Error',
         'Network error. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
       );
+      
     } finally {
       isLoading.value = false;
     }

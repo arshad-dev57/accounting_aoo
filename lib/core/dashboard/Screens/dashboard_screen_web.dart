@@ -53,16 +53,29 @@ class _SidebarSection {
   final String label;
   final List<_SidebarItem>? children;
   final VoidCallback? onTap;
-  const _SidebarSection({required this.icon, required this.label, this.children, this.onTap});
+  final String routeName;
+  
+  const _SidebarSection({
+    required this.icon, 
+    required this.label, 
+    this.children, 
+    this.onTap,
+    this.routeName = '',
+  });
 }
+
 
 class _SidebarItem {
   final String icon;
   final String label;
-  final Widget screen;
-  const _SidebarItem({required this.icon, required this.label, required this.screen});
+  final String routeName;
+  
+  const _SidebarItem({
+    required this.icon, 
+    required this.label, 
+    required this.routeName,
+  });
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
@@ -73,74 +86,29 @@ class WebDashboardScreen extends StatefulWidget {
   State<WebDashboardScreen> createState() => _WebDashboardScreenState();
 }
 
-class _WebDashboardScreenState extends State<WebDashboardScreen>
-    with TickerProviderStateMixin {
+class _WebDashboardScreenState extends State<WebDashboardScreen> {
   bool _sidebarCollapsed = false;
-  Widget? _currentScreen;
-
   late final DashboardController _ctrl;
   late final SubscriptionController _subCtrl;
-  late final AnimationController _fadeCtrl;
-  late final Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _ctrl = Get.put(DashboardController());
     _subCtrl = Get.find<SubscriptionController>();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _fadeCtrl.forward();
-    _currentScreen = _DashboardBody(
+    
+    _ctrl.currentScreen.value = _DashboardBody(
       ctrl: _ctrl,
       subCtrl: _subCtrl,
       onNavigate: _changeScreen,
     );
+    _ctrl.currentRoute.value = 'dashboard';
   }
 
-  void _changeScreen(Widget screen) {
-    setState(() {
-      _currentScreen = screen;
-    });
-  }
-
-  @override
-  void dispose() {
-    _fadeCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Row(
-        children: [
-          _WebSidebar(
-            collapsed: _sidebarCollapsed,
-            ctrl: _ctrl,
-            subCtrl: _subCtrl,
-            onToggle: () => setState(() => _sidebarCollapsed = !_sidebarCollapsed),
-            onLogout: _showLogoutDialog,
-            onChangeScreen: _changeScreen,
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                _TopBar(ctrl: _ctrl, title: _getTitleForScreen(_currentScreen)),
-                Expanded(
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: _currentScreen ?? Container(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+ void _changeScreen(Widget screen, {String route = 'dashboard'}) {
+  print('🖱️ Changing screen to: $route');  // Debug print
+  _ctrl.navigateTo(screen, route: route);
+}
 
   String _getTitleForScreen(Widget? screen) {
     if (screen is _DashboardBody) return 'Dashboard';
@@ -247,20 +215,49 @@ class _WebDashboardScreenState extends State<WebDashboardScreen>
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Row(
+        children: [
+          _WebSidebar(
+            collapsed: _sidebarCollapsed,
+            ctrl: _ctrl,
+            subCtrl: _subCtrl,
+            onToggle: () => setState(() => _sidebarCollapsed = !_sidebarCollapsed),
+            onLogout: _showLogoutDialog,
+            onChangeScreen: _changeScreen,
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Obx(() => _TopBar(
+                  ctrl: _ctrl,
+                  title: _getTitleForScreen(_ctrl.currentScreen.value),
+                )),
+                Expanded(
+                  child: Obx(() => _ctrl.currentScreen.value ?? Container()),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR
-// ══════════════════════════════════════════════════════════════════════════════
-class _WebSidebar extends StatefulWidget {
+class _WebSidebar extends StatelessWidget {
   final bool collapsed;
   final DashboardController ctrl;
   final SubscriptionController subCtrl;
   final VoidCallback onToggle;
   final VoidCallback onLogout;
-  final Function(Widget) onChangeScreen;
+  final Function(Widget, {String route}) onChangeScreen;
 
-  const _WebSidebar({
+  _WebSidebar({
     required this.collapsed,
     required this.ctrl,
     required this.subCtrl,
@@ -268,94 +265,166 @@ class _WebSidebar extends StatefulWidget {
     required this.onLogout,
     required this.onChangeScreen,
   });
-
-  @override
-  State<_WebSidebar> createState() => _WebSidebarState();
-}
-
-class _WebSidebarState extends State<_WebSidebar> {
-  final Map<int, bool> _expanded = {};
-
-  late final List<_SidebarSection> _sections = [
+  final List<_SidebarSection> _sections = const [
     _SidebarSection(
       icon: Mdi.view_dashboard,
       label: 'Dashboard',
-      onTap: () => widget.onChangeScreen(_DashboardBody(
-        ctrl: widget.ctrl,
-        subCtrl: widget.subCtrl,
-        onNavigate: widget.onChangeScreen,
-      )),
+      routeName: 'dashboard',
     ),
     _SidebarSection(
       icon: Mdi.account_circle,
       label: 'LedgerPro Core',
       children: [
-        _SidebarItem(icon: _iconForItem('Chart of Accounts'), label: 'Chart of Accounts', screen: const ChartOfAccountsScreen()),
-        _SidebarItem(icon: _iconForItem('Journal Entries'), label: 'Journal Entries', screen: const JournalEntriesScreen()),
-        _SidebarItem(icon: _iconForItem('General Ledger'), label: 'General Ledger', screen: const GeneralLedgerScreen()),
-        _SidebarItem(icon: _iconForItem('Trial Balance'), label: 'Trial Balance', screen: const TrialBalanceScreen()),
-        _SidebarItem(icon: _iconForItem('Bank Accounts'), label: 'Bank Accounts', screen: const BankAccountsScreen()),
-        _SidebarItem(icon: _iconForItem('Income'), label: 'Income', screen: const IncomeScreen()),
-        _SidebarItem(icon: _iconForItem('Expense'), label: 'Expense', screen: const ExpenseScreen()),
+        _SidebarItem(icon: Mdi.chart_tree, label: 'Chart of Accounts', routeName: 'chart_of_accounts'),
+        _SidebarItem(icon: Mdi.book_open_page_variant, label: 'Journal Entries', routeName: 'journal_entries'),
+        _SidebarItem(icon: Mdi.book_open_blank_variant, label: 'General Ledger', routeName: 'general_ledger'),
+        _SidebarItem(icon: Mdi.scale_balance, label: 'Trial Balance', routeName: 'trial_balance'),
+        _SidebarItem(icon: Mdi.bank, label: 'Bank Accounts', routeName: 'bank_accounts'),
+        _SidebarItem(icon: Mdi.trending_up, label: 'Income', routeName: 'income'),
+        _SidebarItem(icon: Mdi.trending_down, label: 'Expense', routeName: 'expense'),
       ],
     ),
     _SidebarSection(
       icon: Mdi.swap_horizontal,
       label: 'Receivables & Payables',
       children: [
-        _SidebarItem(icon: _iconForItem('Accounts Receivable'), label: 'Accounts Receivable', screen: const AccountsReceivableScreen()),
-        _SidebarItem(icon: _iconForItem('Accounts Payable'), label: 'Accounts Payable', screen: const AccountsPayableScreen()),
-        _SidebarItem(icon: _iconForItem('Customers'), label: 'Customers', screen: const CustomersScreen()),
-        _SidebarItem(icon: _iconForItem('Bills'), label: 'Bills', screen: const BillsScreen()),
-        _SidebarItem(icon: _iconForItem('Vendors / Suppliers'), label: 'Vendors / Suppliers', screen: const VendorsScreen()),
-        _SidebarItem(icon: _iconForItem('Payments Received'), label: 'Payments Received', screen: const PaymentsReceivedScreen()),
-        _SidebarItem(icon: _iconForItem('Payments Made'), label: 'Payments Made', screen: const PaymentsMadeScreen()),
-        _SidebarItem(icon: _iconForItem('Credit Notes'), label: 'Credit Notes', screen: const CreditNotesScreen()),
+        _SidebarItem(icon: Mdi.cash_plus, label: 'Accounts Receivable', routeName: 'accounts_receivable'),
+        _SidebarItem(icon: Mdi.cash_minus, label: 'Accounts Payable', routeName: 'accounts_payable'),
+        _SidebarItem(icon: Mdi.account_group, label: 'Customers', routeName: 'customers'),
+        _SidebarItem(icon: Mdi.file_document_outline, label: 'Bills', routeName: 'bills'),
+        _SidebarItem(icon: Mdi.truck_delivery_outline, label: 'Vendors / Suppliers', routeName: 'vendors'),
+        _SidebarItem(icon: Mdi.credit_card_outline, label: 'Payments Received', routeName: 'payments_received'),
+        _SidebarItem(icon: Mdi.cash_check, label: 'Payments Made', routeName: 'payments_made'),
+        _SidebarItem(icon: Mdi.file_undo_outline, label: 'Credit Notes', routeName: 'credit_notes'),
       ],
     ),
     _SidebarSection(
       icon: Mdi.business,
       label: 'Assets & Liabilities',
       children: [
-        _SidebarItem(icon: _iconForItem('Fixed Assets'), label: 'Fixed Assets', screen: const FixedAssetsScreen()),
-        _SidebarItem(icon: _iconForItem('Loans & Borrowings'), label: 'Loans & Borrowings', screen: const LoansBorrowingsScreen()),
-        _SidebarItem(icon: _iconForItem('Capital / Equity'), label: 'Capital / Equity', screen: const CapitalEquityScreen()),
+        _SidebarItem(icon: Mdi.office_building_outline, label: 'Fixed Assets', routeName: 'fixed_assets'),
+        _SidebarItem(icon: Mdi.hand_coin_outline, label: 'Loans & Borrowings', routeName: 'loans'),
+        _SidebarItem(icon: Mdi.chart_donut, label: 'Capital / Equity', routeName: 'capital_equity'),
       ],
     ),
     _SidebarSection(
       icon: Mdi.chart_line,
       label: 'Financial Reports',
       children: [
-        _SidebarItem(icon: _iconForItem('Profit & Loss Statement'), label: 'Profit & Loss Statement', screen: const ProfitLossStatementScreen()),
-        _SidebarItem(icon: _iconForItem('Balance Sheet'), label: 'Balance Sheet', screen: const BalanceSheetScreen()),
-        _SidebarItem(icon: _iconForItem('Cash Flow Statement'), label: 'Cash Flow Statement', screen: const CashFlowStatementScreen()),
-        _SidebarItem(icon: _iconForItem('Aged Receivables'), label: 'Aged Receivables', screen: const AgedReceivablesScreen()),
+        _SidebarItem(icon: Mdi.chart_line, label: 'Profit & Loss Statement', routeName: 'profit_loss'),
+        _SidebarItem(icon: Mdi.clipboard_list_outline, label: 'Balance Sheet', routeName: 'balance_sheet'),
+        _SidebarItem(icon: Mdi.cash, label: 'Cash Flow Statement', routeName: 'cash_flow'),
+        _SidebarItem(icon: Mdi.account_clock, label: 'Aged Receivables', routeName: 'aged_receivables'),
       ],
     ),
     _SidebarSection(
       icon: Mdi.crown,
       label: 'Subscription',
-      onTap: () => widget.onChangeScreen(const SelectPlanScreen()),
+      routeName: 'subscription',
     ),
     _SidebarSection(
       icon: Mdi.message_draw,
       label: 'Feedback',
-      onTap: () => widget.onChangeScreen(const FeedbackScreen()),
+      routeName: 'feedback',
     ),
     _SidebarSection(
       icon: Mdi.information,
       label: 'About',
       children: [
-        _SidebarItem(icon: _iconForItem('About App'), label: 'About App', screen: const AboutAppScreen()),
-        _SidebarItem(icon: _iconForItem('Terms of Service'), label: 'Terms of Service', screen: const TermsOfServiceScreen()),
-        _SidebarItem(icon: _iconForItem('Privacy Policy'), label: 'Privacy Policy', screen: const PrivacyPolicyScreen()),
+        _SidebarItem(icon: Mdi.information_outline, label: 'About App', routeName: 'about_app'),
+        _SidebarItem(icon: Mdi.file_sign, label: 'Terms of Service', routeName: 'terms'),
+        _SidebarItem(icon: Mdi.shield_lock_outline, label: 'Privacy Policy', routeName: 'privacy'),
       ],
     ),
   ];
 
+  final Map<int, RxBool> _expandedStates = {};
+
+  bool _isExpanded(int index) {
+    if (!_expandedStates.containsKey(index)) {
+      _expandedStates[index] = false.obs;
+    }
+    return _expandedStates[index]!.value;
+  }
+
+  void _toggleExpanded(int index) {
+    if (!_expandedStates.containsKey(index)) {
+      _expandedStates[index] = false.obs;
+    }
+    _expandedStates[index]!.toggle();
+  }
+
+  Widget _getScreenForRoute(String routeName) {
+    switch (routeName) {
+      case 'dashboard':
+        return _DashboardBody(ctrl: ctrl, subCtrl: subCtrl, onNavigate: onChangeScreen);
+      case 'chart_of_accounts':
+        return const ChartOfAccountsScreen();
+      case 'journal_entries':
+        return const JournalEntriesScreen();
+      case 'general_ledger':
+        return const GeneralLedgerScreen();
+      case 'trial_balance':
+        return const TrialBalanceScreen();
+      case 'bank_accounts':
+        return const BankAccountsScreen();
+      case 'income':
+        return const IncomeScreen();
+      case 'expense':
+        return const ExpenseScreen();
+      case 'accounts_receivable':
+        return const AccountsReceivableScreen();
+      case 'accounts_payable':
+        return const AccountsPayableScreen();
+      case 'customers':
+        return const CustomersScreen();
+      case 'bills':
+        return const BillsScreen();
+      case 'vendors':
+        return const VendorsScreen();
+      case 'payments_received':
+        return const PaymentsReceivedScreen();
+      case 'payments_made':
+        return const PaymentsMadeScreen();
+      case 'credit_notes':
+        return const CreditNotesScreen();
+      case 'fixed_assets':
+        return const FixedAssetsScreen();
+      case 'loans':
+        return const LoansBorrowingsScreen();
+      case 'capital_equity':
+        return const CapitalEquityScreen();
+      case 'profit_loss':
+        return const ProfitLossStatementScreen();
+      case 'balance_sheet':
+        return const BalanceSheetScreen();
+      case 'cash_flow':
+        return const CashFlowStatementScreen();
+      case 'aged_receivables':
+        return const AgedReceivablesScreen();
+      case 'subscription':
+        return const SelectPlanScreen();
+      case 'feedback':
+        return const FeedbackScreen();
+      case 'about_app':
+        return const AboutAppScreen();
+      case 'terms':
+        return const TermsOfServiceScreen();
+      case 'privacy':
+        return const PrivacyPolicyScreen();
+      default:
+        return _DashboardBody(ctrl: ctrl, subCtrl: subCtrl, onNavigate: onChangeScreen);
+    }
+  }
+
+  void _onItemTap(String routeName) {
+    final screen = _getScreenForRoute(routeName);
+    onChangeScreen(screen, route: routeName);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final w = widget.collapsed ? 72.0 : 268.0;
+    final w = collapsed ? 72.0 : 268.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -368,13 +437,14 @@ class _WebSidebarState extends State<_WebSidebar> {
       child: Column(
         children: [
           _buildLogoArea(),
-          if (widget.collapsed)
+          if (collapsed)
             Padding(
               padding: const EdgeInsets.only(top: 10),
               child: GestureDetector(
-                onTap: widget.onToggle,
+                onTap: onToggle,
                 child: Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: kBg,
                     borderRadius: BorderRadius.circular(10),
@@ -384,7 +454,7 @@ class _WebSidebarState extends State<_WebSidebar> {
                 ),
               ),
             ),
-          if (!widget.collapsed)
+          if (!collapsed)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
               child: Row(
@@ -401,7 +471,7 @@ class _WebSidebarState extends State<_WebSidebar> {
           const SizedBox(height: 4),
           Expanded(
             child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 10 : 10),
+              padding: EdgeInsets.symmetric(horizontal: collapsed ? 10 : 10),
               itemCount: _sections.length,
               itemBuilder: (_, i) => _buildSectionTile(i),
             ),
@@ -415,27 +485,28 @@ class _WebSidebarState extends State<_WebSidebar> {
   Widget _buildLogoArea() {
     return Container(
       height: 72,
-      padding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 16 : 18),
+      padding: EdgeInsets.symmetric(horizontal: collapsed ? 16 : 18),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: kBorder)),
       ),
       child: Row(
-        mainAxisAlignment: widget.collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+        mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
         children: [
           Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               gradient: LinearGradient(colors: [kPrimary, kPrimaryDark]),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.account_balance_rounded, color: Colors.white, size: 18),
           ),
-          if (!widget.collapsed) ...[
+          if (!collapsed) ...[
             const SizedBox(width: 12),
             Text('LedgerPro', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: kText, letterSpacing: -0.3)),
             const Spacer(),
             GestureDetector(
-              onTap: widget.onToggle,
+              onTap: onToggle,
               child: Icon(Icons.chevron_left_rounded, color: kSubText, size: 20),
             ),
           ],
@@ -443,63 +514,62 @@ class _WebSidebarState extends State<_WebSidebar> {
       ),
     );
   }
-
   Widget _buildSectionTile(int i) {
-    final section = _sections[i];
-    final isDirect = section.children == null;
+  final section = _sections[i];
+  final isDirect = section.children == null;
 
-    if (isDirect) {
-      return _DirectNavTile(
-        icon: section.icon,
-        label: section.label,
-        collapsed: widget.collapsed,
-        onTap: section.onTap!,
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ExpandableHeader(
+  if (isDirect) {
+    return Obx(() => _DirectNavTile(
           icon: section.icon,
           label: section.label,
-          isOpen: _expanded[i] == true,
-          collapsed: widget.collapsed,
-          onTap: () {
-            if (widget.collapsed) {
-              widget.onToggle();
-              return;
-            }
-            setState(() => _expanded[i] = !(_expanded[i] == true));
-          },
-        ),
-        if (!widget.collapsed && _expanded[i] == true)
-          ...section.children!.map((item) => _SubItemTile(
-                item: item,
-                onChangeScreen: widget.onChangeScreen,
-              )),
-      ],
-    );
+          collapsed: collapsed,
+          isActive: ctrl.isActive(section.routeName),
+          onTap: () => _onItemTap(section.routeName),
+        ));
   }
 
-  Widget _buildUserCard() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Obx(() => _ExpandableHeader(
+        icon: section.icon,
+        label: section.label,
+        isOpen: _isExpanded(i),
+        collapsed: collapsed,
+        onToggle: () => _toggleExpanded(i),
+        onNavigate: null,  // ← Keep null, don't navigate on header click
+      )),
+      Obx(() => (!collapsed && _isExpanded(i))
+          ? Column(
+              children: section.children!.map((item) => Obx(() => _SubItemTile(
+                    icon: item.icon,
+                    label: item.label,
+                    isActive: ctrl.isActive(item.routeName),
+                    onTap: () => _onItemTap(item.routeName),
+                  ))).toList(),
+            )
+          : const SizedBox.shrink()),
+    ],
+  );
+} Widget _buildUserCard() {
     return Container(
-      margin: EdgeInsets.all(widget.collapsed ? 10 : 12),
-      padding: EdgeInsets.all(widget.collapsed ? 10 : 14),
+      margin: EdgeInsets.all(collapsed ? 10 : 12),
+      padding: EdgeInsets.all(collapsed ? 10 : 14),
       decoration: BoxDecoration(
         color: kBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: kBorder),
       ),
-      child: widget.collapsed
+      child: collapsed
           ? GestureDetector(
-              onTap: widget.onLogout,
+              onTap: onLogout,
               child: Icon(Icons.logout_rounded, color: kDanger, size: 18),
             )
           : Row(
               children: [
                 Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(colors: [kPrimary, kPrimaryDark]),
                     borderRadius: BorderRadius.circular(10),
@@ -512,19 +582,19 @@ class _WebSidebarState extends State<_WebSidebar> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Obx(() => Text(
-                            widget.ctrl.companyName.value.isEmpty ? 'Company' : widget.ctrl.companyName.value,
+                            ctrl.companyName.value.isEmpty ? 'Company' : ctrl.companyName.value,
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kText),
                             overflow: TextOverflow.ellipsis,
                           )),
                       Obx(() => Text(
-                            widget.subCtrl.hasActiveSubscription.value ? 'Premium' : widget.subCtrl.isTrialActive.value ? 'Trial' : 'Expired',
+                            subCtrl.hasActiveSubscription.value ? 'Premium' : subCtrl.isTrialActive.value ? 'Trial' : 'Expired',
                             style: TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w500),
                           )),
                     ],
                   ),
                 ),
                 GestureDetector(
-                  onTap: widget.onLogout,
+                  onTap: onLogout,
                   child: Icon(Icons.logout_rounded, color: kDanger, size: 16),
                 ),
               ],
@@ -534,48 +604,58 @@ class _WebSidebarState extends State<_WebSidebar> {
 }
 
 // ─── Direct Nav Tile ─────────────────────────────────────────────────────────
-class _DirectNavTile extends StatefulWidget {
+class _DirectNavTile extends StatelessWidget {
   final String icon, label;
   final bool collapsed;
+  final bool isActive;
   final VoidCallback onTap;
-  const _DirectNavTile({required this.icon, required this.label, required this.collapsed, required this.onTap});
 
-  @override
-  State<_DirectNavTile> createState() => _DirectNavTileState();
-}
-
-class _DirectNavTileState extends State<_DirectNavTile> {
-  bool _hovered = false;
+  const _DirectNavTile({
+    required this.icon,
+    required this.label,
+    required this.collapsed,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final col = _hovered ? kText : kSubText;
+    final color = isActive ? kPrimary : kSubText;
+    final bgColor = isActive ? kPrimary.withOpacity(0.08) : Colors.transparent;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        onTap: onTap,
+        child: Container(
           margin: const EdgeInsets.only(bottom: 2),
-          padding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 0 : 12, vertical: 11),
+          padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12, vertical: 11),
           decoration: BoxDecoration(
-            color: _hovered ? kBg : Colors.transparent,
+            color: bgColor,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: widget.collapsed
+          child: collapsed
               ? Tooltip(
-                  message: widget.label,
+                  message: label,
                   preferBelow: false,
-                  child: Center(child: Iconify(widget.icon, color: col, size: 20)),
+                  child: Center(
+                    child: Iconify(icon, color: color, size: 20),
+                  ),
                 )
               : Row(
                   children: [
                     const SizedBox(width: 12),
-                    Iconify(widget.icon, color: col, size: 18),
+                    Iconify(icon, color: color, size: 18),
                     const SizedBox(width: 12),
-                    Text(widget.label, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: col, letterSpacing: -0.2)),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        color: color,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
                   ],
                 ),
         ),
@@ -583,52 +663,63 @@ class _DirectNavTileState extends State<_DirectNavTile> {
     );
   }
 }
-
-// ─── Expandable Header ────────────────────────────────────────────────────────
-class _ExpandableHeader extends StatefulWidget {
+class _ExpandableHeader extends StatelessWidget {
   final String icon, label;
   final bool isOpen, collapsed;
-  final VoidCallback onTap;
-  const _ExpandableHeader({required this.icon, required this.label, required this.isOpen, required this.collapsed, required this.onTap});
+  final VoidCallback onToggle;
+  final VoidCallback? onNavigate;
 
-  @override
-  State<_ExpandableHeader> createState() => _ExpandableHeaderState();
-}
-
-class _ExpandableHeaderState extends State<_ExpandableHeader> {
-  bool _hovered = false;
+  const _ExpandableHeader({
+    required this.icon,
+    required this.label,
+    required this.isOpen,
+    required this.collapsed,
+    required this.onToggle,
+    this.onNavigate,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final color = isOpen ? kPrimary : kSubText;
+
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        onTap: () {
+          onToggle();  // Sirf expand/collapse, navigate nahi
+        },
+        child: Container(
           margin: const EdgeInsets.only(bottom: 2),
-          padding: EdgeInsets.symmetric(horizontal: widget.collapsed ? 0 : 12, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 12, vertical: 10),
           decoration: BoxDecoration(
-            color: _hovered ? kBg : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: widget.collapsed
+          child: collapsed
               ? Tooltip(
-                  message: widget.label,
+                  message: label,
                   preferBelow: false,
-                  child: Center(child: Iconify(widget.icon, color: kSubText, size: 20)),
+                  child: Center(
+                    child: Iconify(icon, color: color, size: 20),
+                  ),
                 )
               : Row(
                   children: [
                     const SizedBox(width: 12),
-                    Iconify(widget.icon, color: widget.isOpen ? kPrimary : kSubText, size: 18),
+                    Iconify(icon, color: color, size: 18),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(widget.label, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: widget.isOpen ? kText : kSubText, letterSpacing: -0.2)),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          color: color,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
                     ),
                     AnimatedRotation(
-                      turns: widget.isOpen ? 0.5 : 0,
+                      turns: isOpen ? 0.5 : 0,
                       duration: const Duration(milliseconds: 200),
                       child: Icon(Icons.keyboard_arrow_down_rounded, color: kSubText, size: 18),
                     ),
@@ -638,49 +729,56 @@ class _ExpandableHeaderState extends State<_ExpandableHeader> {
       ),
     );
   }
-}
+}// ─── Sub Item Tile ────────────────────────────────────────────────────────────
+class _SubItemTile extends StatelessWidget {
+  final String icon, label;
+  final bool isActive;
+  final VoidCallback onTap;
 
-// ─── Sub Item Tile ────────────────────────────────────────────────────────────
-class _SubItemTile extends StatefulWidget {
-  final _SidebarItem item;
-  final Function(Widget) onChangeScreen;
-  const _SubItemTile({required this.item, required this.onChangeScreen});
-
-  @override
-  State<_SubItemTile> createState() => _SubItemTileState();
-}
-
-class _SubItemTileState extends State<_SubItemTile> {
-  bool _hovered = false;
+  const _SubItemTile({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final color = isActive ? kPrimary : kSubText;
+    final bgColor = isActive ? kPrimary.withOpacity(0.08) : Colors.transparent;
+
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => widget.onChangeScreen(widget.item.screen),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
+        onTap: onTap,
+        child: Container(
           margin: const EdgeInsets.only(bottom: 1, left: 12),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: _hovered ? kPrimary.withOpacity(0.08) : Colors.transparent,
+            color: bgColor,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
             children: [
               Container(
-                width: 6, height: 6,
-                decoration: BoxDecoration(color: _hovered ? kPrimary : kSubText.withOpacity(0.4), shape: BoxShape.circle),
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isActive ? kPrimary : kSubText.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 12),
-              Iconify(widget.item.icon, color: _hovered ? kPrimary : kSubText, size: 15),
+              Iconify(icon, color: color, size: 15),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  widget.item.label,
-                  style: TextStyle(fontSize: 12.5, fontWeight: _hovered ? FontWeight.w600 : FontWeight.w400, color: _hovered ? kText : kSubText),
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    color: color,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -689,44 +787,6 @@ class _SubItemTileState extends State<_SubItemTile> {
         ),
       ),
     );
-  }
-}
-
-String _iconForItem(String item) {
-  switch (item) {
-    case 'Chart of Accounts': return Mdi.chart_tree;
-    case 'Journal Entries': return Mdi.book_open_page_variant;
-    case 'General Ledger': return Mdi.book_open_blank_variant;
-    case 'Trial Balance': return Mdi.scale_balance;
-    case 'Bank Accounts': return Mdi.bank;
-    case 'Income': return Mdi.trending_up;
-    case 'Expense': return Mdi.trending_down;
-    case 'Accounts Receivable': return Mdi.cash_plus;
-    case 'Accounts Payable': return Mdi.cash_minus;
-    case 'Customers': return Mdi.account_group;
-    case 'Bills': return Mdi.file_document_outline;
-    case 'Vendors / Suppliers': return Mdi.truck_delivery_outline;
-    case 'Payments Received': return Mdi.credit_card_outline;
-    case 'Payments Made': return Mdi.cash_check;
-    case 'Credit Notes': return Mdi.file_undo_outline;
-    case 'Fixed Assets': return Mdi.office_building_outline;
-    case 'Loans & Borrowings': return Mdi.hand_coin_outline;
-    case 'Capital / Equity': return Mdi.chart_donut;
-    case 'Profit & Loss Statement': return Mdi.chart_line;
-    case 'Balance Sheet': return Mdi.clipboard_list_outline;
-    case 'Cash Flow Statement': return Mdi.cash;
-    case 'Aged Receivables': return Mdi.account_clock;
-    case 'My Profile': return Mdi.account_circle_outline;
-    case 'Change Password': return Mdi.lock_reset;
-    case 'User Guide': return Mdi.book_information_variant;
-    case 'Contact Support': return Mdi.headset;
-    case 'Report an Issue': return Mdi.bug_outline;
-    case 'Subscription': return Mdi.crown;
-    case 'Feedback': return Mdi.message_draw;
-    case 'About App': return Mdi.information_outline;
-    case 'Terms of Service': return Mdi.file_sign;
-    case 'Privacy Policy': return Mdi.shield_lock_outline;
-    default: return Mdi.circle_outline;
   }
 }
 
@@ -772,8 +832,6 @@ class _TopBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          _NotifBtn(),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () => Get.to(() => ProfileScreen()),
@@ -789,51 +847,13 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _NotifBtn extends StatefulWidget {
-  @override
-  State<_NotifBtn> createState() => _NotifBtnState();
-}
-
-class _NotifBtnState extends State<_NotifBtn> {
-  bool _h = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _h = true),
-      onExit: (_) => setState(() => _h = false),
-      child: Stack(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 38, height: 38,
-            decoration: BoxDecoration(
-              color: _h ? kBg : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _h ? kBorder : Colors.transparent),
-            ),
-            child: Icon(Icons.notifications_none_rounded, color: _h ? kText : kSubText, size: 20),
-          ),
-          Positioned(
-            top: 6, right: 6,
-            child: Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(color: kDanger, shape: BoxShape.circle, border: Border.all(color: kCardBg, width: 1.5)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
-// DASHBOARD BODY
+// DASHBOARD BODY (Remains same as before - unchanged)
 // ══════════════════════════════════════════════════════════════════════════════
 class _DashboardBody extends StatefulWidget {
   final DashboardController ctrl;
   final SubscriptionController subCtrl;
-  final Function(Widget) onNavigate;
+  final Function(Widget, {String route}) onNavigate;
   const _DashboardBody({required this.ctrl, required this.subCtrl, required this.onNavigate});
 
   @override
@@ -909,13 +929,6 @@ class _DashboardBodyState extends State<_DashboardBody> {
                 ],
               ),
               const SizedBox(height: 20),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                 
-               
-                ],
-              ),
             ],
           ),
         ),
@@ -1144,7 +1157,7 @@ class _BarChartWidget extends StatelessWidget {
           touchTooltipData: BarTouchTooltipData(
             tooltipBorder: BorderSide(color: kBorder),
             tooltipBorderRadius: BorderRadius.circular(8),
-            getTooltipItem: (group, gi, rod, ri) => BarTooltipItem('₨ ${NumberFormat('#,##0').format(rod.toY)}', TextStyle(color: kText, fontSize: 12, fontWeight: FontWeight.w600)),
+            getTooltipItem: (group, gi, rod, ri) => BarTooltipItem('\$ ${NumberFormat('#,##0').format(rod.toY)}', TextStyle(color: kText, fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         ),
         titlesData: FlTitlesData(
@@ -1284,7 +1297,7 @@ class _PieChartWidget extends StatelessWidget {
 
 class _QuickActionsCard extends StatelessWidget {
   final DashboardController ctrl;
-  final Function(Widget) onNavigate;
+  final Function(Widget, {String route}) onNavigate;
   const _QuickActionsCard({required this.ctrl, required this.onNavigate});
 
   @override
@@ -1299,15 +1312,14 @@ class _QuickActionsCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text('Common tasks', style: TextStyle(fontSize: 12, color: kSubText)),
           const SizedBox(height: 20),
-          _QuickAction(icon: Icons.add_circle_outline_rounded, color: kSuccess, bg: kSuccess.withOpacity(0.1), label: 'Add Income', sub: 'Record a payment', onTap: () => onNavigate(const IncomeScreen())),
+          _QuickAction(icon: Icons.add_circle_outline_rounded, color: kSuccess, bg: kSuccess.withOpacity(0.1), label: 'Add Income', sub: 'Record a payment', onTap: () => onNavigate(const IncomeScreen(), route: 'income')),
           const SizedBox(height: 10),
-          _QuickAction(icon: Icons.remove_circle_outline_rounded, color: kDanger, bg: kDanger.withOpacity(0.1), label: 'Add Expense', sub: 'Log an expense', onTap: () => onNavigate(const ExpenseScreen())),
+          _QuickAction(icon: Icons.remove_circle_outline_rounded, color: kDanger, bg: kDanger.withOpacity(0.1), label: 'Add Expense', sub: 'Log an expense', onTap: () => onNavigate(const ExpenseScreen(), route: 'expense')),
           const SizedBox(height: 10),
           _QuickAction(icon: Icons.receipt_long_rounded, color: kPrimary, bg: kPrimary.withOpacity(0.1), label: 'New Invoice', sub: 'Create invoice', onTap: () {}),
           const SizedBox(height: 10),
-          _QuickAction(icon: Icons.people_alt_rounded, color: kWarning, bg: kWarning.withOpacity(0.1), label: 'Customers', sub: 'Manage customers', onTap: () => onNavigate(const CustomersScreen())),
+          _QuickAction(icon: Icons.people_alt_rounded, color: kWarning, bg: kWarning.withOpacity(0.1), label: 'Customers', sub: 'Manage customers', onTap: () => onNavigate(const CustomersScreen(), route: 'customers')),
           const SizedBox(height: 10),
-          _QuickAction(icon: Icons.bar_chart_rounded, color: const Color(0xFF8B5CF6), bg: const Color(0xFF8B5CF6).withOpacity(0.1), label: 'View Reports', sub: 'Analytics & insights', onTap: () => onNavigate(const ProfitLossStatementScreen())),
         ],
       ),
     );
@@ -1360,141 +1372,6 @@ class _QuickActionState extends State<_QuickAction> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _RecentTransactionsCard extends StatelessWidget {
-  final DashboardController ctrl;
-  const _RecentTransactionsCard({required this.ctrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(() {
-      if (ctrl.recentTransactions.isEmpty) return const SizedBox.shrink();
-      final recent = ctrl.recentTransactions.take(6).toList();
-
-      return Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: kCardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: kBorder)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Recent Transactions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kText)),
-                    const SizedBox(height: 2),
-                    Text('Latest financial activity', style: TextStyle(fontSize: 12, color: kSubText)),
-                  ],
-                ),
-                TextButton(onPressed: () {}, style: TextButton.styleFrom(foregroundColor: kPrimary, padding: EdgeInsets.zero), child: const Text('View All →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                children: [
-                  Expanded(flex: 3, child: Text('Description', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSubText.withOpacity(0.6), letterSpacing: 0.5))),
-                  Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSubText.withOpacity(0.6), letterSpacing: 0.5))),
-                  Expanded(flex: 1, child: Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSubText.withOpacity(0.6), letterSpacing: 0.5))),
-                  Expanded(flex: 2, child: Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSubText.withOpacity(0.6), letterSpacing: 0.5))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: recent.length,
-              separatorBuilder: (_, __) => Divider(color: kBorder, height: 1),
-              itemBuilder: (_, i) {
-                final tx = recent[i];
-                final date = tx['date'] is DateTime ? tx['date'] as DateTime : DateTime.parse(tx['date'].toString());
-                final isIncome = tx['type'] == 'income';
-                final amount = (tx['amount'] ?? 0).toDouble();
-                final title = tx['title']?.toString() ?? '';
-                return _TxRow(title: title, date: DateFormat('dd MMM yyyy').format(date), isIncome: isIncome, amount: '₨ ${NumberFormat('#,##0').format(amount)}');
-              },
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-class _TxRow extends StatefulWidget {
-  final String title, date, amount;
-  final bool isIncome;
-  const _TxRow({required this.title, required this.date, required this.isIncome, required this.amount});
-
-  @override
-  State<_TxRow> createState() => _TxRowState();
-}
-
-class _TxRowState extends State<_TxRow> {
-  bool _h = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _h = true),
-      onExit: (_) => setState(() => _h = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        color: _h ? kBg : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        child: Row(
-          children: [
-            Container(width: 32, height: 32, margin: const EdgeInsets.only(right: 10), decoration: BoxDecoration(color: widget.isIncome ? kSuccess.withOpacity(0.1) : kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(widget.isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, color: widget.isIncome ? kSuccess : kDanger, size: 15)),
-            Expanded(flex: 3, child: Text(widget.title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kText), overflow: TextOverflow.ellipsis)),
-            Expanded(flex: 2, child: Text(widget.date, style: TextStyle(fontSize: 12, color: kSubText))),
-            Expanded(flex: 1, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: widget.isIncome ? kSuccess.withOpacity(0.1) : kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(5)), child: Text(widget.isIncome ? 'Income' : 'Expense', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: widget.isIncome ? kSuccess : kDanger)))),
-            Expanded(flex: 2, child: Text(widget.amount, textAlign: TextAlign.right, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.isIncome ? kSuccess : kText))),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniStatCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor, iconBg;
-  final String label;
-  final String Function() getValue;
-  final Widget subWidget;
-  final Color? valueColor;
-
-  const _MiniStatCard({required this.icon, required this.iconColor, required this.iconBg, required this.label, required this.getValue, required this.subWidget, this.valueColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(color: kCardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: kBorder)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(width: 36, height: 36, decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: iconColor, size: 18)),
-              const SizedBox(width: 10),
-              Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kSubText)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Obx(() => Text(getValue(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: valueColor ?? kText, letterSpacing: -0.5))),
-          const SizedBox(height: 8),
-          subWidget,
-        ],
       ),
     );
   }

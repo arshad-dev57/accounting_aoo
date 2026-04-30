@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -202,14 +203,8 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
           icon: Icon(Icons.picture_as_pdf, color: Colors.white, size: isWeb ? 22 : 20),
           onPressed: () => _generateAndPrintPDF(),
         ),
-        IconButton(
-          icon: Icon(Icons.print, color: Colors.white, size: isWeb ? 22 : 20),
-          onPressed: () => _printReport(),
-        ),
-        IconButton(
-          icon: Icon(Icons.download, color: Colors.white, size: isWeb ? 22 : 20),
-          onPressed: () => _exportToExcel(),
-        ),
+      
+      
       ],
     );
   }
@@ -783,21 +778,19 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
         filename: 'Aged_Receivables_${DateFormat('yyyyMMdd').format(_asAtDate)}.pdf',
       );
       
-      Get.snackbar(
+      AppSnackbar.success(
+        Colors.green,
         'Success',
         'PDF generated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: kSuccess,
-        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
       );
     } catch (e) {
       Get.back();
-      Get.snackbar(
+      AppSnackbar.error(
+        Colors.red,
         'Error',
         'Failed to generate PDF: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: kDanger,
-        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -995,32 +988,29 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
         onLayout: (PdfPageFormat format) async => pdf.save(),
       );
       
-      Get.snackbar(
+      AppSnackbar.success(
+        Colors.green,
         'Success',
         'Print job sent successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: kSuccess,
-        colorText: Colors.white,
+       
       );
     } catch (e) {
       Get.back();
-      Get.snackbar(
+      AppSnackbar.error(
+        Colors.red,
         'Error',
         'Failed to print: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: kDanger,
-        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
       );
     }
   }
 
   void _exportToExcel() {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Export',
       'Exporting to Excel...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -1319,43 +1309,40 @@ class _AgedReceivablesScreenState extends State<AgedReceivablesScreen> {
   }
 
   void _viewInvoices(AgedCustomer customer) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Invoices',
       'Viewing invoices for ${customer.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 
   void _sendReminder(AgedCustomer customer) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Reminder',
       'Sending payment reminder to ${customer.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 
   void _recordPayment(AgedCustomer customer) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.green,
       'Record Payment',
       'Recording payment from ${customer.name}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kSuccess,
-      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
     );
   }
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 
   String _formatAmountForPdf(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }
 

@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -69,7 +72,7 @@ class CashFlowController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   Future<void> loadCashFlowData() async {
@@ -201,7 +204,7 @@ class CashFlowController extends GetxController {
   
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   // ==================== EXPORT FUNCTIONS ====================
@@ -251,9 +254,10 @@ class CashFlowController extends GetxController {
       ),
     );
   }
-  
   Future<void> exportToPdf() async {
-    try {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -268,48 +272,72 @@ class CashFlowController extends GetxController {
         ),
         barrierDismissible: false,
       );
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfOperatingSection(),
+          pw.SizedBox(height: 16),
+          _pdfInvestingSection(),
+          pw.SizedBox(height: 16),
+          _pdfFinancingSection(),
+          pw.SizedBox(height: 16),
+          _pdfTotalsSection(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'cash_flow_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      final pdf = pw.Document();
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfOperatingSection(),
-            pw.SizedBox(height: 16),
-            _pdfInvestingSection(),
-            pw.SizedBox(height: 16),
-            _pdfFinancingSection(),
-            pw.SizedBox(height: 16),
-            _pdfTotalsSection(),
-          ],
-        ),
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Cash flow statement exported to PDF',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Cash flow statement exported to PDF',
+        duration: const Duration(seconds: 2),
       );
       
-      final dir = await getTemporaryDirectory();
-      final fileName = 'cash_flow_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', 'Cash flow statement exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
   }
-  
+}
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -508,9 +536,10 @@ class CashFlowController extends GetxController {
       ),
     );
   }
-  
   Future<void> exportToExcelFile() async {
-    try {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -525,147 +554,170 @@ class CashFlowController extends GetxController {
         ),
         barrierDismissible: false,
       );
-      
-      final excelFile = Excel.createExcel();
-      
-      // Summary Sheet
-      final summarySheet = excelFile['Summary'];
-      excelFile.setDefaultSheet('Summary');
-      
-      _excelSetCell(summarySheet, 0, 0, 'Cash Flow Statement',
-          bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(summarySheet, 1, 0,
-          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
-          fontSize: 9, fontColor: '757575');
-      _excelSetCell(summarySheet, 2, 0,
-          'Period: ${periodText.value}',
-          fontSize: 10, fontColor: '1A237E');
-      
-      _excelSetCell(summarySheet, 4, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
-      
-      final summaryRows = [
-        ['Opening Cash Balance', _formatAmount(openingCashBalance.value)],
-        ['Net Cash Flow', _formatAmount(netCashFlow.value)],
-        ['Closing Cash Balance', _formatAmount(closingCashBalance.value)],
-        ['Net Cash Flow Change', '${netCashFlowPercentage.value.toStringAsFixed(1)}%'],
-      ];
-      
-      for (int r = 0; r < summaryRows.length; r++) {
-        for (int c = 0; c < 2; c++) {
-          _excelSetCell(summarySheet, 5 + r, c, summaryRows[r][c],
-              bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
-        }
+    }
+    
+    final excelFile = Excel.createExcel();
+    
+    // Summary Sheet
+    final summarySheet = excelFile['Summary'];
+    excelFile.setDefaultSheet('Summary');
+    
+    _excelSetCell(summarySheet, 0, 0, 'Cash Flow Statement',
+        bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(summarySheet, 1, 0,
+        'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+        fontSize: 9, fontColor: '757575');
+    _excelSetCell(summarySheet, 2, 0,
+        'Period: ${periodText.value}',
+        fontSize: 10, fontColor: '1A237E');
+    
+    _excelSetCell(summarySheet, 4, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    
+    final summaryRows = [
+      ['Opening Cash Balance', _formatAmount(openingCashBalance.value)],
+      ['Net Cash Flow', _formatAmount(netCashFlow.value)],
+      ['Closing Cash Balance', _formatAmount(closingCashBalance.value)],
+      ['Net Cash Flow Change', '${netCashFlowPercentage.value.toStringAsFixed(1)}%'],
+    ];
+    
+    for (int r = 0; r < summaryRows.length; r++) {
+      for (int c = 0; c < 2; c++) {
+        _excelSetCell(summarySheet, 5 + r, c, summaryRows[r][c],
+            bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
       }
-      summarySheet.setColumnWidth(0, 25);
-      summarySheet.setColumnWidth(1, 20);
+    }
+    summarySheet.setColumnWidth(0, 25);
+    summarySheet.setColumnWidth(1, 20);
+    
+    // Operating Activities Sheet
+    final operatingSheet = excelFile['Operating Activities'];
+    _excelSetCell(operatingSheet, 0, 0, 'Cash Flow from Operating Activities', 
+        bold: true, fontSize: 12, bgColor: '2E7D32', fontColor: 'FFFFFF');
+    _excelSetCell(operatingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(operatingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
+    
+    int row = 2;
+    for (final item in operatingItems) {
+      final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(operatingSheet, row, 0, item.name, bgColor: bg);
+      _excelSetCell(operatingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
+      row++;
+    }
+    _excelSetCell(operatingSheet, row, 0, 'Total Operating Cash Flow', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(operatingSheet, row, 1, cashFlowFromOperations.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromOperations.value >= 0 ? '2E7D32' : 'C62828');
+    
+    operatingSheet.setColumnWidth(0, 40);
+    operatingSheet.setColumnWidth(1, 20);
+    
+    // Investing Activities Sheet
+    final investingSheet = excelFile['Investing Activities'];
+    _excelSetCell(investingSheet, 0, 0, 'Cash Flow from Investing Activities', 
+        bold: true, fontSize: 12, bgColor: 'F39C12', fontColor: 'FFFFFF');
+    _excelSetCell(investingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(investingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
+    
+    row = 2;
+    for (final item in investingItems) {
+      final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(investingSheet, row, 0, item.name, bgColor: bg);
+      _excelSetCell(investingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
+      row++;
+    }
+    _excelSetCell(investingSheet, row, 0, 'Total Investing Cash Flow', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(investingSheet, row, 1, cashFlowFromInvesting.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromInvesting.value >= 0 ? '2E7D32' : 'C62828');
+    
+    investingSheet.setColumnWidth(0, 40);
+    investingSheet.setColumnWidth(1, 20);
+    
+    // Financing Activities Sheet
+    final financingSheet = excelFile['Financing Activities'];
+    _excelSetCell(financingSheet, 0, 0, 'Cash Flow from Financing Activities', 
+        bold: true, fontSize: 12, bgColor: 'C62828', fontColor: 'FFFFFF');
+    _excelSetCell(financingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(financingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
+    
+    row = 2;
+    for (final item in financingItems) {
+      final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(financingSheet, row, 0, item.name, bgColor: bg);
+      _excelSetCell(financingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
+      row++;
+    }
+    _excelSetCell(financingSheet, row, 0, 'Total Financing Cash Flow', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(financingSheet, row, 1, cashFlowFromFinancing.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromFinancing.value >= 0 ? '2E7D32' : 'C62828');
+    
+    financingSheet.setColumnWidth(0, 40);
+    financingSheet.setColumnWidth(1, 20);
+    
+    // Totals Sheet
+    final totalsSheet = excelFile['Totals'];
+    _excelSetCell(totalsSheet, 0, 0, 'Cash Flow Summary', bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(totalsSheet, 2, 0, 'Cash Flow from Operations', bold: true);
+    _excelSetCell(totalsSheet, 2, 1, cashFlowFromOperations.value, fontColor: cashFlowFromOperations.value >= 0 ? '2E7D32' : 'C62828');
+    _excelSetCell(totalsSheet, 3, 0, 'Cash Flow from Investing', bold: true);
+    _excelSetCell(totalsSheet, 3, 1, cashFlowFromInvesting.value, fontColor: cashFlowFromInvesting.value >= 0 ? '2E7D32' : 'C62828');
+    _excelSetCell(totalsSheet, 4, 0, 'Cash Flow from Financing', bold: true);
+    _excelSetCell(totalsSheet, 4, 1, cashFlowFromFinancing.value, fontColor: cashFlowFromFinancing.value >= 0 ? '2E7D32' : 'C62828');
+    _excelSetCell(totalsSheet, 5, 0, 'Net Cash Flow', bold: true);
+    _excelSetCell(totalsSheet, 5, 1, netCashFlow.value, bold: true, fontColor: netCashFlow.value >= 0 ? '2E7D32' : 'C62828');
+    _excelSetCell(totalsSheet, 7, 0, 'Opening Cash Balance', bold: true);
+    _excelSetCell(totalsSheet, 7, 1, openingCashBalance.value);
+    _excelSetCell(totalsSheet, 8, 0, 'Net Cash Flow', bold: true);
+    _excelSetCell(totalsSheet, 8, 1, netCashFlow.value, fontColor: netCashFlow.value >= 0 ? '2E7D32' : 'C62828');
+    _excelSetCell(totalsSheet, 9, 0, 'Closing Cash Balance', bold: true, fontSize: 12);
+    _excelSetCell(totalsSheet, 9, 1, closingCashBalance.value, bold: true, fontColor: '1A237E');
+    _excelSetCell(totalsSheet, 11, 0, 'Net Cash Flow Change', bold: true);
+    _excelSetCell(totalsSheet, 11, 1, '${netCashFlowPercentage.value.toStringAsFixed(1)}%');
+    
+    totalsSheet.setColumnWidth(0, 30);
+    totalsSheet.setColumnWidth(1, 20);
+    
+    excelFile.delete('Sheet1');
+    
+    final bytes = excelFile.save();
+    if (bytes == null) throw Exception('Excel save failed');
+    
+    final fileName = 'cash_flow_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+    
+    if (kIsWeb) {
+      // WEB: Download Excel
+      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      // Operating Activities Sheet
-      final operatingSheet = excelFile['Operating Activities'];
-      _excelSetCell(operatingSheet, 0, 0, 'Cash Flow from Operating Activities', 
-          bold: true, fontSize: 12, bgColor: '2E7D32', fontColor: 'FFFFFF');
-      _excelSetCell(operatingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(operatingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      int row = 2;
-      for (final item in operatingItems) {
-        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(operatingSheet, row, 0, item.name, bgColor: bg);
-        _excelSetCell(operatingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
-        row++;
-      }
-      _excelSetCell(operatingSheet, row, 0, 'Total Operating Cash Flow', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(operatingSheet, row, 1, cashFlowFromOperations.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromOperations.value >= 0 ? '2E7D32' : 'C62828');
-      
-      operatingSheet.setColumnWidth(0, 40);
-      operatingSheet.setColumnWidth(1, 20);
-      
-      // Investing Activities Sheet
-      final investingSheet = excelFile['Investing Activities'];
-      _excelSetCell(investingSheet, 0, 0, 'Cash Flow from Investing Activities', 
-          bold: true, fontSize: 12, bgColor: 'F39C12', fontColor: 'FFFFFF');
-      _excelSetCell(investingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(investingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
-      
-      row = 2;
-      for (final item in investingItems) {
-        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(investingSheet, row, 0, item.name, bgColor: bg);
-        _excelSetCell(investingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
-        row++;
-      }
-      _excelSetCell(investingSheet, row, 0, 'Total Investing Cash Flow', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(investingSheet, row, 1, cashFlowFromInvesting.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromInvesting.value >= 0 ? '2E7D32' : 'C62828');
-      
-      investingSheet.setColumnWidth(0, 40);
-      investingSheet.setColumnWidth(1, 20);
-      
-      // Financing Activities Sheet
-      final financingSheet = excelFile['Financing Activities'];
-      _excelSetCell(financingSheet, 0, 0, 'Cash Flow from Financing Activities', 
-          bold: true, fontSize: 12, bgColor: 'C62828', fontColor: 'FFFFFF');
-      _excelSetCell(financingSheet, 1, 0, 'Description', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(financingSheet, 1, 1, 'Amount', bold: true, bgColor: 'E8EAF6');
-      
-      row = 2;
-      for (final item in financingItems) {
-        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(financingSheet, row, 0, item.name, bgColor: bg);
-        _excelSetCell(financingSheet, row, 1, item.amount, bgColor: bg, fontColor: item.amount >= 0 ? '2E7D32' : 'C62828');
-        row++;
-      }
-      _excelSetCell(financingSheet, row, 0, 'Total Financing Cash Flow', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(financingSheet, row, 1, cashFlowFromFinancing.value, bold: true, bgColor: 'E8EAF6', fontColor: cashFlowFromFinancing.value >= 0 ? '2E7D32' : 'C62828');
-      
-      financingSheet.setColumnWidth(0, 40);
-      financingSheet.setColumnWidth(1, 20);
-      
-      // Totals Sheet
-      final totalsSheet = excelFile['Totals'];
-      _excelSetCell(totalsSheet, 0, 0, 'Cash Flow Summary', bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(totalsSheet, 2, 0, 'Cash Flow from Operations', bold: true);
-      _excelSetCell(totalsSheet, 2, 1, cashFlowFromOperations.value, fontColor: cashFlowFromOperations.value >= 0 ? '2E7D32' : 'C62828');
-      _excelSetCell(totalsSheet, 3, 0, 'Cash Flow from Investing', bold: true);
-      _excelSetCell(totalsSheet, 3, 1, cashFlowFromInvesting.value, fontColor: cashFlowFromInvesting.value >= 0 ? '2E7D32' : 'C62828');
-      _excelSetCell(totalsSheet, 4, 0, 'Cash Flow from Financing', bold: true);
-      _excelSetCell(totalsSheet, 4, 1, cashFlowFromFinancing.value, fontColor: cashFlowFromFinancing.value >= 0 ? '2E7D32' : 'C62828');
-      _excelSetCell(totalsSheet, 5, 0, 'Net Cash Flow', bold: true);
-      _excelSetCell(totalsSheet, 5, 1, netCashFlow.value, bold: true, fontColor: netCashFlow.value >= 0 ? '2E7D32' : 'C62828');
-      _excelSetCell(totalsSheet, 7, 0, 'Opening Cash Balance', bold: true);
-      _excelSetCell(totalsSheet, 7, 1, openingCashBalance.value);
-      _excelSetCell(totalsSheet, 8, 0, 'Net Cash Flow', bold: true);
-      _excelSetCell(totalsSheet, 8, 1, netCashFlow.value, fontColor: netCashFlow.value >= 0 ? '2E7D32' : 'C62828');
-      _excelSetCell(totalsSheet, 9, 0, 'Closing Cash Balance', bold: true, fontSize: 12);
-      _excelSetCell(totalsSheet, 9, 1, closingCashBalance.value, bold: true, fontColor: '1A237E');
-      _excelSetCell(totalsSheet, 11, 0, 'Net Cash Flow Change', bold: true);
-      _excelSetCell(totalsSheet, 11, 1, '${netCashFlowPercentage.value.toStringAsFixed(1)}%');
-      
-      totalsSheet.setColumnWidth(0, 30);
-      totalsSheet.setColumnWidth(1, 20);
-      
-      excelFile.delete('Sheet1');
-      
-      final bytes = excelFile.save();
-      if (bytes == null) throw Exception('Excel save failed');
-      
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Cash flow statement exported to Excel',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save and open
       final dir = await getTemporaryDirectory();
-      final fileName = 'cash_flow_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes);
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', 'Cash flow statement exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Cash flow statement exported to Excel',
+        duration: const Duration(seconds: 2),
+      );
           
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
   }
-  
+}
   void _excelSetCell(
     Sheet sheet,
     int row,
@@ -695,18 +747,31 @@ class CashFlowController extends GetxController {
   }
   
   void printReport() {
-    Get.snackbar('Print', 'Preparing print...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.error(
+      Colors.blue,
+      'Print',
+      'Preparing print...',
+      
+      duration: const Duration(seconds: 2),
+    );
   }
   
   void _handleSessionExpired() {
-    Get.snackbar('Session Expired', 'Please login again',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kDanger, colorText: Colors.white);
+    AppSnackbar.error(
+      Colors.red,
+      'Session Expired',
+      'Please login again',
+      
+      duration: const Duration(seconds: 2),
+    );
   }
   
   void _showError(String message) {
-    Get.snackbar('Error', message,
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kDanger, colorText: Colors.white);
+    AppSnackbar.error(
+      Colors.red,
+      'Error',
+      message,
+    );
   }
 }
 

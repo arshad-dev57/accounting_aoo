@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/Bills/Screen/bill_Screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -89,7 +92,7 @@ class PaymentMadeController extends GetxController {
   
   // ==================== HELPER: FORMAT AMOUNT ====================
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   // ==================== LOAD PAYMENTS FROM API ====================
@@ -312,15 +315,8 @@ class PaymentMadeController extends GetxController {
       if (response.statusCode == 201 || response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
-          Get.snackbar(
-            'Success',
-            'Payment recorded successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
-                    Get.back(); 
+          AppSnackbar.success(kSuccess, 'Success', 'Payment recorded successfully\nJournal entry created');
+          Get.back(); 
           loadPaymentsData();
           loadSummary();
         } else {
@@ -375,14 +371,7 @@ class PaymentMadeController extends GetxController {
           
           if (billsData.isEmpty) {
             print('⚠️ No unpaid bills found for this vendor');
-            Get.snackbar(
-              'Info',
-              'No unpaid bills found for this vendor',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: kPrimary,
-              colorText: Colors.white,
-              duration: const Duration(seconds: 2),
-            );
+            AppSnackbar.info('Info', 'No unpaid bills found for this vendor');
             currentBills.value = [];
             return [];
           }
@@ -437,13 +426,7 @@ class PaymentMadeController extends GetxController {
   }
   
   void printVoucher(PaymentMade payment) {
-    Get.snackbar(
-      'Print',
-      'Printing payment voucher for ${payment.paymentNumber}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-    );
+    AppSnackbar.info('Print', 'Printing payment voucher for ${payment.paymentNumber}');
   }
   
   // ─────────────────────── EXPORT FUNCTIONS ───────────────────────
@@ -459,19 +442,19 @@ class PaymentMadeController extends GetxController {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-           Text(
+            Text(
               'Export Payments',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-           Text(
+            Text(
               'Choose export format',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             ListTile(
               leading: Icon(Icons.picture_as_pdf, color: Color(0xFFE53935)),
-              title:Text('Export as PDF'),
+              title: Text('Export as PDF'),
               onTap: () {
                 Get.back();
                 exportToPdf();
@@ -479,7 +462,7 @@ class PaymentMadeController extends GetxController {
             ),
             ListTile(
               leading: Icon(Icons.table_chart, color: Color(0xFF2E7D32)),
-              title:Text('Export as Excel'),
+              title: Text('Export as Excel'),
               onTap: () {
                 Get.back();
                 exportToExcel();
@@ -496,20 +479,23 @@ class PaymentMadeController extends GetxController {
   
   Future<void> exportToPdf() async {
     try {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Generating PDF...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final pdf = pw.Document();
       
@@ -527,22 +513,36 @@ class PaymentMadeController extends GetxController {
         ),
       );
       
-      final dir = await getTemporaryDirectory();
+      final bytes = await pdf.save();
       final fileName = 'payments_made_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${payments.length} payments exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download using HTML anchor tag
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(kSuccess, 'Success', '${payments.length} payments exported to PDF');
+      } else {
+        // MOBILE: Save to file and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(kSuccess, 'Success', '${payments.length} payments exported to PDF');
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
     }
   }
   
@@ -693,20 +693,23 @@ class PaymentMadeController extends GetxController {
   
   Future<void> exportToExcel() async {
     try {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final excel = Excel.createExcel();
       
@@ -799,22 +802,35 @@ class PaymentMadeController extends GetxController {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Excel save failed');
       
-      final dir = await getTemporaryDirectory();
       final fileName = 'payments_made_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${payments.length} payments exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download Excel
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(kSuccess, 'Success', '${payments.length} payments exported to Excel');
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(kSuccess, 'Success', '${payments.length} payments exported to Excel');
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -847,31 +863,18 @@ class PaymentMadeController extends GetxController {
   }
   
   void printPayments() {
-    Get.snackbar(
-      'Print',
-      'Preparing payments report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-    );
+    AppSnackbar.info('Print', 'Preparing payments report...');
   }
   
   // ==================== HELPER METHODS ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void _showError(String message) {
     print('❌ Error showing: $message');
-    Get.snackbar(
-      'Error',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kWarning,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.error(kDanger, 'Error', message);
   }
 }
 
@@ -1013,7 +1016,7 @@ class BillDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title:Text('Bill Details')),
+      appBar: AppBar(title: Text('Bill Details')),
       body: Center(
         child: Text('Bill Details Screen'),
       ),

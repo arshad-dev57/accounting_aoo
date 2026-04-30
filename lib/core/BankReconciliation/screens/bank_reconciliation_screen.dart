@@ -384,7 +384,7 @@ class BankReconciliationScreen extends StatelessWidget {
               hintText: '0.00',
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.2.h),
-              prefixText: '₨ ',
+              prefixText: '\$ ',
               prefixStyle: TextStyle(fontSize: 12.sp, color: kSubText),
             ),
             onChanged: (text) {
@@ -610,6 +610,6 @@ class BankReconciliationScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

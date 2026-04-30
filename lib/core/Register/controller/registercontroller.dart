@@ -1,6 +1,8 @@
 import 'package:LedgerPro_app/core/dashboard/Screens/dashbaord_screen.dart';
 import 'package:LedgerPro_app/core/plans/controllers/subscription_controller.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -21,7 +23,7 @@ class AuthController extends GetxController {
   late TextEditingController passwordController;
   late TextEditingController confirmPasswordController;
   
-  // ✅ New controllers for address and organization name
+  // New controllers for address and organization name
   late TextEditingController addressController;
   late TextEditingController organizationNameController;
 
@@ -49,8 +51,8 @@ class AuthController extends GetxController {
   var country = ''.obs;
   var password = ''.obs;
   var confirmPassword = ''.obs;
-  var address = ''.obs;           // ✅ New
-  var organizationName = ''.obs;  // ✅ New
+  var address = ''.obs;           // New
+  var organizationName = ''.obs;  // New
 
   @override
   void onInit() {
@@ -62,8 +64,8 @@ class AuthController extends GetxController {
     countryController = TextEditingController();
     passwordController = TextEditingController();
     confirmPasswordController = TextEditingController();
-    addressController = TextEditingController();              // ✅ New
-    organizationNameController = TextEditingController();     // ✅ New
+    addressController = TextEditingController();              // New
+    organizationNameController = TextEditingController();     // New
 
     firstNameController.addListener(() => firstName.value = firstNameController.text);
     lastNameController.addListener(() => lastName.value = lastNameController.text);
@@ -75,8 +77,8 @@ class AuthController extends GetxController {
       checkPasswordStrength(passwordController.text);
     });
     confirmPasswordController.addListener(() => confirmPassword.value = confirmPasswordController.text);
-    addressController.addListener(() => address.value = addressController.text);                 // ✅ New
-    organizationNameController.addListener(() => organizationName.value = organizationNameController.text); // ✅ New
+    addressController.addListener(() => address.value = addressController.text);                 // New
+    organizationNameController.addListener(() => organizationName.value = organizationNameController.text); // New
 
     checkLoginStatus();
   }
@@ -90,8 +92,8 @@ class AuthController extends GetxController {
     countryController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
-    addressController.dispose();           // ✅ New
-    organizationNameController.dispose();  // ✅ New
+    addressController.dispose();           // New
+    organizationNameController.dispose();  // New
     super.onClose();
   }
 
@@ -122,151 +124,126 @@ class AuthController extends GetxController {
     user.value = null;
     isLoggedIn.value = false;
   }
-Future<bool> register() async {
-  print("🚀 Register function started at step: ${currentStep.value}");
 
-  if (currentStep.value == 0) {
-    if (firstNameController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter first name',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    if (lastNameController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter last name',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    if (countryController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please select country',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    currentStep.value = 1;
-    return true;
-  }
+  Future<bool> register() async {
+    print("🚀 Register function started at step: ${currentStep.value}");
 
-  if (currentStep.value == 1) {
-    if (phoneController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter phone number',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    if (emailController.text.trim().isEmpty || !emailController.text.contains('@')) {
-      Get.snackbar('Error', 'Please enter valid email',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    
-    if (!agreeToTerms.value) {
-      Get.snackbar('Error', 'Please agree to terms and conditions',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    currentStep.value = 2;
-    return true;
-  }
-
-  if (currentStep.value == 2) {
-    if (passwordController.text.length < 6) {
-      Get.snackbar('Error', 'Password must be at least 6 characters',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-    if (passwordController.text != confirmPasswordController.text) {
-      Get.snackbar('Error', 'Passwords do not match',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
-      return false;
-    }
-
-    isLoading.value = true;
-
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/users/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'firstName': firstNameController.text.trim(),
-          'lastName': lastNameController.text.trim(),
-          'email': emailController.text.trim(),
-          'password': passwordController.text,
-          'country': countryController.text.trim(),
-          'phone': phoneController.text.trim(),
-          'address': addressController.text.trim(),
-          'organizationName': organizationNameController.text.trim(),
-        }),
-      );
-
-      final data = json.decode(response.body);
-
-      if (response.statusCode == 201) {
-        print("✅ Registration successful");
-
-        await _saveAuthData(data['token'], data['user']);
-
-        // ✅ Store company name separately in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (data['user']['organizationName'] != null && data['user']['organizationName'].isNotEmpty) {
-          print("Company Name in: ${data['user']['organizationName']}");
-          await prefs.setString('company_name', data['user']['organizationName']);
-          print("Company Name: ${data['user']['organizationName']}");
-          print("✅ Company name saved: ${data['user']['organizationName']}");
-        }
-        
-        // ✅ Also store address if needed
-        if (data['user']['address'] != null && data['user']['address'].isNotEmpty) {
-          await prefs.setString('company_address', data['user']['address']);
-        }
-
-        final subscriptionController = Get.find<SubscriptionController>();
-        subscriptionController.updateFromUserData(data['user']);
-
-        currentStep.value = 3;
-        Get.snackbar('Success', 'Account created successfully!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green, colorText: Colors.white,
-            duration: const Duration(seconds: 2));
-
-        if (subscriptionController.hasAccess) {
-          Get.offAll(() => const DashboardScreen());
-        } else {
-          Get.offAll(() => const SelectPlanScreen());
-        }
-
-        return true;
-      } else {
-        Get.snackbar('Error', data['message'] ?? 'Registration failed',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red, colorText: Colors.white,
-            duration: const Duration(seconds: 3));
+    if (currentStep.value == 0) {
+      if (firstNameController.text.trim().isEmpty) {
+        AppSnackbar.error(kDanger, 'Error', 'Please enter first name');
         return false;
       }
-    } catch (e) {
-      print('❌ Registration error: $e');
-      Get.snackbar('Error', 'Network error. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white,
-          duration: const Duration(seconds: 3));
-      return false;
-    } finally {
-      isLoading.value = false;
+      if (lastNameController.text.trim().isEmpty) {
+        AppSnackbar.error(kDanger, 'Error', 'Please enter last name');
+        return false;
+      }
+      if (countryController.text.trim().isEmpty) {
+        AppSnackbar.error(kDanger, 'Error', 'Please select country');
+        return false;
+      }
+      currentStep.value = 1;
+      return true;
     }
+
+    if (currentStep.value == 1) {
+      if (phoneController.text.trim().isEmpty) {
+        AppSnackbar.error(kDanger, 'Error', 'Please enter phone number');
+        return false;
+      }
+      if (emailController.text.trim().isEmpty || !emailController.text.contains('@')) {
+        AppSnackbar.error(kDanger, 'Error', 'Please enter valid email');
+        return false;
+      }
+      
+      if (!agreeToTerms.value) {
+        AppSnackbar.error(kDanger, 'Error', 'Please agree to terms and conditions');
+        return false;
+      }
+      currentStep.value = 2;
+      return true;
+    }
+
+    if (currentStep.value == 2) {
+      if (passwordController.text.length < 6) {
+        AppSnackbar.error(kDanger, 'Error', 'Password must be at least 6 characters');
+        return false;
+      }
+      if (passwordController.text != confirmPasswordController.text) {
+        AppSnackbar.error(kDanger, 'Error', 'Passwords do not match');
+        return false;
+      }
+
+      isLoading.value = true;
+
+      try {
+        final response = await http.post(
+          Uri.parse('$baseUrl/api/users/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'firstName': firstNameController.text.trim(),
+            'lastName': lastNameController.text.trim(),
+            'email': emailController.text.trim(),
+            'password': passwordController.text,
+            'country': countryController.text.trim(),
+            'phone': phoneController.text.trim(),
+            'address': addressController.text.trim(),
+            'organizationName': organizationNameController.text.trim(),
+          }),
+        );
+
+        final data = json.decode(response.body);
+
+        if (response.statusCode == 201) {
+          print("✅ Registration successful");
+
+          await _saveAuthData(data['token'], data['user']);
+
+          // Store company name separately in SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          if (data['user']['organizationName'] != null && data['user']['organizationName'].isNotEmpty) {
+            print("Company Name in: ${data['user']['organizationName']}");
+            await prefs.setString('company_name', data['user']['organizationName']);
+            print("Company Name: ${data['user']['organizationName']}");
+            print("✅ Company name saved: ${data['user']['organizationName']}");
+          }
+          
+          // Also store address if needed
+          if (data['user']['address'] != null && data['user']['address'].isNotEmpty) {
+            await prefs.setString('company_address', data['user']['address']);
+          }
+
+          final subscriptionController = Get.find<SubscriptionController>();
+          subscriptionController.updateFromUserData(data['user']);
+
+          currentStep.value = 3;
+          AppSnackbar.success(kSuccess, 'Success', 'Account created successfully!');
+
+          if (subscriptionController.hasAccess) {
+            Get.offAll(() => const DashboardScreen());
+          } else {
+            Get.offAll(() => const SelectPlanScreen());
+          }
+
+          return true;
+        } else {
+          AppSnackbar.error(kDanger, 'Error', data['message'] ?? 'Registration failed');
+          return false;
+        }
+      } catch (e) {
+        print('❌ Registration error: $e');
+        AppSnackbar.error(kDanger, 'Error', 'Network error. Please try again.');
+        return false;
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    return false;
   }
 
-  return false;
-}
   Future<bool> login(String email, String password) async {
     if (email.isEmpty || password.isEmpty) {
-      Get.snackbar('Error', 'Please enter email and password',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Please enter email and password');
       return false;
     }
 
@@ -290,10 +267,7 @@ Future<bool> register() async {
         final subscriptionController = Get.find<SubscriptionController>();
         subscriptionController.updateFromUserData(data['user']);
 
-        Get.snackbar('Success', 'Login successful!',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green, colorText: Colors.white,
-            duration: const Duration(seconds: 2));
+        AppSnackbar.success(kSuccess, 'Success', 'Login successful!');
 
         if (subscriptionController.hasAccess) {
           Get.offAll(() => const DashboardScreen());
@@ -303,18 +277,12 @@ Future<bool> register() async {
 
         return true;
       } else {
-        Get.snackbar('Error', data['message'] ?? 'Login failed',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red, colorText: Colors.white,
-            duration: const Duration(seconds: 3));
+        AppSnackbar.error(kDanger, 'Error', data['message'] ?? 'Login failed');
         return false;
       }
     } catch (e) {
       print('Login error: $e');
-      Get.snackbar('Error', 'Network error. Please try again.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red, colorText: Colors.white,
-          duration: const Duration(seconds: 3));
+      AppSnackbar.error(kDanger, 'Error', 'Network error. Please try again.');
       return false;
     } finally {
       isLoading.value = false;
@@ -352,9 +320,7 @@ Future<bool> register() async {
   Future<void> logout() async {
     await _clearAuthData();
     Get.offAllNamed('/login');
-    Get.snackbar('Logged Out', 'You have been logged out successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange, colorText: Colors.white);
+    AppSnackbar.success(kWarning, 'Logged Out', 'You have been logged out successfully');
   }
 
   void checkPasswordStrength(String pwd) {

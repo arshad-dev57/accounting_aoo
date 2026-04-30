@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/chartofaccounts/controller/chart_of_account_controller.dart';
 import 'package:LedgerPro_app/core/journalEntries/Screens/journal_entries_screen.dart';
 import 'package:flutter/material.dart';
@@ -484,7 +485,7 @@ class ChartOfAccountsScreen extends StatelessWidget {
                                 labelText: 'Opening Balance',
                                 hintText: '0.00',
                                 border: OutlineInputBorder(),
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                               ),
                               keyboardType: TextInputType.number,
                               onChanged: (value) {
@@ -827,7 +828,7 @@ class ChartOfAccountsScreen extends StatelessWidget {
                                 labelText: 'Opening Balance',
                                 hintText: '0.00',
                                 border: OutlineInputBorder(),
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                               ),
                               keyboardType: TextInputType.number,
                               onChanged: (value) {
@@ -988,7 +989,7 @@ class ChartOfAccountsScreen extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Get.snackbar('Filter', 'Filter applied');
+              AppSnackbar.success(Colors.green, 'Filter', 'Filter applied');
             },
             child: const Text('Apply'),
           ),
@@ -998,6 +999,6 @@ class ChartOfAccountsScreen extends StatelessWidget {
   }
 
   String _formatAmount(double amount) {
-    return '₨ ${amount.toStringAsFixed(2)}';
+    return '\$ ${amount.toStringAsFixed(2)}';
   }
 }

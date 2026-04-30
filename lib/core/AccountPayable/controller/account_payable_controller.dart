@@ -1,5 +1,8 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -63,7 +66,7 @@ class AccountsPayableController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   @override
@@ -201,20 +204,14 @@ class AccountsPayableController extends GetxController {
       );
       
       if (response.statusCode == 201) {
-        Get.snackbar(
-          'Success',
-          'Vendor added successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-        );
+        AppSnackbar.success(Colors.green, 'Success', 'Vendor added successfully');
         await fetchVendors();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar('Error', data['message'] ?? 'Failed to add vendor');
+        AppSnackbar.error(Colors.red, 'Error', data['message'] ?? 'Failed to add vendor');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to add vendor: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to add vendor: $e');
     } finally {
       isProcessing(false);
     }
@@ -232,12 +229,10 @@ class AccountsPayableController extends GetxController {
       );
       
       if (response.statusCode == 201) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Bill created successfully!\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
         await fetchBills();
@@ -245,10 +240,10 @@ class AccountsPayableController extends GetxController {
         await fetchVendors();
       } else {
         final data = jsonDecode(response.body);
-        Get.snackbar('Error', data['message'] ?? 'Failed to create bill');
+        AppSnackbar.error(Colors.red, 'Error', data['message'] ?? 'Failed to create bill');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create bill: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to create bill: $e');
     } finally {
       isProcessing(false);
     }
@@ -282,12 +277,10 @@ class AccountsPayableController extends GetxController {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
+        AppSnackbar.success(
+          Colors.green,
           'Success',
           'Payment recorded successfully!\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
           duration: const Duration(seconds: 3),
         );
         await fetchBills();
@@ -295,10 +288,10 @@ class AccountsPayableController extends GetxController {
         await fetchVendors();
       } else {
         final errorData = jsonDecode(response.body);
-        Get.snackbar('Error', errorData['message'] ?? 'Failed to record payment');
+        AppSnackbar.error(Colors.red, 'Error', errorData['message'] ?? 'Failed to record payment');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to record payment: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to record payment: $e');
     } finally {
       isProcessing(false);
     }
@@ -343,7 +336,6 @@ class AccountsPayableController extends GetxController {
   // ─────────────────────── EXPORT FUNCTIONS ───────────────────────
   
   void exportReport() {
-    // Show export options bottom sheet
     Get.bottomSheet(
       Container(
         padding: const EdgeInsets.all(20),
@@ -354,19 +346,19 @@ class AccountsPayableController extends GetxController {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-           Text(
+            Text(
               'Export Accounts Payable',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-           Text(
+            Text(
               'Choose export format',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             ListTile(
               leading: Icon(Icons.picture_as_pdf, color: Color(0xFFE53935)),
-              title:Text('Export as PDF'),
+              title: Text('Export as PDF'),
               onTap: () {
                 Get.back();
                 exportToPdf();
@@ -374,7 +366,7 @@ class AccountsPayableController extends GetxController {
             ),
             ListTile(
               leading: Icon(Icons.table_chart, color: Color(0xFF2E7D32)),
-              title:Text('Export as Excel'),
+              title: Text('Export as Excel'),
               onTap: () {
                 Get.back();
                 exportToExcel();
@@ -391,21 +383,23 @@ class AccountsPayableController extends GetxController {
   
   Future<void> exportToPdf() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Generating PDF...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final pdf = pw.Document();
       
@@ -425,22 +419,36 @@ class AccountsPayableController extends GetxController {
         ),
       );
       
-      final dir = await getTemporaryDirectory();
+      final bytes = await pdf.save();
       final fileName = 'accounts_payable_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${bills.length} bills exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download using HTML anchor tag
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(Colors.green, 'Success', '${bills.length} bills exported to PDF');
+      } else {
+        // MOBILE: Save to file and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(Colors.green, 'Success', '${bills.length} bills exported to PDF');
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
     }
   }
   
@@ -649,21 +657,23 @@ class AccountsPayableController extends GetxController {
   
   Future<void> exportToExcel() async {
     try {
-      // Show loading
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
           ),
-        ),
-        barrierDismissible: false,
-      );
+          barrierDismissible: false,
+        );
+      }
       
       final excel = Excel.createExcel();
       
@@ -797,22 +807,35 @@ class AccountsPayableController extends GetxController {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Excel save failed');
       
-      final dir = await getTemporaryDirectory();
       final fileName = 'accounts_payable_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
       
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${bills.length} bills exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
+      if (kIsWeb) {
+        // WEB: Download Excel
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(Colors.green, 'Success', '${bills.length} bills exported to Excel');
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        
+        AppSnackbar.success(Colors.green, 'Success', '${bills.length} bills exported to Excel');
+        
+        await OpenFile.open(file.path);
+      }
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -845,6 +868,7 @@ class AccountsPayableController extends GetxController {
   }
 }
 
+// Models (Vendor, Bill, BillItem classes remain the same as in your original code)
 class Vendor {
   final String id;
   final String name;

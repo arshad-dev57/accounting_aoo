@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/Income/controller/income_controller.dart';
 import 'package:LedgerPro_app/core/Income/models/income_model.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +15,10 @@ class IncomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(IncomeController());
 
-    return Container(
-      color: kBg,
-      child: Obx(() {
+    // ✅ Scaffold for Material context
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Obx(() {
         if (controller.isLoading.value && controller.incomes.isEmpty) {
           return Center(
             child: Column(
@@ -33,7 +35,6 @@ class IncomeScreen extends StatelessWidget {
           );
         }
         
-        // Single ScrollView that scrolls everything together
         return SingleChildScrollView(
           padding: EdgeInsets.zero,
           physics: const BouncingScrollPhysics(),
@@ -44,7 +45,7 @@ class IncomeScreen extends StatelessWidget {
               _buildSummaryCards(controller, context),
               _buildFilterBar(controller, context),
               _buildIncomesList(controller, context),
-              const SizedBox(height: 20), // Add bottom padding
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -52,7 +53,7 @@ class IncomeScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header without AppBar
+  // ==================== HEADER ====================
   Widget _buildHeader(IncomeController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -64,9 +65,9 @@ class IncomeScreen extends StatelessWidget {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -92,44 +93,21 @@ class IncomeScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Filter Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => _showFilterDialog(controller, context),
-            ),
+          _headerIconBtn(
+            icon: Icons.filter_alt_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => _showFilterDialog(controller, context),
           ),
           const SizedBox(width: 8),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportIncomes(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Print Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.printIncomes(),
-            ),
+          _headerIconBtn(
+            icon: Icons.download_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportIncomes(),
           ),
           if (!isMobile) const SizedBox(width: 8),
           if (!isMobile)
@@ -148,6 +126,27 @@ class IncomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.white, size: size),
+      ),
+    );
+  }
+
+  // ==================== SUMMARY CARDS ====================
   Widget _buildSummaryCards(IncomeController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -190,131 +189,135 @@ class IncomeScreen extends StatelessWidget {
             children: [
               Icon(icon, size: isWeb ? 24 : 20, color: color),
               SizedBox(width: isWeb ? 8 : 6),
-              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500))),
+              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
             ],
           ),
           SizedBox(height: isWeb ? 8 : 6),
-          Text(isNumber ? amount : amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color)),
+          Text(isNumber ? amount : amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color), overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 
+  // ==================== FILTER BAR ====================
   Widget _buildFilterBar(IncomeController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+    return Material(
       color: kCardBg,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: isWeb ? 3 : 2,
-                child: Container(
-                  height: isWeb ? 45 : 40,
-                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-                  child: TextField(
-                    controller: controller.searchController,
-                    style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
-                    decoration: InputDecoration(
-                      hintText: isWeb ? 'Search by number, customer, description...' : 'Search...',
-                      hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
-                      prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: isWeb ? 16 : 12),
-              Expanded(
-                flex: isWeb ? 2 : 1,
-                child: Container(
-                  height: isWeb ? 45 : 40,
-                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-                  child: Obx(() => DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: controller.selectedFilter.value,
-                      icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
-                      padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-                      isExpanded: true,
-                      style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
-                      dropdownColor: kCardBg,
-                      items: controller.filterOptions.map((filter) {
-                        return DropdownMenuItem(value: filter, child: Text(filter, style: TextStyle(color: kText)));
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) controller.applyFilter(value);
-                      },
-                    ),
-                  )),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isWeb ? 12 : 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: controller.incomeTypes.map((type) {
-                final isSelected = controller.selectedType.value == type;
-                return Padding(
-                  padding: EdgeInsets.only(right: isWeb ? 8 : 6),
-                  child: FilterChip(
-                    label: Text(type, style: TextStyle(fontSize: isWeb ? 12 : 11)),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      controller.applyTypeFilter(selected ? type : 'All');
-                    },
-                    backgroundColor: kBg,
-                    selectedColor: kPrimary.withOpacity(0.2),
-                    labelStyle: TextStyle(color: isSelected ? kPrimary : kSubText),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          if (controller.startDate.value != null && controller.endDate.value != null)
-            Padding(
-              padding: EdgeInsets.only(top: isWeb ? 12 : 8),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
-                decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Row(
-                        children: [
-                          Icon(Icons.date_range, size: isWeb ? 20 : 16, color: kPrimary),
-                          SizedBox(width: isWeb ? 8 : 6),
-                          Flexible(
-                            child: Text(
-                              '${DateFormat('dd MMM yyyy').format(controller.startDate.value!)} - ${DateFormat('dd MMM yyyy').format(controller.endDate.value!)}',
-                              style: TextStyle(fontSize: isWeb ? 12 : 11, color: kPrimary),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: isWeb ? 3 : 2,
+                  child: Container(
+                    height: isWeb ? 45 : 40,
+                    decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                    child: TextField(
+                      controller: controller.searchController,
+                      style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
+                      decoration: InputDecoration(
+                        hintText: isWeb ? 'Search by number, customer, description...' : 'Search...',
+                        hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                        prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => controller.clearDateRange(),
-                      child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
-                    ),
-                  ],
+                  ),
                 ),
+                SizedBox(width: isWeb ? 16 : 12),
+                SizedBox(
+                  width: isWeb ? 150 : 120,
+                  height: isWeb ? 45 : 40,
+                  child: Container(
+                    decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                    child: Obx(() => DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: controller.selectedFilter.value,
+                        icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
+                        padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                        isExpanded: true,
+                        style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                        dropdownColor: kCardBg,
+                        items: controller.filterOptions.map((filter) {
+                          return DropdownMenuItem(value: filter, child: Text(filter, style: TextStyle(color: kText), overflow: TextOverflow.ellipsis));
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) controller.applyFilter(value);
+                        },
+                      ),
+                    )),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isWeb ? 12 : 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: controller.incomeTypes.map((type) {
+                  final isSelected = controller.selectedType.value == type;
+                  return Padding(
+                    padding: EdgeInsets.only(right: isWeb ? 8 : 6),
+                    child: FilterChip(
+                      label: Text(type, style: TextStyle(fontSize: isWeb ? 12 : 11)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        controller.applyTypeFilter(selected ? type : 'All');
+                      },
+                      backgroundColor: kBg,
+                      selectedColor: kPrimary.withOpacity(0.2),
+                      labelStyle: TextStyle(color: isSelected ? kPrimary : kSubText),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-        ],
+            if (controller.startDate.value != null && controller.endDate.value != null)
+              Padding(
+                padding: EdgeInsets.only(top: isWeb ? 12 : 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
+                  decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Row(
+                          children: [
+                            Icon(Icons.date_range, size: isWeb ? 20 : 16, color: kPrimary),
+                            SizedBox(width: isWeb ? 8 : 6),
+                            Flexible(
+                              child: Text(
+                                '${DateFormat('dd MMM yyyy').format(controller.startDate.value!)} - ${DateFormat('dd MMM yyyy').format(controller.endDate.value!)}',
+                                style: TextStyle(fontSize: isWeb ? 12 : 11, color: kPrimary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => controller.clearDateRange(),
+                        child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
+  // ==================== INCOMES LIST ====================
   Widget _buildIncomesList(IncomeController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -340,238 +343,355 @@ class IncomeScreen extends StatelessWidget {
       );
     }
 
+    if (isWeb) {
+      return _buildWebIncomeTable(controller, context);
+    } else {
+      return _buildMobileIncomeList(controller, context);
+    }
+  }
+
+  // ==================== WEB TABLE ====================
+  Widget _buildWebIncomeTable(IncomeController controller, BuildContext context) {
+    final incomes = controller.incomes;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: [
+                // Header - Fixed widths
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  color: kPrimary.withOpacity(0.06),
+                  child: Row(
+                    children: [
+                      Container(width: 60, child: const Text('', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Income #', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 180, child: const Text('Customer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 80, child: const Text('Tax', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 100, child: const Text('Status', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                    ],
+                  ),
+                ),
+                ...incomes.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final income = entry.value;
+                  final isEven = index.isEven;
+                  final typeColor = Color(int.parse(controller.getTypeColor(income.incomeType).substring(1, 7), radix: 16) + 0xFF000000);
+                  final statusColor = income.status == 'Posted' ? kSuccess : income.status == 'Draft' ? kWarning : kDanger;
+
+                  return InkWell(
+                    onTap: () => _showIncomeDetails(income, context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                      decoration: BoxDecoration(
+                        color: isEven ? Colors.transparent : kPrimary.withOpacity(0.01),
+                        border: Border(top: BorderSide(color: kBorder.withOpacity(0.5))),
+                      ),
+                      child: Row(
+                        children: [
+                          // Icon
+                          Container(
+                            width: 60,
+                            height: 44,
+                            decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                            child: Icon(controller.getTypeIcon(income.incomeType), size: 20, color: typeColor),
+                          ),
+                          // Income Number
+                          Container(
+                            width: 150,
+                            child: Text(income.incomeNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          // Type
+                          Container(
+                            width: 120,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                              child: Text(income.incomeType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          // Customer
+                          Container(
+                            width: 180,
+                            child: Text(income.customerName.isNotEmpty ? income.customerName : '-', style:  TextStyle(fontSize: 13, color: kSubText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          // Date
+                          Container(
+                            width: 120,
+                            child: Text(DateFormat('dd MMM yyyy').format(income.date), style:  TextStyle(fontSize: 13, color: kSubText)),
+                          ),
+                          // Tax
+                          Container(
+                            width: 80,
+                            child: Text(income.taxRate > 0 ? '${income.taxRate.toStringAsFixed(0)}%' : '-', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: kWarning, fontWeight: FontWeight.w600)),
+                          ),
+                          // Amount
+                          Container(
+                            width: 150,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(color: kSuccess.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                                child: Text(controller.formatAmount(income.totalAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kSuccess)),
+                              ),
+                            ),
+                          ),
+                          // Status
+                          Container(
+                            width: 100,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                                    const SizedBox(width: 4),
+                                    Text(income.status, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Actions
+                          Container(
+                            width: 120,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  onPressed: () => _showIncomeDetails(income, context),
+                                  icon: const Icon(Icons.remove_red_eye, size: 18),
+                                  tooltip: 'View Details',
+                                  padding: EdgeInsets.zero,
+                                  color: kPrimary,
+                                ),
+                                if (income.status == 'Draft') ...[
+                                  IconButton(
+                                    onPressed: () => controller.postIncome(income.id),
+                                    icon: const Icon(Icons.check_circle, size: 18),
+                                    tooltip: 'Post',
+                                    padding: EdgeInsets.zero,
+                                    color: kSuccess,
+                                  ),
+                                  IconButton(
+                                    onPressed: () => _showRowActions(controller, income, context),
+                                    icon: const Icon(Icons.more_vert, size: 18),
+                                    tooltip: 'More',
+                                    padding: EdgeInsets.zero,
+                                    color: kSubText,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                // Footer
+                _buildTableFooter(controller, incomes),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableFooter(IncomeController controller, List<Income> incomes) {
+    final postedCount = incomes.where((i) => i.status == 'Posted').length;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: kPrimary.withOpacity(0.06),
+        border:  Border(top: BorderSide(color: kBorder)),
+      ),
+      child: Row(
+        children: [
+          Container(width: 60, child: const Text('')),
+          Container(width: 150, child: const Text('TOTALS', style: TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 120, child: const SizedBox()),
+          Container(width: 180, child: const SizedBox()),
+          Container(width: 120, child: const SizedBox()),
+          Container(width: 80, child: const SizedBox()),
+          Container(width: 150, child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: Text(controller.formatAmount(controller.totalIncome.value), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kSuccess)),
+            ),
+          )),
+          Container(width: 100, child: Center(child: Text('$postedCount Posted', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSuccess)))),
+          Container(width: 120, child: const SizedBox()),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MOBILE LIST ====================
+  Widget _buildMobileIncomeList(IncomeController controller, BuildContext context) {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 8),
-          child: Text(
-            'Income Records',
-            style: TextStyle(
-              fontSize: isWeb ? 18 : 16,
-              fontWeight: FontWeight.w700,
-              color: kText,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Text('Income Records', style:  TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kText)),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text('${controller.incomes.length} records', style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ),
-        ...controller.incomes.map((income) => Padding(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 12, vertical: isWeb ? 8 : 6),
-          child: _buildIncomeCard(controller, income, context),
-        )).toList(),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: controller.incomes.length,
+          itemBuilder: (context, index) {
+            final income = controller.incomes[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildMobileIncomeCard(controller, income, context),
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildIncomeCard(IncomeController controller, Income income, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    final isMobile = ResponsiveUtils.isMobile(context);
+  Widget _buildMobileIncomeCard(IncomeController controller, Income income, BuildContext context) {
+    final statusColor = income.status == 'Posted' ? kSuccess : income.status == 'Draft' ? kWarning : kDanger;
+    final typeColor = Color(int.parse(controller.getTypeColor(income.incomeType).substring(1, 7), radix: 16) + 0xFF000000);
     
-    Color statusColor = income.status == 'Posted' ? kSuccess : income.status == 'Draft' ? kWarning : kDanger;
-    Color typeColor = Color(int.parse(controller.getTypeColor(income.incomeType).substring(1, 7), radix: 16) + 0xFF000000);
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-      decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showIncomeDetails(income, context),
-          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-          child: Padding(
-            padding: EdgeInsets.all(isWeb ? 16 : 12),
-            child: isMobile
-                ? _buildMobileIncomeCard(controller, income, statusColor, typeColor, context)
-                : _buildDesktopIncomeCard(controller, income, statusColor, typeColor, context),
+    return Card(
+      color: kCardBg,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showIncomeDetails(income, context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(controller.getTypeIcon(income.incomeType), size: 20, color: typeColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(income.incomeNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText), overflow: TextOverflow.ellipsis),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                              child: Text(income.status, style: TextStyle(fontSize: 9, color: statusColor, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(income.incomeType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600)),
+                        if (income.customerName.isNotEmpty)
+                          Text(income.customerName, style:  TextStyle(fontSize: 11, color: kSubText), overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(controller.formatAmount(income.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kSuccess)),
+                      const SizedBox(height: 2),
+                      Text(DateFormat('dd MMM yyyy').format(income.date), style:  TextStyle(fontSize: 9, color: kSubText)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Divider(color: kBorder),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (income.status == 'Draft')
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => controller.postIncome(income.id),
+                        icon: Icon(Icons.check_circle, size: 14, color: kSuccess),
+                        label: const Text('Post', style: TextStyle(fontSize: 10, color: kSuccess)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: kSuccess, width: 1),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                      ),
+                    ),
+                  if (income.status == 'Draft') const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showIncomeDetails(income, context),
+                      icon: Icon(Icons.visibility, size: 14, color: kPrimary),
+                      label: const Text('Details', style: TextStyle(fontSize: 10, color: kPrimary)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: kPrimary, width: 1),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildDesktopIncomeCard(IncomeController controller, Income income, Color statusColor, Color typeColor, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: isWeb ? 50 : 44,
-              height: isWeb ? 50 : 44,
-              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
-              child: Icon(controller.getTypeIcon(income.incomeType), size: isWeb ? 24 : 20, color: typeColor),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(income.incomeNumber, style: TextStyle(fontSize: isWeb ? 15 : 13, fontWeight: FontWeight.w800, color: kText)),
-                      SizedBox(width: isWeb ? 8 : 6),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 6 : 4)),
-                        child: Text(income.status, style: TextStyle(fontSize: isWeb ? 11 : 10, color: statusColor, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: isWeb ? 4 : 2),
-                  Text(income.incomeType, style: TextStyle(fontSize: isWeb ? 12 : 11, color: typeColor, fontWeight: FontWeight.w600)),
-                  if (income.customerName.isNotEmpty)
-                    Text(income.customerName, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(controller.formatAmount(income.totalAmount), style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: kSuccess)),
-                SizedBox(height: isWeb ? 4 : 2),
-                Text(DateFormat('dd MMM yyyy').format(income.date), style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
-              ],
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 12 : 8),
-        Divider(color: kBorder),
-        SizedBox(height: isWeb ? 12 : 8),
-        Row(
-          children: [
-            if (income.status == 'Draft')
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.postIncome(income.id),
-                  icon: Icon(Icons.check_circle, size: isWeb ? 18 : 14, color: kSuccess),
-                  label: Text('Post', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSuccess)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: kSuccess, width: 1),
-                    padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-                  ),
-                ),
-              ),
-            if (income.status == 'Draft') SizedBox(width: isWeb ? 12 : 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showIncomeDetails(income, context),
-                icon: Icon(Icons.visibility, size: isWeb ? 18 : 14, color: kPrimary),
-                label: Text('Details', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kPrimary)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: kPrimary, width: 1),
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileIncomeCard(IncomeController controller, Income income, Color statusColor, Color typeColor, BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(controller.getTypeIcon(income.incomeType), size: 20, color: typeColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(income.incomeNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                        child: Text(income.status, style: TextStyle(fontSize: 9, color: statusColor, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(income.incomeType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600)),
-                  if (income.customerName.isNotEmpty)
-                    Text(income.customerName, style:  TextStyle(fontSize: 11, color: kSubText)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(controller.formatAmount(income.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kSuccess)),
-                const SizedBox(height: 2),
-                Text(DateFormat('dd MMM yyyy').format(income.date), style:  TextStyle(fontSize: 9, color: kSubText)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Divider(color: kBorder),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            if (income.status == 'Draft')
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.postIncome(income.id),
-                  icon: Icon(Icons.check_circle, size: 14, color: kSuccess),
-                  label: const Text('Post', style: TextStyle(fontSize: 10, color: kSuccess)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: kSuccess, width: 1),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-              ),
-            if (income.status == 'Draft') const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showIncomeDetails(income, context),
-                icon: Icon(Icons.visibility, size: 14, color: kPrimary),
-                label: const Text('Details', style: TextStyle(fontSize: 10, color: kPrimary)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: kPrimary, width: 1),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
+  // ==================== DIALOGS & MODALS ====================
   void _showAddIncomeDialog(IncomeController controller, BuildContext ctx) {
     final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
     DateTime selectedDate = DateTime.now();
     String incomeType = 'Sales';
     String? selectedCustomerId;
-    
-    // For simple income (Interest, Rental, etc.)
     double simpleAmount = 0;
-    
-    // For detailed income (Sales, Services)
     List<Map<String, dynamic>> items = [];
     double taxRate = 0;
-    
     String description = '';
     String reference = '';
     String paymentMethod = 'Cash';
@@ -580,9 +700,8 @@ class IncomeScreen extends StatelessWidget {
     void addItem() {
       items.add({'description': '', 'quantity': 1, 'unitPrice': 0.0});
     }
-    addItem(); // Start with one empty item
+    addItem();
     
-    // Check if income type requires items
     bool requiresItems() {
       return incomeType == 'Sales' || incomeType == 'Services';
     }
@@ -609,7 +728,7 @@ class IncomeScreen extends StatelessWidget {
           return Dialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
-              width: isWeb ? 600 : double.infinity,
+              width: isWeb ? 600 : MediaQuery.of(context).size.width * 0.9,
               constraints: BoxConstraints(maxHeight: isWeb ? 700 : 600),
               padding: EdgeInsets.all(isWeb ? 24 : 20),
               child: Column(
@@ -630,7 +749,6 @@ class IncomeScreen extends StatelessWidget {
                             _buildCustomerDropdown(selectedCustomerId, (v) => setState(() => selectedCustomerId = v), controller.customers, isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
                             
-                            // CONDITIONAL FIELDS - Items OR Simple Amount
                             if (requiresItems()) ...[
                               ..._buildItemsList(items, setState, isWeb, context),
                               SizedBox(height: isWeb ? 12 : 8),
@@ -642,7 +760,7 @@ class IncomeScreen extends StatelessWidget {
                               SizedBox(height: isWeb ? 16 : 12),
                               _buildTextField('Tax Rate (%)', (v) => taxRate = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true),
                             ] else ...[
-                              _buildTextField('Amount *', (v) => simpleAmount = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '₨ '),
+                              _buildTextField('Amount *', (v) => simpleAmount = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '\$ '),
                             ],
                             
                             SizedBox(height: isWeb ? 16 : 12),
@@ -655,7 +773,6 @@ class IncomeScreen extends StatelessWidget {
                               _buildBankAccountDropdown(selectedBankAccountId, (v) => setState(() => selectedBankAccountId = v), controller.bankAccounts, isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
                             
-                            // Total Amount Display
                             Container(
                               padding: EdgeInsets.all(isWeb ? 16 : 12),
                               decoration: BoxDecoration(color: kPrimary.withOpacity(0.07), borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
@@ -679,12 +796,12 @@ class IncomeScreen extends StatelessWidget {
                           if (formKey.currentState!.validate()) {
                             if (requiresItems()) {
                               if (items.isEmpty || items.any((i) => i['description'].isEmpty || i['unitPrice'] <= 0)) {
-                                Get.snackbar('Error', 'Please add at least one item with description and price', backgroundColor: kWarning, colorText: Colors.white);
+                                AppSnackbar.error(kWarning, 'Error', 'Please add at least one item with description and price');
                                 return;
                               }
                             } else {
                               if (simpleAmount <= 0) {
-                                Get.snackbar('Error', 'Please enter a valid amount', backgroundColor: kWarning, colorText: Colors.white);
+                                AppSnackbar.error(kWarning, 'Error', 'Please enter a valid amount');
                                 return;
                               }
                             }
@@ -741,7 +858,7 @@ class IncomeScreen extends StatelessWidget {
               children: [
                 Expanded(child: _buildTextField('Quantity', (v) => item['quantity'] = int.tryParse(v) ?? 1, isWeb: isWeb, isNumber: true, initialValue: item['quantity'].toString())),
                 SizedBox(width: isWeb ? 12 : 8),
-                Expanded(flex: 2, child: _buildTextField('Unit Price *', (v) => item['unitPrice'] = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '₨ ', initialValue: item['unitPrice'].toString())),
+                Expanded(flex: 2, child: _buildTextField('Unit Price *', (v) => item['unitPrice'] = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '\$ ', initialValue: item['unitPrice'].toString())),
               ],
             ),
             Align(
@@ -757,110 +874,92 @@ class IncomeScreen extends StatelessWidget {
   void _showIncomeDetails(Income income, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    if (isWeb) {
-      showDialog(
-        context: context,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            width: 500,
-            padding: const EdgeInsets.all(24),
-            child: _buildIncomeDetailsContent(income, ctx),
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (ctx) => Container(
-          padding: const EdgeInsets.all(20),
-          child: _buildIncomeDetailsContent(income, ctx),
-        ),
-      );
-    }
-  }
-
-  Widget _buildIncomeDetailsContent(Income income, BuildContext ctx) {
-    final isWeb = ResponsiveUtils.isWeb(ctx);
-    
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: isWeb ? 60 : 50,
-              height: isWeb ? 60 : 50,
-              decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 14 : 10)),
-              child: Icon(Icons.trending_up, size: isWeb ? 28 : 24, color: kSuccess),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(income.incomeNumber, style: TextStyle(fontSize: isWeb ? 18 : 16, fontWeight: FontWeight.w800, color: kText)),
-                Text(DateFormat('dd MMM yyyy').format(income.date), style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
-              ]),
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 10, vertical: isWeb ? 6 : 4),
-              decoration: BoxDecoration(color: income.status == 'Posted' ? kSuccess.withOpacity(0.1) : kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-              child: Text(income.status, style: TextStyle(fontSize: isWeb ? 13 : 12, color: income.status == 'Posted' ? kSuccess : kWarning)),
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 20 : 16),
-        Container(
-          padding: EdgeInsets.all(isWeb ? 16 : 12),
-          decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: isWeb ? 500 : MediaQuery.of(ctx).size.width * 0.9,
+          padding: const EdgeInsets.all(24),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow('Income Type', income.incomeType, isWeb),
-              if (income.customerName.isNotEmpty) _buildDetailRow('Customer', income.customerName, isWeb),
-              _buildDetailRow('Subtotal', _formatAmount(income.subtotal), isWeb),
-              if (income.taxRate > 0) _buildDetailRow('Tax (${income.taxRate}%)', _formatAmount(income.taxAmount), isWeb),
-              _buildDetailRow('Total Amount', _formatAmount(income.totalAmount), isWeb),
-              _buildDetailRow('Payment Method', income.paymentMethod, isWeb),
-              if (income.reference.isNotEmpty) _buildDetailRow('Reference', income.reference, isWeb),
-              if (income.description.isNotEmpty) _buildDetailRow('Description', income.description, isWeb),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                    child: Icon(Icons.trending_up, size: 28, color: kSuccess),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(income.incomeNumber, style:  TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kText)),
+                      Text(DateFormat('dd MMM yyyy').format(income.date), style:  TextStyle(fontSize: 13, color: kSubText)),
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: income.status == 'Posted' ? kSuccess.withOpacity(0.1) : kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: Text(income.status, style: TextStyle(fontSize: 13, color: income.status == 'Posted' ? kSuccess : kWarning)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  children: [
+                    _buildDetailRow('Income Type', income.incomeType, isWeb),
+                    if (income.customerName.isNotEmpty) _buildDetailRow('Customer', income.customerName, isWeb),
+                    _buildDetailRow('Subtotal', _formatAmount(income.subtotal), isWeb),
+                    if (income.taxRate > 0) _buildDetailRow('Tax (${income.taxRate}%)', _formatAmount(income.taxAmount), isWeb),
+                    _buildDetailRow('Total Amount', _formatAmount(income.totalAmount), isWeb),
+                    _buildDetailRow('Payment Method', income.paymentMethod, isWeb),
+                    if (income.reference.isNotEmpty) _buildDetailRow('Reference', income.reference, isWeb),
+                    if (income.description.isNotEmpty) _buildDetailRow('Description', income.description, isWeb),
+                  ],
+                ),
+              ),
+              if (income.items.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                 Text('Items', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kText)),
+                const SizedBox(height: 8),
+                ...income.items.map((item) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(item.description, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kText)),
+                          Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style:  TextStyle(fontSize: 10, color: kSubText)),
+                        ]),
+                      ),
+                      Text(_formatAmount(item.amount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kSuccess)),
+                    ],
+                  ),
+                )).toList(),
+              ],
+              const SizedBox(height: 16),
+              if (income.status == 'Draft')
+                ElevatedButton.icon(
+                  onPressed: () { 
+                    Navigator.pop(context); 
+                    Get.find<IncomeController>().postIncome(income.id); 
+                  },
+                  icon: const Icon(Icons.check_circle, size: 18),
+                  label: const Text('Post Income', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
+                ),
             ],
           ),
         ),
-        if (income.items.isNotEmpty) ...[
-          SizedBox(height: isWeb ? 20 : 16),
-          Text('Items', style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kText)),
-          SizedBox(height: isWeb ? 12 : 8),
-          ...income.items.map((item) => Container(
-            margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-            padding: EdgeInsets.all(isWeb ? 12 : 10),
-            decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item.description, style: TextStyle(fontSize: isWeb ? 13 : 12, fontWeight: FontWeight.w600, color: kText)),
-                    Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
-                  ]),
-                ),
-                Text(_formatAmount(item.amount), style: TextStyle(fontSize: isWeb ? 14 : 13, fontWeight: FontWeight.w700, color: kSuccess)),
-              ],
-            ),
-          )).toList(),
-        ],
-        SizedBox(height: isWeb ? 20 : 16),
-        if (income.status == 'Draft')
-          ElevatedButton.icon(
-            onPressed: () { 
-              Navigator.pop(ctx); 
-              Get.find<IncomeController>().postIncome(income.id); 
-            },
-            icon: Icon(Icons.check_circle, size: isWeb ? 20 : 18),
-            label: Text('Post Income', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-            style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
-          ),
-      ],
+      ),
     );
   }
   
@@ -907,8 +1006,69 @@ class IncomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showRowActions(IncomeController controller, Income income, BuildContext context) {
+    showMenu(
+      context: context,
+      position: const RelativeRect.fromLTRB(100, 100, 0, 0),
+      items: [
+        PopupMenuItem(
+          child: ListTile(
+            leading: Icon(Icons.edit, size: 20, color: kPrimary),
+            title: const Text('Edit', style: TextStyle(fontSize: 14)),
+            dense: true,
+          ),
+          onTap: () {
+            AppSnackbar.info('Info', 'Edit income #${income.incomeNumber}');
+          },
+        ),
+        PopupMenuItem(
+          child: ListTile(
+            leading: Icon(Icons.delete, size: 20, color: kDanger),
+            title: const Text('Delete', style: TextStyle(fontSize: 14)),
+            dense: true,
+          ),
+          onTap: () {
+            _showDeleteConfirmation(controller, income, context);
+          },
+        ),
+        PopupMenuItem(
+          child: ListTile(
+            leading: Icon(Icons.print, size: 20, color: kPrimary),
+            title: const Text('Print', style: TextStyle(fontSize: 14)),
+            dense: true,
+          ),
+          onTap: () {
+            controller.printIncomes();
+          },
+        ),
+      ],
+      elevation: 4,
+    );
+  }
+
+  void _showDeleteConfirmation(IncomeController controller, Income income, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Income'),
+        content: Text('Are you sure you want to delete ${income.incomeNumber}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppSnackbar.success(Colors.green, 'Deleted', 'Income deleted successfully');
+            },
+            style: TextButton.styleFrom(foregroundColor: kDanger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
   
-  // Helper widgets
+  // ==================== HELPER WIDGETS ====================
   Widget _buildTextField(String label, Function(String) onChanged, {bool isWeb = false, bool isNumber = false, String? prefix, int maxLines = 1, String initialValue = ''}) {
     return TextFormField(
       initialValue: initialValue,
@@ -940,7 +1100,7 @@ class IncomeScreen extends StatelessWidget {
         ),
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
-        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: TextStyle(color: kText)))).toList(),
+        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -991,7 +1151,7 @@ class IncomeScreen extends StatelessWidget {
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
         hint: Text('Select customer', style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-        items: customers.map((cust) => DropdownMenuItem(value: cust['_id'].toString(), child: Text(cust['name'], style: TextStyle(color: kText)))).toList(),
+        items: customers.map((cust) => DropdownMenuItem(value: cust['_id'].toString(), child: Text(cust['name'], style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -1012,7 +1172,7 @@ class IncomeScreen extends StatelessWidget {
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
         hint: Text('Select bank account', style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-        items: bankAccounts.map((acc) => DropdownMenuItem(value: acc['_id'].toString(), child: Text(acc['accountName'], style: TextStyle(color: kText)))).toList(),
+        items: bankAccounts.map((acc) => DropdownMenuItem(value: acc['_id'].toString(), child: Text(acc['accountName'], style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -1025,7 +1185,7 @@ class IncomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: isWeb ? 120 : 100, child: Text(label, style: TextStyle(fontSize: isWeb ? 13 : 11, color: kSubText, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(value, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText, fontWeight: FontWeight.w600))),
+          Expanded(child: Text(value, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -1033,6 +1193,6 @@ class IncomeScreen extends StatelessWidget {
   
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

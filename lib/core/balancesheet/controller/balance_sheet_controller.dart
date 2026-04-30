@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -76,7 +79,7 @@ class BalanceSheetController extends GetxController {
   }
 
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
 
   // ==================== LOAD BALANCE SHEET FROM API ====================
@@ -216,7 +219,7 @@ class BalanceSheetController extends GetxController {
   // ==================== FORMAT AMOUNT ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 
   // ==================== EXPORT FUNCTIONS ====================
@@ -263,9 +266,10 @@ class BalanceSheetController extends GetxController {
     ),
   );
 }
-
-  Future<void> exportToPdf() async {
-    try {
+Future<void> exportToPdf() async {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -280,46 +284,75 @@ class BalanceSheetController extends GetxController {
         ),
         barrierDismissible: false,
       );
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfAssetsSection(),
+          pw.SizedBox(height: 16),
+          _pdfLiabilitiesSection(),
+          pw.SizedBox(height: 16),
+          _pdfEquitySection(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'balance_sheet_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      final pdf = pw.Document();
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfAssetsSection(),
-            pw.SizedBox(height: 16),
-            _pdfLiabilitiesSection(),
-            pw.SizedBox(height: 16),
-            _pdfEquitySection(),
-          ],
-        ),
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Balance sheet exported to PDF',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Balance sheet exported to PDF',
+        duration: const Duration(seconds: 2),
       );
       
-      final dir = await getTemporaryDirectory();
-      final fileName = 'balance_sheet_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', 'Balance sheet exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-      
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(
+      Colors.red,
+      'Error',
+      'Failed to export PDF: $e',
+      duration: const Duration(seconds: 2),
+    );
   }
-  
+}  
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -511,9 +544,10 @@ class BalanceSheetController extends GetxController {
       ],
     );
   }
-  
   Future<void> exportToExcelFile() async {
-    try {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -528,139 +562,167 @@ class BalanceSheetController extends GetxController {
         ),
         barrierDismissible: false,
       );
-      
-      final excelFile = Excel.createExcel();
-      
-      // Summary Sheet
-      final summarySheet = excelFile['Summary'];
-      excelFile.setDefaultSheet('Summary');
-      
-      _excelSetCell(summarySheet, 0, 0, 'Balance Sheet Report',
-          bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(summarySheet, 1, 0,
-          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
-          fontSize: 9, fontColor: '757575');
-      _excelSetCell(summarySheet, 2, 0,
-          'As of Date: ${DateFormat('dd MMM yyyy').format(asOfDate.value)}',
-          fontSize: 10, fontColor: '1A237E');
-      _excelSetCell(summarySheet, 3, 0,
-          'Period: ${selectedPeriod.value}',
-          fontSize: 10, fontColor: '1A237E');
-      
-      _excelSetCell(summarySheet, 5, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
-      
-      final summaryRows = [
-        ['Total Assets', _formatAmount(totalAssets.value)],
-        ['Total Liabilities', _formatAmount(totalLiabilities.value)],
-        ['Equity', _formatAmount(equity.value)],
-        ['Total Liabilities & Equity', _formatAmount(totalLiabilities.value + equity.value)],
-      ];
-      
-      for (int r = 0; r < summaryRows.length; r++) {
-        for (int c = 0; c < 2; c++) {
-          _excelSetCell(summarySheet, 6 + r, c, summaryRows[r][c],
-              bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
-        }
+    }
+    
+    final excelFile = Excel.createExcel();
+    
+    // Summary Sheet
+    final summarySheet = excelFile['Summary'];
+    excelFile.setDefaultSheet('Summary');
+    
+    _excelSetCell(summarySheet, 0, 0, 'Balance Sheet Report',
+        bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(summarySheet, 1, 0,
+        'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+        fontSize: 9, fontColor: '757575');
+    _excelSetCell(summarySheet, 2, 0,
+        'As of Date: ${DateFormat('dd MMM yyyy').format(asOfDate.value)}',
+        fontSize: 10, fontColor: '1A237E');
+    _excelSetCell(summarySheet, 3, 0,
+        'Period: ${selectedPeriod.value}',
+        fontSize: 10, fontColor: '1A237E');
+    
+    _excelSetCell(summarySheet, 5, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    
+    final summaryRows = [
+      ['Total Assets', _formatAmount(totalAssets.value)],
+      ['Total Liabilities', _formatAmount(totalLiabilities.value)],
+      ['Equity', _formatAmount(equity.value)],
+      ['Total Liabilities & Equity', _formatAmount(totalLiabilities.value + equity.value)],
+    ];
+    
+    for (int r = 0; r < summaryRows.length; r++) {
+      for (int c = 0; c < 2; c++) {
+        _excelSetCell(summarySheet, 6 + r, c, summaryRows[r][c],
+            bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
       }
-      summarySheet.setColumnWidth(0, 25);
-      summarySheet.setColumnWidth(1, 20);
-      
-      // Assets Sheet
-      final assetsSheet = excelFile['Assets'];
-      _excelSetCell(assetsSheet, 0, 0, 'ASSETS', bold: true, fontSize: 14, bgColor: '2E7D32', fontColor: 'FFFFFF');
-      
-      int row = 2;
-      for (final category in assetsData.keys) {
-        final items = assetsData[category] ?? {};
-        if (items.isNotEmpty) {
-          _excelSetCell(assetsSheet, row, 0, category, bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    }
+    summarySheet.setColumnWidth(0, 25);
+    summarySheet.setColumnWidth(1, 20);
+    
+    // Assets Sheet
+    final assetsSheet = excelFile['Assets'];
+    _excelSetCell(assetsSheet, 0, 0, 'ASSETS', bold: true, fontSize: 14, bgColor: '2E7D32', fontColor: 'FFFFFF');
+    
+    int row = 2;
+    for (final category in assetsData.keys) {
+      final items = assetsData[category] ?? {};
+      if (items.isNotEmpty) {
+        _excelSetCell(assetsSheet, row, 0, category, bold: true, fontSize: 11, bgColor: 'E8EAF6');
+        row++;
+        
+        for (final item in items.entries) {
+          _excelSetCell(assetsSheet, row, 0, '   ${item.key}', bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
+          _excelSetCell(assetsSheet, row, 1, item.value, bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
           row++;
-          
-          for (final item in items.entries) {
-            _excelSetCell(assetsSheet, row, 0, '   ${item.key}', bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
-            _excelSetCell(assetsSheet, row, 1, item.value, bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
-            row++;
-          }
-          
-          _excelSetCell(assetsSheet, row, 0, '   Total $category', bold: true, bgColor: 'E8EAF6');
-          _excelSetCell(assetsSheet, row, 1, items.values.fold(0.0, (sum, val) => sum + val), 
-              bold: true, bgColor: 'E8EAF6', fontColor: '2E7D32');
-          row += 2;
         }
+        
+        _excelSetCell(assetsSheet, row, 0, '   Total $category', bold: true, bgColor: 'E8EAF6');
+        _excelSetCell(assetsSheet, row, 1, items.values.fold(0.0, (sum, val) => sum + val), 
+            bold: true, bgColor: 'E8EAF6', fontColor: '2E7D32');
+        row += 2;
       }
-      
-      _excelSetCell(assetsSheet, row, 0, 'TOTAL ASSETS', bold: true, fontSize: 12, bgColor: '2E7D32', fontColor: 'FFFFFF');
-      _excelSetCell(assetsSheet, row, 1, totalAssets.value, bold: true, bgColor: '2E7D32', fontColor: 'FFFFFF');
-      
-      assetsSheet.setColumnWidth(0, 40);
-      assetsSheet.setColumnWidth(1, 20);
-      
-      // Liabilities Sheet
-      final liabilitiesSheet = excelFile['Liabilities'];
-      _excelSetCell(liabilitiesSheet, 0, 0, 'LIABILITIES', bold: true, fontSize: 14, bgColor: 'C62828', fontColor: 'FFFFFF');
-      
-      row = 2;
-      for (final category in liabilitiesData.keys) {
-        final items = liabilitiesData[category] ?? {};
-        if (items.isNotEmpty) {
-          _excelSetCell(liabilitiesSheet, row, 0, category, bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    }
+    
+    _excelSetCell(assetsSheet, row, 0, 'TOTAL ASSETS', bold: true, fontSize: 12, bgColor: '2E7D32', fontColor: 'FFFFFF');
+    _excelSetCell(assetsSheet, row, 1, totalAssets.value, bold: true, bgColor: '2E7D32', fontColor: 'FFFFFF');
+    
+    assetsSheet.setColumnWidth(0, 40);
+    assetsSheet.setColumnWidth(1, 20);
+    
+    // Liabilities Sheet
+    final liabilitiesSheet = excelFile['Liabilities'];
+    _excelSetCell(liabilitiesSheet, 0, 0, 'LIABILITIES', bold: true, fontSize: 14, bgColor: 'C62828', fontColor: 'FFFFFF');
+    
+    row = 2;
+    for (final category in liabilitiesData.keys) {
+      final items = liabilitiesData[category] ?? {};
+      if (items.isNotEmpty) {
+        _excelSetCell(liabilitiesSheet, row, 0, category, bold: true, fontSize: 11, bgColor: 'E8EAF6');
+        row++;
+        
+        for (final item in items.entries) {
+          _excelSetCell(liabilitiesSheet, row, 0, '   ${item.key}', bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
+          _excelSetCell(liabilitiesSheet, row, 1, item.value, bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
           row++;
-          
-          for (final item in items.entries) {
-            _excelSetCell(liabilitiesSheet, row, 0, '   ${item.key}', bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
-            _excelSetCell(liabilitiesSheet, row, 1, item.value, bgColor: row.isEven ? 'F5F5F5' : 'FFFFFF');
-            row++;
-          }
-          
-          _excelSetCell(liabilitiesSheet, row, 0, '   Total $category', bold: true, bgColor: 'E8EAF6');
-          _excelSetCell(liabilitiesSheet, row, 1, items.values.fold(0.0, (sum, val) => sum + val), 
-              bold: true, bgColor: 'E8EAF6', fontColor: 'C62828');
-          row += 2;
         }
+        
+        _excelSetCell(liabilitiesSheet, row, 0, '   Total $category', bold: true, bgColor: 'E8EAF6');
+        _excelSetCell(liabilitiesSheet, row, 1, items.values.fold(0.0, (sum, val) => sum + val), 
+            bold: true, bgColor: 'E8EAF6', fontColor: 'C62828');
+        row += 2;
       }
+    }
+    
+    _excelSetCell(liabilitiesSheet, row, 0, 'TOTAL LIABILITIES', bold: true, fontSize: 12, bgColor: 'C62828', fontColor: 'FFFFFF');
+    _excelSetCell(liabilitiesSheet, row, 1, totalLiabilities.value, bold: true, bgColor: 'C62828', fontColor: 'FFFFFF');
+    
+    liabilitiesSheet.setColumnWidth(0, 40);
+    liabilitiesSheet.setColumnWidth(1, 20);
+    
+    // Equity Sheet
+    final equitySheet = excelFile['Equity'];
+    _excelSetCell(equitySheet, 0, 0, 'EQUITY', bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(equitySheet, 2, 0, 'Total Equity', bold: true);
+    _excelSetCell(equitySheet, 2, 1, equity.value, bold: true, fontColor: '1A237E');
+    _excelSetCell(equitySheet, 4, 0, 'Total Liabilities & Equity', bold: true, fontSize: 12, bgColor: 'E8EAF6');
+    _excelSetCell(equitySheet, 4, 1, totalLiabilities.value + equity.value, 
+        bold: true, bgColor: 'E8EAF6', fontColor: '1A237E');
+    
+    equitySheet.setColumnWidth(0, 30);
+    equitySheet.setColumnWidth(1, 20);
+    
+    excelFile.delete('Sheet1');
+    
+    final bytes = excelFile.save();
+    if (bytes == null) throw Exception('Excel save failed');
+    
+    final fileName = 'balance_sheet_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+    
+    if (kIsWeb) {
+      // WEB: Download Excel
+      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
-      _excelSetCell(liabilitiesSheet, row, 0, 'TOTAL LIABILITIES', bold: true, fontSize: 12, bgColor: 'C62828', fontColor: 'FFFFFF');
-      _excelSetCell(liabilitiesSheet, row, 1, totalLiabilities.value, bold: true, bgColor: 'C62828', fontColor: 'FFFFFF');
+      if (Get.isDialogOpen ?? false) Get.back();
       
-      liabilitiesSheet.setColumnWidth(0, 40);
-      liabilitiesSheet.setColumnWidth(1, 20);
-      
-      // Equity Sheet
-      final equitySheet = excelFile['Equity'];
-      _excelSetCell(equitySheet, 0, 0, 'EQUITY', bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(equitySheet, 2, 0, 'Total Equity', bold: true);
-      _excelSetCell(equitySheet, 2, 1, equity.value, bold: true, fontColor: '1A237E');
-      _excelSetCell(equitySheet, 4, 0, 'Total Liabilities & Equity', bold: true, fontSize: 12, bgColor: 'E8EAF6');
-      _excelSetCell(equitySheet, 4, 1, totalLiabilities.value + equity.value, 
-          bold: true, bgColor: 'E8EAF6', fontColor: '1A237E');
-      
-      equitySheet.setColumnWidth(0, 30);
-      equitySheet.setColumnWidth(1, 20);
-      
-      excelFile.delete('Sheet1');
-      
-      final bytes = excelFile.save();
-      if (bytes == null) throw Exception('Excel save failed');
-      
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Balance sheet exported to Excel',
+        duration: const Duration(seconds: 2),
+      );
+    } else {
+      // MOBILE: Save and open
       final dir = await getTemporaryDirectory();
-      final fileName = 'balance_sheet_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes);
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', 'Balance sheet exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        'Balance sheet exported to Excel',
+        duration: const Duration(seconds: 2),
+      );
           
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(
+      Colors.red,
+      'Error',
+      'Failed to export Excel: $e',
+      duration: const Duration(seconds: 2),
+    );
   }
-  
+}
   void _excelSetCell(
     Sheet sheet,
     int row,
@@ -691,12 +753,10 @@ class BalanceSheetController extends GetxController {
 
   // ==================== PRINT BALANCE SHEET ====================
   void printBalanceSheet() {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.blue,
       'Print',
       'Preparing balance sheet for print...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );
     // TODO: Implement actual print functionality
@@ -704,12 +764,10 @@ class BalanceSheetController extends GetxController {
 
   // ==================== HANDLE SESSION EXPIRED ====================
   void _handleSessionExpired() {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Session Expired',
       'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
       duration: const Duration(seconds: 3),
     );
     // TODO: Navigate to login screen
@@ -717,12 +775,10 @@ class BalanceSheetController extends GetxController {
 
   // ==================== SHOW ERROR ====================
   void _showError(String message) {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Error',
       message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
       duration: const Duration(seconds: 3),
     );
   }

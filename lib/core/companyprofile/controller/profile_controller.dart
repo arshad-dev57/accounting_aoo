@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -214,23 +216,19 @@ class ProfileController extends GetxController {
   }
   
   void _showError(String message) {
-    Get.snackbar(
+    AppSnackbar.error(
+      kDanger,
       'Error',
       message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
       duration: const Duration(seconds: 3),
     );
   }
   
   void _showSuccess(String message) {
-    Get.snackbar(
+    AppSnackbar.success(
+      Colors.green, 
       'Success',
       message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );
   }

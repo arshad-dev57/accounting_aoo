@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/Expense/controller/expense_controller.dart';
 import 'package:LedgerPro_app/core/Expense/model/expense_model.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +15,10 @@ class ExpenseScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(ExpenseController());
 
-    return Container(
-      color: kBg,
-      child: Obx(() {
+    // ✅ Scaffold for Material context
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Obx(() {
         if (controller.isLoading.value && controller.expenses.isEmpty) {
           return Center(
             child: Column(
@@ -33,7 +35,6 @@ class ExpenseScreen extends StatelessWidget {
           );
         }
         
-        // Single ScrollView that scrolls everything together
         return SingleChildScrollView(
           padding: EdgeInsets.zero,
           physics: const BouncingScrollPhysics(),
@@ -52,7 +53,7 @@ class ExpenseScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header without AppBar
+  // ==================== HEADER ====================
   Widget _buildHeader(ExpenseController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -64,9 +65,9 @@ class ExpenseScreen extends StatelessWidget {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -92,44 +93,21 @@ class ExpenseScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Filter Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => _showFilterDialog(controller, context),
-            ),
+          _headerIconBtn(
+            icon: Icons.filter_alt_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => _showFilterDialog(controller, context),
           ),
           const SizedBox(width: 8),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportExpenses(),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Print Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.printExpenses(),
-            ),
+          _headerIconBtn(
+            icon: Icons.download_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportExpenses(),
           ),
           if (!isMobile) const SizedBox(width: 8),
           if (!isMobile)
@@ -148,6 +126,27 @@ class ExpenseScreen extends StatelessWidget {
     );
   }
 
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.white, size: size),
+      ),
+    );
+  }
+
+  // ==================== SUMMARY CARDS ====================
   Widget _buildSummaryCards(ExpenseController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -190,134 +189,138 @@ class ExpenseScreen extends StatelessWidget {
             children: [
               Icon(icon, size: isWeb ? 24 : 20, color: color),
               SizedBox(width: isWeb ? 8 : 6),
-              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500))),
+              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
             ],
           ),
           SizedBox(height: isWeb ? 8 : 6),
-          Text(isNumber ? amount : amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color)),
+          Text(isNumber ? amount : amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color), overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 
+  // ==================== FILTER BAR ====================
   Widget _buildFilterBar(ExpenseController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+    return Material(
       color: kCardBg,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: isWeb ? 3 : 2,
-                child: Container(
-                  height: isWeb ? 45 : 40,
-                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-                  child: TextField(
-                    controller: controller.searchController,
-                    style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
-                    decoration: InputDecoration(
-                      hintText: isWeb ? 'Search by number, vendor, description...' : 'Search...',
-                      hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
-                      prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: isWeb ? 16 : 12),
-              Expanded(
-                flex: isWeb ? 2 : 1,
-                child: Container(
-                  height: isWeb ? 45 : 40,
-                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-                  child: Obx(() => DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: controller.selectedFilter.value,
-                      icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
-                      padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-                      isExpanded: true,
-                      style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
-                      dropdownColor: kCardBg,
-                      items: controller.filterOptions.map((filter) {
-                        return DropdownMenuItem(value: filter, child: Text(filter, style: TextStyle(color: kText)));
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) controller.applyFilter(value);
-                      },
-                    ),
-                  )),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isWeb ? 12 : 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: controller.expenseTypes.map((type) {
-                final isSelected = controller.selectedType.value == type;
-                return Padding(
-                  padding: EdgeInsets.only(right: isWeb ? 8 : 6),
-                  child: FilterChip(
-                    label: Text(type, style: TextStyle(fontSize: isWeb ? 12 : 11)),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      controller.applyTypeFilter(selected ? type : 'All');
-                    },
-                    backgroundColor: kBg,
-                    selectedColor: kPrimary.withOpacity(0.2),
-                    labelStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: isSelected ? kPrimary : kSubText),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          if (controller.startDate.value != null && controller.endDate.value != null)
-            Padding(
-              padding: EdgeInsets.only(top: isWeb ? 12 : 8),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
-                decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Row(
-                        children: [
-                          Icon(Icons.date_range, size: isWeb ? 20 : 16, color: kPrimary),
-                          SizedBox(width: isWeb ? 8 : 6),
-                          Flexible(
-                            child: Text(
-                              '${DateFormat('dd MMM yyyy').format(controller.startDate.value!)} - ${DateFormat('dd MMM yyyy').format(controller.endDate.value!)}',
-                              style: TextStyle(fontSize: isWeb ? 12 : 11, color: kPrimary),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: isWeb ? 3 : 2,
+                  child: Container(
+                    height: isWeb ? 45 : 40,
+                    decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                    child: TextField(
+                      controller: controller.searchController,
+                      style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
+                      decoration: InputDecoration(
+                        hintText: isWeb ? 'Search by number, vendor, description...' : 'Search...',
+                        hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                        prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => controller.clearDateRange(),
-                      child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
-                    ),
-                  ],
+                  ),
                 ),
+                SizedBox(width: isWeb ? 16 : 12),
+                SizedBox(
+                  width: isWeb ? 150 : 120,
+                  height: isWeb ? 45 : 40,
+                  child: Container(
+                    decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                    child: Obx(() => DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: controller.selectedFilter.value,
+                        icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
+                        padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                        isExpanded: true,
+                        style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                        dropdownColor: kCardBg,
+                        items: controller.filterOptions.map((filter) {
+                          return DropdownMenuItem(value: filter, child: Text(filter, style: TextStyle(color: kText), overflow: TextOverflow.ellipsis));
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) controller.applyFilter(value);
+                        },
+                      ),
+                    )),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isWeb ? 12 : 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: controller.expenseTypes.map((type) {
+                  final isSelected = controller.selectedType.value == type;
+                  return Padding(
+                    padding: EdgeInsets.only(right: isWeb ? 8 : 6),
+                    child: FilterChip(
+                      label: Text(type, style: TextStyle(fontSize: isWeb ? 12 : 11)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        controller.applyTypeFilter(selected ? type : 'All');
+                      },
+                      backgroundColor: kBg,
+                      selectedColor: kPrimary.withOpacity(0.2),
+                      labelStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: isSelected ? kPrimary : kSubText),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-        ],
+            if (controller.startDate.value != null && controller.endDate.value != null)
+              Padding(
+                padding: EdgeInsets.only(top: isWeb ? 12 : 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12, vertical: isWeb ? 10 : 8),
+                  decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Row(
+                          children: [
+                            Icon(Icons.date_range, size: isWeb ? 20 : 16, color: kPrimary),
+                            SizedBox(width: isWeb ? 8 : 6),
+                            Flexible(
+                              child: Text(
+                                '${DateFormat('dd MMM yyyy').format(controller.startDate.value!)} - ${DateFormat('dd MMM yyyy').format(controller.endDate.value!)}',
+                                style: TextStyle(fontSize: isWeb ? 12 : 11, color: kPrimary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => controller.clearDateRange(),
+                        child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
+  // ==================== EXPENSES LIST ====================
   Widget _buildExpensesList(ExpenseController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    
+
     if (controller.expenses.isEmpty) {
       return Padding(
         padding: EdgeInsets.all(isWeb ? 40 : 20),
@@ -340,234 +343,353 @@ class ExpenseScreen extends StatelessWidget {
       );
     }
 
+    if (isWeb) {
+      return _buildWebExpensesTable(controller, context);
+    } else {
+      return _buildMobileExpenseList(controller, context);
+    }
+  }
+
+  // ==================== WEB TABLE ====================
+  Widget _buildWebExpensesTable(ExpenseController controller, BuildContext context) {
+    final expenses = controller.expenses;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: [
+                // Header - Fixed widths
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  color: kPrimary.withOpacity(0.06),
+                  child: Row(
+                    children: [
+                      Container(width: 60, child: const Text('', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Expense #', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 180, child: const Text('Vendor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 100, child: const Text('Payment', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Amount', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 100, child: const Text('Status', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 100, child: const Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                    ],
+                  ),
+                ),
+                ...expenses.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final expense = entry.value;
+                  final isEven = index.isEven;
+
+                  final statusColor = expense.status == 'Posted' ? kSuccess : expense.status == 'Draft' ? kWarning : kDanger;
+                  final typeColor = Color(int.parse(controller.getTypeColor(expense.expenseType).substring(1, 7), radix: 16) + 0xFF000000);
+
+                  return InkWell(
+                    onTap: () => _showExpenseDetails(expense, context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isEven ? Colors.transparent : kPrimary.withOpacity(0.01),
+                        border: Border(top: BorderSide(color: kBorder.withOpacity(0.5))),
+                      ),
+                      child: Row(
+                        children: [
+                          // Icon
+                          Container(
+                            width: 60,
+                            height: 44,
+                            decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                            child: Icon(controller.getTypeIcon(expense.expenseType), size: 20, color: typeColor),
+                          ),
+                          // Expense Number
+                          Container(
+                            width: 150,
+                            child: Text(expense.expenseNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          // Type
+                          Container(
+                            width: 120,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                              child: Text(expense.expenseType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          // Vendor
+                          Container(
+                            width: 180,
+                            child: Text(expense.vendorName.isEmpty ? '-' : expense.vendorName, style:  TextStyle(fontSize: 13, color: kSubText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          // Date
+                          Container(
+                            width: 120,
+                            child: Text(DateFormat('dd MMM yyyy').format(expense.date), style:  TextStyle(fontSize: 13, color: kSubText)),
+                          ),
+                          // Payment Method
+                          Container(
+                            width: 100,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                decoration: BoxDecoration(color: kPrimary.withOpacity(0.06), borderRadius: BorderRadius.circular(6)),
+                                child: Text(expense.paymentMethod, style: TextStyle(fontSize: 10, color: kPrimary, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                              ),
+                            ),
+                          ),
+                          // Amount
+                          Container(
+                            width: 150,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                decoration: BoxDecoration(color: kDanger.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+                                child: Text(controller.formatAmount(expense.totalAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kDanger)),
+                              ),
+                            ),
+                          ),
+                          // Status
+                          Container(
+                            width: 100,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
+                                    const SizedBox(width: 4),
+                                    Text(expense.status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Actions
+                          Container(
+                            width: 100,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (expense.status == 'Draft')
+                                  IconButton(
+                                    onPressed: () => controller.postExpense(expense.id),
+                                    icon: const Icon(Icons.check_circle, size: 18),
+                                    tooltip: 'Post',
+                                    padding: EdgeInsets.zero,
+                                    color: kSuccess,
+                                  ),
+                                IconButton(
+                                  onPressed: () => _showExpenseDetails(expense, context),
+                                  icon: const Icon(Icons.remove_red_eye, size: 18),
+                                  tooltip: 'View Details',
+                                  padding: EdgeInsets.zero,
+                                  color: kSubText,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                // Footer
+                _buildTableFooter(controller, expenses),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableFooter(ExpenseController controller, List<Expense> expenses) {
+    final totalAmount = expenses.fold(0.0, (s, e) => s + e.totalAmount);
+    final postedCount = expenses.where((e) => e.status == 'Posted').length;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: kPrimary.withOpacity(0.06),
+        border:  Border(top: BorderSide(color: kBorder)),
+      ),
+      child: Row(
+        children: [
+          Container(width: 60, child: const Text('')),
+          Container(width: 150, child: const Text('TOTALS', style: TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 120, child: const SizedBox()),
+          Container(width: 180, child: const SizedBox()),
+          Container(width: 120, child: const SizedBox()),
+          Container(width: 100, child: const SizedBox()),
+          Container(width: 150, child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: Text(controller.formatAmount(totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kDanger)),
+            ),
+          )),
+          Container(width: 100, child: Center(child: Text('$postedCount Posted', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kSuccess)))),
+          Container(width: 100, child: const SizedBox()),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MOBILE LIST ====================
+  Widget _buildMobileExpenseList(ExpenseController controller, BuildContext context) {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 8),
-          child: Text(
-            'Expense Records',
-            style: TextStyle(
-              fontSize: isWeb ? 18 : 16,
-              fontWeight: FontWeight.w700,
-              color: kText,
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Text('Expense Records', style:  TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kText)),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text('${controller.expenses.length} records', style: const TextStyle(fontSize: 11, color: kDanger, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ),
-        ...controller.expenses.map((expense) => Padding(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 12, vertical: isWeb ? 8 : 6),
-          child: _buildExpenseCard(controller, expense, context),
-        )).toList(),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: controller.expenses.length,
+          itemBuilder: (context, index) {
+            final expense = controller.expenses[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildMobileExpenseCard(controller, expense, context),
+            );
+          },
+        ),
         if (controller.hasMore.value)
           Padding(
-            padding: EdgeInsets.symmetric(vertical: isWeb ? 16 : 12),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
-              child: LoadingAnimationWidget.waveDots(
-                color: kPrimary,
-                size: isWeb ? 40 : 30,
-              ),
+              child: LoadingAnimationWidget.waveDots(color: kPrimary, size: 30),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildExpenseCard(ExpenseController controller, Expense expense, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    final isMobile = ResponsiveUtils.isMobile(context);
+  Widget _buildMobileExpenseCard(ExpenseController controller, Expense expense, BuildContext context) {
+    final statusColor = expense.status == 'Posted' ? kSuccess : expense.status == 'Draft' ? kWarning : kDanger;
+    final typeColor = Color(int.parse(controller.getTypeColor(expense.expenseType).substring(1, 7), radix: 16) + 0xFF000000);
     
-    Color statusColor = expense.status == 'Posted' ? kSuccess : expense.status == 'Draft' ? kWarning : kDanger;
-    Color typeColor = Color(int.parse(controller.getTypeColor(expense.expenseType).substring(1, 7), radix: 16) + 0xFF000000);
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-      decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showExpenseDetails(expense, context),
-          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-          child: Padding(
-            padding: EdgeInsets.all(isWeb ? 16 : 12),
-            child: isMobile
-                ? _buildMobileExpenseCard(controller, expense, statusColor, typeColor, context)
-                : _buildDesktopExpenseCard(controller, expense, statusColor, typeColor, context),
+    return Card(
+      color: kCardBg,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showExpenseDetails(expense, context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(controller.getTypeIcon(expense.expenseType), size: 20, color: typeColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(expense.expenseNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText), overflow: TextOverflow.ellipsis),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                              child: Text(expense.status, style: TextStyle(fontSize: 9, color: statusColor, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(expense.expenseType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600)),
+                        if (expense.vendorName.isNotEmpty)
+                          Text(expense.vendorName, style:  TextStyle(fontSize: 11, color: kSubText), overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(controller.formatAmount(expense.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kDanger)),
+                      const SizedBox(height: 2),
+                      Text(DateFormat('dd MMM yyyy').format(expense.date), style:  TextStyle(fontSize: 9, color: kSubText)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Divider(color: kBorder),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (expense.status == 'Draft')
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => controller.postExpense(expense.id),
+                        icon: Icon(Icons.check_circle, size: 14, color: kSuccess),
+                        label: const Text('Post', style: TextStyle(fontSize: 10, color: kSuccess)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: kSuccess, width: 1),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                      ),
+                    ),
+                  if (expense.status == 'Draft') const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showExpenseDetails(expense, context),
+                      icon: Icon(Icons.visibility, size: 14, color: kPrimary),
+                      label: const Text('Details', style: TextStyle(fontSize: 10, color: kPrimary)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: kPrimary, width: 1),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildDesktopExpenseCard(ExpenseController controller, Expense expense, Color statusColor, Color typeColor, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: isWeb ? 50 : 44,
-              height: isWeb ? 50 : 44,
-              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
-              child: Icon(controller.getTypeIcon(expense.expenseType), size: isWeb ? 24 : 20, color: typeColor),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(expense.expenseNumber, style: TextStyle(fontSize: isWeb ? 15 : 13, fontWeight: FontWeight.w800, color: kText)),
-                      SizedBox(width: isWeb ? 8 : 6),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 6 : 4)),
-                        child: Text(expense.status, style: TextStyle(fontSize: isWeb ? 11 : 10, color: statusColor, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: isWeb ? 4 : 2),
-                  Text(expense.expenseType, style: TextStyle(fontSize: isWeb ? 12 : 11, color: typeColor, fontWeight: FontWeight.w600)),
-                  if (expense.vendorName.isNotEmpty)
-                    Text(expense.vendorName, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(controller.formatAmount(expense.totalAmount), style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: kDanger)),
-                SizedBox(height: isWeb ? 4 : 2),
-                Text(DateFormat('dd MMM yyyy').format(expense.date), style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
-              ],
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 12 : 8),
-        Divider(color: kBorder),
-        SizedBox(height: isWeb ? 12 : 8),
-        Row(
-          children: [
-            if (expense.status == 'Draft')
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.postExpense(expense.id),
-                  icon: Icon(Icons.check_circle, size: isWeb ? 18 : 14, color: kSuccess),
-                  label: Text('Post', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSuccess)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: kSuccess, width: 1),
-                    padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-                  ),
-                ),
-              ),
-            if (expense.status == 'Draft') SizedBox(width: isWeb ? 12 : 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showExpenseDetails(expense, context),
-                icon: Icon(Icons.visibility, size: isWeb ? 18 : 14, color: kPrimary),
-                label: Text('Details', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kPrimary)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: kPrimary, width: 1),
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileExpenseCard(ExpenseController controller, Expense expense, Color statusColor, Color typeColor, BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(controller.getTypeIcon(expense.expenseType), size: 20, color: typeColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(expense.expenseNumber, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText)),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                        child: Text(expense.status, style: TextStyle(fontSize: 9, color: statusColor, fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(expense.expenseType, style: TextStyle(fontSize: 11, color: typeColor, fontWeight: FontWeight.w600)),
-                  if (expense.vendorName.isNotEmpty)
-                    Text(expense.vendorName, style:  TextStyle(fontSize: 11, color: kSubText)),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(controller.formatAmount(expense.totalAmount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: kDanger)),
-                const SizedBox(height: 2),
-                Text(DateFormat('dd MMM yyyy').format(expense.date), style:  TextStyle(fontSize: 9, color: kSubText)),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Divider(color: kBorder),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            if (expense.status == 'Draft')
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => controller.postExpense(expense.id),
-                  icon: Icon(Icons.check_circle, size: 14, color: kSuccess),
-                  label: const Text('Post', style: TextStyle(fontSize: 10, color: kSuccess)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: kSuccess, width: 1),
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-              ),
-            if (expense.status == 'Draft') const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showExpenseDetails(expense, context),
-                icon: Icon(Icons.visibility, size: 14, color: kPrimary),
-                label: const Text('Details', style: TextStyle(fontSize: 10, color: kPrimary)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: kPrimary, width: 1),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
+  // ==================== DIALOGS ====================
   void _showAddExpenseDialog(ExpenseController controller, BuildContext ctx) {
     final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
@@ -613,7 +735,7 @@ class ExpenseScreen extends StatelessWidget {
           return Dialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             child: Container(
-              width: isWeb ? 600 : double.infinity,
+              width: isWeb ? 600 : MediaQuery.of(context).size.width * 0.9,
               constraints: BoxConstraints(maxHeight: isWeb ? 700 : 600),
               padding: EdgeInsets.all(isWeb ? 24 : 20),
               child: Column(
@@ -627,15 +749,15 @@ class ExpenseScreen extends StatelessWidget {
                         key: formKey,
                         child: Column(
                           children: [
-                            _buildDatePicker('Date', selectedDate, (date) => setState(() => selectedDate = date), isWeb, ctx),
+                            _buildDatePicker('Date', selectedDate, (date) => setState(() => selectedDate = date), isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
-                            _buildDropdown('Expense Type', expenseType, controller.expenseTypes.skip(1).toList(), (v) => setState(() => expenseType = v!), isWeb, ctx),
+                            _buildDropdown('Expense Type', expenseType, controller.expenseTypes.skip(1).toList(), (v) => setState(() => expenseType = v!), isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
-                            _buildVendorDropdown(selectedVendorId, (v) => setState(() => selectedVendorId = v), controller.vendors, isWeb, ctx),
+                            _buildVendorDropdown(selectedVendorId, (v) => setState(() => selectedVendorId = v), controller.vendors, isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
                             
                             if (requiresItems()) ...[
-                              ..._buildItemsList(items, setState, isWeb, ctx),
+                              ..._buildItemsList(items, setState, isWeb, context),
                               SizedBox(height: isWeb ? 12 : 8),
                               TextButton.icon(
                                 onPressed: () => setState(() => addItem()),
@@ -645,7 +767,7 @@ class ExpenseScreen extends StatelessWidget {
                               SizedBox(height: isWeb ? 16 : 12),
                               _buildTextField('Tax Rate (%)', (v) => taxRate = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true),
                             ] else ...[
-                              _buildTextField('Amount *', (v) => simpleAmount = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '₨ '),
+                              _buildTextField('Amount *', (v) => simpleAmount = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '\$ '),
                             ],
                             
                             SizedBox(height: isWeb ? 16 : 12),
@@ -653,9 +775,9 @@ class ExpenseScreen extends StatelessWidget {
                             SizedBox(height: isWeb ? 16 : 12),
                             _buildTextField('Reference Number', (v) => reference = v, isWeb: isWeb),
                             SizedBox(height: isWeb ? 16 : 12),
-                            _buildDropdown('Payment Method', paymentMethod, ['Cash', 'Bank Transfer', 'Cheque', 'Credit Card'], (v) => setState(() => paymentMethod = v!), isWeb, ctx),
+                            _buildDropdown('Payment Method', paymentMethod, ['Cash', 'Bank Transfer', 'Cheque', 'Credit Card'], (v) => setState(() => paymentMethod = v!), isWeb, context),
                             if (paymentMethod == 'Bank Transfer')
-                              _buildBankAccountDropdown(selectedBankAccountId, (v) => setState(() => selectedBankAccountId = v), controller.bankAccounts, isWeb, ctx),
+                              _buildBankAccountDropdown(selectedBankAccountId, (v) => setState(() => selectedBankAccountId = v), controller.bankAccounts, isWeb, context),
                             SizedBox(height: isWeb ? 16 : 12),
                             
                             Container(
@@ -681,12 +803,12 @@ class ExpenseScreen extends StatelessWidget {
                           if (formKey.currentState!.validate()) {
                             if (requiresItems()) {
                               if (items.isEmpty || items.any((i) => i['description'].isEmpty || i['unitPrice'] <= 0)) {
-                                Get.snackbar('Error', 'Please add at least one item with description and price', backgroundColor: kWarning, colorText: Colors.white);
+                                AppSnackbar.error(kWarning, 'Error', 'Please add at least one item with description and price');
                                 return;
                               }
                             } else {
                               if (simpleAmount <= 0) {
-                                Get.snackbar('Error', 'Please enter a valid amount', backgroundColor: kWarning, colorText: Colors.white);
+                                AppSnackbar.error(kWarning, 'Error', 'Please enter a valid amount');
                                 return;
                               }
                             }
@@ -743,7 +865,7 @@ class ExpenseScreen extends StatelessWidget {
               children: [
                 Expanded(child: _buildTextField('Quantity', (v) => item['quantity'] = int.tryParse(v) ?? 1, isWeb: isWeb, isNumber: true, initialValue: item['quantity'].toString())),
                 SizedBox(width: isWeb ? 12 : 8),
-                Expanded(flex: 2, child: _buildTextField('Unit Price *', (v) => item['unitPrice'] = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '₨ ', initialValue: item['unitPrice'].toString())),
+                Expanded(flex: 2, child: _buildTextField('Unit Price *', (v) => item['unitPrice'] = double.tryParse(v) ?? 0, isWeb: isWeb, isNumber: true, prefix: '\$ ', initialValue: item['unitPrice'].toString())),
               ],
             ),
             Align(
@@ -759,110 +881,92 @@ class ExpenseScreen extends StatelessWidget {
   void _showExpenseDetails(Expense expense, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    if (isWeb) {
-      showDialog(
-        context: context,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            width: 500,
-            padding: const EdgeInsets.all(24),
-            child: _buildExpenseDetailsContent(expense, ctx),
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        builder: (ctx) => Container(
-          padding: const EdgeInsets.all(20),
-          child: _buildExpenseDetailsContent(expense, ctx),
-        ),
-      );
-    }
-  }
-
-  Widget _buildExpenseDetailsContent(Expense expense, BuildContext ctx) {
-    final isWeb = ResponsiveUtils.isWeb(ctx);
-    
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: isWeb ? 60 : 50,
-              height: isWeb ? 60 : 50,
-              decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 14 : 10)),
-              child: Icon(Icons.trending_down, size: isWeb ? 28 : 24, color: kDanger),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(expense.expenseNumber, style: TextStyle(fontSize: isWeb ? 18 : 16, fontWeight: FontWeight.w800, color: kText)),
-                Text(DateFormat('dd MMM yyyy').format(expense.date), style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
-              ]),
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 10, vertical: isWeb ? 6 : 4),
-              decoration: BoxDecoration(color: expense.status == 'Posted' ? kSuccess.withOpacity(0.1) : kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
-              child: Text(expense.status, style: TextStyle(fontSize: isWeb ? 13 : 12, color: expense.status == 'Posted' ? kSuccess : kWarning)),
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 20 : 16),
-        Container(
-          padding: EdgeInsets.all(isWeb ? 16 : 12),
-          decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: isWeb ? 500 : MediaQuery.of(ctx).size.width * 0.9,
+          padding: const EdgeInsets.all(24),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow('Expense Type', expense.expenseType, isWeb),
-              if (expense.vendorName.isNotEmpty) _buildDetailRow('Vendor', expense.vendorName, isWeb),
-              _buildDetailRow('Subtotal', _formatAmount(expense.subtotal), isWeb),
-              if (expense.taxRate > 0) _buildDetailRow('Tax (${expense.taxRate}%)', _formatAmount(expense.taxAmount), isWeb),
-              _buildDetailRow('Total Amount', _formatAmount(expense.totalAmount), isWeb),
-              _buildDetailRow('Payment Method', expense.paymentMethod, isWeb),
-              if (expense.reference.isNotEmpty) _buildDetailRow('Reference', expense.reference, isWeb),
-              if (expense.description.isNotEmpty) _buildDetailRow('Description', expense.description, isWeb),
+              Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                    child: Icon(Icons.trending_down, size: 28, color: kDanger),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(expense.expenseNumber, style:  TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kText)),
+                      Text(DateFormat('dd MMM yyyy').format(expense.date), style:  TextStyle(fontSize: 13, color: kSubText)),
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: expense.status == 'Posted' ? kSuccess.withOpacity(0.1) : kWarning.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: Text(expense.status, style: TextStyle(fontSize: 13, color: expense.status == 'Posted' ? kSuccess : kWarning)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  children: [
+                    _buildDetailRow('Expense Type', expense.expenseType, isWeb),
+                    if (expense.vendorName.isNotEmpty) _buildDetailRow('Vendor', expense.vendorName, isWeb),
+                    _buildDetailRow('Subtotal', _formatAmount(expense.subtotal), isWeb),
+                    if (expense.taxRate > 0) _buildDetailRow('Tax (${expense.taxRate}%)', _formatAmount(expense.taxAmount), isWeb),
+                    _buildDetailRow('Total Amount', _formatAmount(expense.totalAmount), isWeb),
+                    _buildDetailRow('Payment Method', expense.paymentMethod, isWeb),
+                    if (expense.reference.isNotEmpty) _buildDetailRow('Reference', expense.reference, isWeb),
+                    if (expense.description.isNotEmpty) _buildDetailRow('Description', expense.description, isWeb),
+                  ],
+                ),
+              ),
+              if (expense.items.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                 Text('Items', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kText)),
+                const SizedBox(height: 8),
+                ...expense.items.map((item) => Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(item.description, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kText)),
+                          Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style:  TextStyle(fontSize: 10, color: kSubText)),
+                        ]),
+                      ),
+                      Text(_formatAmount(item.amount), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kDanger)),
+                    ],
+                  ),
+                )).toList(),
+              ],
+              const SizedBox(height: 16),
+              if (expense.status == 'Draft')
+                ElevatedButton.icon(
+                  onPressed: () { 
+                    Navigator.pop(context); 
+                    Get.find<ExpenseController>().postExpense(expense.id); 
+                  },
+                  icon: const Icon(Icons.check_circle, size: 18),
+                  label: const Text('Post Expense', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
+                ),
             ],
           ),
         ),
-        if (expense.items.isNotEmpty) ...[
-          SizedBox(height: isWeb ? 20 : 16),
-          Text('Items', style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kText)),
-          SizedBox(height: isWeb ? 12 : 8),
-          ...expense.items.map((item) => Container(
-            margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-            padding: EdgeInsets.all(isWeb ? 12 : 10),
-            decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(item.description, style: TextStyle(fontSize: isWeb ? 13 : 12, fontWeight: FontWeight.w600, color: kText)),
-                    Text('${item.quantity} x ${_formatAmount(item.unitPrice)}', style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText)),
-                  ]),
-                ),
-                Text(_formatAmount(item.amount), style: TextStyle(fontSize: isWeb ? 14 : 13, fontWeight: FontWeight.w700, color: kDanger)),
-              ],
-            ),
-          )).toList(),
-        ],
-        SizedBox(height: isWeb ? 20 : 16),
-        if (expense.status == 'Draft')
-          ElevatedButton.icon(
-            onPressed: () { 
-              Navigator.pop(ctx); 
-              Get.find<ExpenseController>().postExpense(expense.id); 
-            },
-            icon: Icon(Icons.check_circle, size: isWeb ? 20 : 18),
-            label: Text('Post Expense', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-            style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
-          ),
-      ],
+      ),
     );
   }
   
@@ -910,7 +1014,7 @@ class ExpenseScreen extends StatelessWidget {
     );
   }
   
-  // Helper widgets
+  // ==================== HELPER WIDGETS ====================
   Widget _buildTextField(String label, Function(String) onChanged, {bool isWeb = false, bool isNumber = false, String? prefix, int maxLines = 1, String initialValue = ''}) {
     return TextFormField(
       initialValue: initialValue,
@@ -942,7 +1046,7 @@ class ExpenseScreen extends StatelessWidget {
         ),
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
-        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: TextStyle(color: kText)))).toList(),
+        items: items.map((item) => DropdownMenuItem(value: item, child: Text(item, style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -993,7 +1097,7 @@ class ExpenseScreen extends StatelessWidget {
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
         hint: Text('Select vendor', style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-        items: vendors.map((vendor) => DropdownMenuItem(value: vendor['_id'].toString(), child: Text(vendor['name'], style: TextStyle(color: kText)))).toList(),
+        items: vendors.map((vendor) => DropdownMenuItem(value: vendor['_id'].toString(), child: Text(vendor['name'], style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -1014,7 +1118,7 @@ class ExpenseScreen extends StatelessWidget {
         style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
         dropdownColor: kCardBg,
         hint: Text('Select bank account', style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-        items: bankAccounts.map((acc) => DropdownMenuItem(value: acc['_id'].toString(), child: Text(acc['accountName'], style: TextStyle(color: kText)))).toList(),
+        items: bankAccounts.map((acc) => DropdownMenuItem(value: acc['_id'].toString(), child: Text(acc['accountName'], style: TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
         onChanged: onChanged,
       ),
     );
@@ -1027,7 +1131,7 @@ class ExpenseScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: isWeb ? 120 : 100, child: Text(label, style: TextStyle(fontSize: isWeb ? 13 : 11, color: kSubText, fontWeight: FontWeight.w500))),
-          Expanded(child: Text(value, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText, fontWeight: FontWeight.w600))),
+          Expanded(child: Text(value, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -1035,6 +1139,6 @@ class ExpenseScreen extends StatelessWidget {
   
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

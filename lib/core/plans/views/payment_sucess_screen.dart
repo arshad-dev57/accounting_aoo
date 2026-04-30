@@ -1,3 +1,4 @@
+import 'package:LedgerPro_app/core/BusinessSetup/Views/business_setup_view.dart';
 import 'package:LedgerPro_app/core/plans/controllers/subscription_controller.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
 import 'package:flutter/material.dart';
@@ -18,16 +19,10 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
   }
 
   Future<void> _handleSuccess() async {
-    final subCtrl = Get.find<SubscriptionController>();
-    subCtrl.justSubscribed.value = false;
-
-    // Backend se fresh subscription status lo
-    await subCtrl.checkSubscriptionStatus();
-
-    // 2 second baad subscription screen pe wapas bhejo
+ 
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      Get.offAll(() => const SelectPlanScreen());
+      Get.offAll(() => const DashboardScreen());
     }
   }
 

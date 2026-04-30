@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -24,14 +25,12 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Future<void> _submitFeedback() async {
     if (_feedbackController.text.trim().isEmpty && _suggestionController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please provide some feedback',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(Colors.red, 'Error', 'Please provide some feedback');
       return;
     }
     
     if (_rating == 0) {
-      Get.snackbar('Error', 'Please rate your experience',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(Colors.red, 'Error', 'Please rate your experience');
       return;
     }
 
@@ -56,8 +55,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       );
 
       if (response.statusCode == 200) {
-        Get.snackbar('Thank You!', 'Your feedback has been submitted',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.success(Colors.green,'Thank You!', 'Your feedback has been submitted');
         
         _feedbackController.clear();
         _suggestionController.clear();
@@ -68,8 +66,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         throw Exception('Failed to submit');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to submit feedback. Please try again.',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to submit feedback. Please try again.');
     } finally {
       setState(() => _isSubmitting = false);
     }
@@ -78,11 +75,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    final isMobile = ResponsiveUtils.isMobile(context);
     
-    return Container(
-      color: const Color(0xFFF5F8FC),
-      child: SingleChildScrollView(
+    // ✅ Scaffold for Material context
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F8FC),
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(isWeb ? 24 : 16),
         child: Column(
           children: [
@@ -100,7 +97,6 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Widget _buildHeader() {
     final isWeb = ResponsiveUtils.isWeb(Get.context!);
-    final isMobile = ResponsiveUtils.isMobile(Get.context!);
     
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -109,25 +105,20 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
       ),
       child: Row(
         children: [
-          // Back Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: isWeb ? 20 : 16),
-              onPressed: () => Get.back(),
-            ),
+          // ✅ Back Button - Fixed IconButton to InkWell
+          _headerIconBtn(
+            icon: Icons.arrow_back_ios,
+            size: isWeb ? 20 : 16,
+            onTap: () => Get.back(),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -149,11 +140,33 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     fontSize: isWeb ? 14 : 12,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ Helper method for header icons - fixes Material error
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.white, size: size),
       ),
     );
   }
@@ -179,8 +192,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
             children: List.generate(5, (index) {
               return IconButton(
                 onPressed: () => setState(() => _rating = index + 1),
@@ -272,6 +285,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     fontSize: isWeb ? 14 : 13,
                     color: kSubText,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

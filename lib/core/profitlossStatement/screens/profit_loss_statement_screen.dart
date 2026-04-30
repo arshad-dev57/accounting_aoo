@@ -13,9 +13,10 @@ class ProfitLossStatementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(PLController());
 
-    return Container(
-      color: kBg,
-      child: Obx(() {
+    // ✅ Scaffold for Material context
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Obx(() {
         if (controller.isLoading.value) {
           return Center(
             child: Column(
@@ -32,7 +33,6 @@ class ProfitLossStatementScreen extends StatelessWidget {
           );
         }
         
-        // Single ScrollView that scrolls everything together
         return SingleChildScrollView(
           padding: EdgeInsets.zero,
           physics: const BouncingScrollPhysics(),
@@ -70,7 +70,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header without AppBar
+  // ==================== HEADER ====================
   Widget _buildHeader(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -82,9 +82,9 @@ class ProfitLossStatementScreen extends StatelessWidget {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -110,128 +110,136 @@ class ProfitLossStatementScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportToExcel(),
-            ),
-          ),
-          if (!isMobile) const SizedBox(width: 8),
-          // Print Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.print, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.printReport(),
-            ),
+          _headerIconBtn(
+            icon: Icons.download,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportToExcel(),
           ),
         ],
       ),
     );
   }
 
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+    bool isWhiteBg = false,
+    Color? iconColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isWhiteBg ? Colors.white : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor ?? Colors.white, size: size),
+      ),
+    );
+  }
+
+  // ==================== PERIOD SELECTOR ====================
   Widget _buildPeriodSelector(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+    return Material(
       color: kCardBg,
-      child: Row(
-        children: [
-          Expanded(
-            flex: isWeb ? 2 : 2,
-            child: Container(
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+        child: Row(
+          children: [
+            SizedBox(
+              width: isWeb ? 200 : 150,
               height: isWeb ? 45 : 40,
-              padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-              decoration: BoxDecoration(
-                color: kBg,
-                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                border: Border.all(color: kBorder),
-              ),
-              child: Obx(() => DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: controller.selectedPeriod.value,
-                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
-                  isExpanded: true,
-                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
-                  dropdownColor: kCardBg,
-                  items: controller.periodOptions.map((period) {
-                    return DropdownMenuItem(
-                      value: period,
-                      child: Text(period, style: TextStyle(fontSize: isWeb ? 13 : 12)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      if (value == 'Custom Range') {
-                        _selectDateRange(controller, context);
-                      } else {
-                        controller.changePeriod(value);
-                      }
-                    }
-                  },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                decoration: BoxDecoration(
+                  color: kBg,
+                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                  border: Border.all(color: kBorder),
                 ),
-              )),
+                child: Obx(() => DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: controller.selectedPeriod.value,
+                    icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
+                    isExpanded: true,
+                    style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                    dropdownColor: kCardBg,
+                    items: controller.periodOptions.map((period) {
+                      return DropdownMenuItem(
+                        value: period,
+                        child: Text(period, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        if (value == 'Custom Range') {
+                          _selectDateRange(controller, context);
+                        } else {
+                          controller.changePeriod(value);
+                        }
+                      }
+                    },
+                  ),
+                )),
+              ),
             ),
-          ),
-          Obx(() {
-            if (controller.selectedDateRange.value != null) {
-              final range = controller.selectedDateRange.value!;
-              return Expanded(
-                flex: isWeb ? 3 : 2,
-                child: Padding(
-                  padding: EdgeInsets.only(left: isWeb ? 12 : 8),
-                  child: Container(
-                    height: isWeb ? 45 : 40,
-                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-                    decoration: BoxDecoration(
-                      color: kPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}',
-                            style: TextStyle(
-                              fontSize: isWeb ? 12 : 11,
-                              color: kPrimary,
-                              fontWeight: FontWeight.w500,
+            Obx(() {
+              if (controller.selectedDateRange.value != null) {
+                final range = controller.selectedDateRange.value!;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: isWeb ? 12 : 8),
+                    child: Container(
+                      height: isWeb ? 45 : 40,
+                      padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                      decoration: BoxDecoration(
+                        color: kPrimary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}',
+                              style: TextStyle(
+                                fontSize: isWeb ? 12 : 11,
+                                color: kPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () => controller.clearDateRange(),
-                          child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
-                        ),
-                      ],
+                          GestureDetector(
+                            onTap: () => controller.clearDateRange(),
+                            child: Icon(Icons.close, size: isWeb ? 20 : 16, color: kPrimary),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-        ],
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+          ],
+        ),
       ),
     );
   }
 
+  // ==================== REPORT HEADER ====================
   Widget _buildReportHeader(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -241,31 +249,18 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
           Text(
             'Profit & Loss Statement',
-            style: TextStyle(
-              fontSize: isWeb ? 18 : 16,
-              fontWeight: FontWeight.w800,
-              color: kText,
-            ),
+            style: TextStyle(fontSize: isWeb ? 18 : 16, fontWeight: FontWeight.w800, color: kText),
           ),
           SizedBox(height: isWeb ? 8 : 6),
           Obx(() => Text(
             controller.periodText.value,
-            style: TextStyle(
-              fontSize: isWeb ? 13 : 12,
-              color: kSubText,
-            ),
+            style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText),
           )),
           SizedBox(height: isWeb ? 12 : 8),
           Divider(color: kBorder, height: 1),
@@ -274,6 +269,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== REVENUE SECTION ====================
   Widget _buildRevenueSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -283,24 +279,14 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Revenue',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kSuccess,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kSuccess),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           ...controller.revenueItems.map((item) => _buildReportRow(item.name, item.amount, isWeb)),
@@ -311,6 +297,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== COST OF GOODS SOLD SECTION ====================
   Widget _buildCostOfGoodsSoldSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -320,24 +307,14 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Cost of Goods Sold',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kDanger,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kDanger),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           _buildReportRow('COGS', controller.costOfGoodsSold.value, isWeb),
@@ -348,9 +325,10 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== GROSS PROFIT SECTION ====================
   Widget _buildGrossProfitSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    Color profitColor = controller.grossProfit.value >= 0 ? kSuccess : kDanger;
+    final Color profitColor = controller.grossProfit.value >= 0 ? kSuccess : kDanger;
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
@@ -365,23 +343,19 @@ class ProfitLossStatementScreen extends StatelessWidget {
         children: [
           Text(
             'Gross Profit',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kPrimary,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kPrimary),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           _buildReportRow('Revenue', controller.totalRevenue.value, isWeb),
           _buildReportRow('Less: COGS', controller.costOfGoodsSold.value, isWeb, isNegative: true),
           Divider(color: kBorder, height: isWeb ? 16 : 12),
-          _buildReportRow('Gross Profit', controller.grossProfit.value, isWeb, isBold: true, 
-              color: profitColor),
+          _buildReportRow('Gross Profit', controller.grossProfit.value, isWeb, isBold: true, color: profitColor),
         ],
       ),
     );
   }
 
+  // ==================== OPERATING EXPENSES SECTION ====================
   Widget _buildOperatingExpensesSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -391,24 +365,14 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Operating Expenses',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kDanger,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kDanger),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           ...controller.expenseItems.map((item) => _buildReportRow(item.name, item.amount, isWeb)),
@@ -419,9 +383,10 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== OTHER INCOME SECTION ====================
   Widget _buildOtherIncomeSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    double totalOtherIncome = controller.otherIncomeItems.fold(0.0, (sum, item) => sum + item.amount);
+    final double totalOtherIncome = controller.otherIncomeItems.fold(0.0, (sum, item) => sum + item.amount);
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
@@ -429,24 +394,14 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Other Income',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kSuccess,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kSuccess),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           ...controller.otherIncomeItems.map((item) => _buildReportRow(item.name, item.amount, isWeb)),
@@ -457,9 +412,10 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== OTHER EXPENSES SECTION ====================
   Widget _buildOtherExpensesSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    double totalOtherExpenses = controller.otherExpenseItems.fold(0.0, (sum, item) => sum + item.amount);
+    final double totalOtherExpenses = controller.otherExpenseItems.fold(0.0, (sum, item) => sum + item.amount);
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
@@ -467,24 +423,14 @@ class ProfitLossStatementScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Other Expenses',
-            style: TextStyle(
-              fontSize: isWeb ? 16 : 14,
-              fontWeight: FontWeight.w700,
-              color: kDanger,
-            ),
+            style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w700, color: kDanger),
           ),
           SizedBox(height: isWeb ? 12 : 8),
           ...controller.otherExpenseItems.map((item) => _buildReportRow(item.name, item.amount, isWeb)),
@@ -495,10 +441,11 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== NET PROFIT SECTION ====================
   Widget _buildNetProfitSection(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    Color profitColor = controller.netProfit.value >= 0 ? kSuccess : kDanger;
-    String profitText = controller.netProfit.value >= 0 ? 'Net Profit' : 'Net Loss';
+    final Color profitColor = controller.netProfit.value >= 0 ? kSuccess : kDanger;
+    final String profitText = controller.netProfit.value >= 0 ? 'Net Profit' : 'Net Loss';
     
     return Container(
       margin: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16),
@@ -510,25 +457,16 @@ class ProfitLossStatementScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildReportRow(profitText, controller.netProfit.value, isWeb, isBold: true, 
-              color: profitColor, fontSize: isWeb ? 20 : 18),
+          _buildReportRow(profitText, controller.netProfit.value, isWeb, isBold: true, color: profitColor, fontSize: isWeb ? 20 : 18),
           SizedBox(height: isWeb ? 12 : 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                controller.netProfit.value >= 0 ? Icons.trending_up : Icons.trending_down,
-                size: isWeb ? 20 : 16,
-                color: profitColor,
-              ),
+              Icon(controller.netProfit.value >= 0 ? Icons.trending_up : Icons.trending_down, size: isWeb ? 20 : 16, color: profitColor),
               SizedBox(width: isWeb ? 8 : 6),
               Text(
                 'Profit Margin: ${controller.netProfitMargin.value.toStringAsFixed(2)}%',
-                style: TextStyle(
-                  fontSize: isWeb ? 13 : 12,
-                  color: profitColor,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: isWeb ? 13 : 12, color: profitColor, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -537,6 +475,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== REPORT ROW ====================
   Widget _buildReportRow(String label, double amount, bool isWeb, 
       {bool isBold = false, Color? color, bool isNegative = false, double? fontSize}) {
     return Padding(
@@ -544,20 +483,27 @@ class ProfitLossStatementScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
-              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-              color: color ?? (isNegative ? kDanger : kText),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
+                fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                color: color ?? (isNegative ? kDanger : kText),
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(
-            isNegative ? _formatAmount(-amount) : _formatAmount(amount),
-            style: TextStyle(
-              fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-              color: color ?? (isNegative ? kDanger : kText),
+          Flexible(
+            child: Text(
+              isNegative ? _formatAmount(-amount) : _formatAmount(amount),
+              style: TextStyle(
+                fontSize: fontSize ?? (isWeb ? (isBold ? 14 : 13) : (isBold ? 13 : 12)),
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: color ?? (isNegative ? kDanger : kText),
+              ),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -565,6 +511,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  // ==================== ACTION BUTTONS ====================
   Widget _buildActionButtons(PLController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -577,30 +524,16 @@ class ProfitLossStatementScreen extends StatelessWidget {
               onPressed: () => controller.exportToExcel(),
               icon: Icon(Icons.table_chart, size: isWeb ? 20 : 16),
               label: Text('Export Excel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kPrimary,
-                side: BorderSide(color: kPrimary, width: 1),
-                padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                ),
-              ),
+              style: _buttonStyle(kPrimary, isWeb),
             ),
           ),
           SizedBox(width: isWeb ? 16 : 12),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () => controller.printReport(),
+              onPressed: () => controller.exportToPdf(),
               icon: Icon(Icons.picture_as_pdf, size: isWeb ? 20 : 16),
               label: Text('Save as PDF', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kPrimary,
-                side: BorderSide(color: kPrimary, width: 1),
-                padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                ),
-              ),
+              style: _buttonStyle(kPrimary, isWeb),
             ),
           ),
           SizedBox(width: isWeb ? 16 : 12),
@@ -612,9 +545,7 @@ class ProfitLossStatementScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimary,
                 padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
               ),
             ),
           ),
@@ -623,6 +554,16 @@ class ProfitLossStatementScreen extends StatelessWidget {
     );
   }
 
+  ButtonStyle _buttonStyle(Color color, bool isWeb) {
+    return OutlinedButton.styleFrom(
+      foregroundColor: color,
+      side: BorderSide(color: color, width: 1),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
+    );
+  }
+
+  // ==================== DATE RANGE PICKER ====================
   void _selectDateRange(PLController controller, BuildContext context) async {
     final picked = await showDateRangePicker(
       context: context,
@@ -637,6 +578,6 @@ class ProfitLossStatementScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

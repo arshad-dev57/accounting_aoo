@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -367,23 +368,14 @@ Future<void> loadMoreTransactions() async {
       
       if (response.statusCode == 201) {
         Get.back();
-        Get.snackbar(
-          'Success',
-          '${type == 'income' ? 'Income' : 'Expense'} recorded successfully\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
+        AppSnackbar.success(kSuccess, 'Success', '${type == 'income' ? 'Income' : 'Expense'} recorded successfully\nJournal entry created');
         _resetAndReload();
       } else {
         final errorData = json.decode(response.body);
-        Get.snackbar('Error', errorData['message'] ?? 'Failed to create transaction',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: kDanger, colorText: Colors.white);
+        AppSnackbar.error(kDanger, 'Error', errorData['message'] ?? 'Failed to create transaction');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create transaction: $e',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: kDanger, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Failed to create transaction: $e');
     } finally {
       isLoading.value = false;
     }
@@ -566,16 +558,14 @@ Future<void> loadMoreTransactions() async {
   
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void exportTransactions() {
-    Get.snackbar('Export', 'Exporting transactions to Excel...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.info('Export', 'Exporting transactions to Excel...');
   }
   
   void _showError(String message) {
-    Get.snackbar('Error', message,
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kDanger, colorText: Colors.white);
+    AppSnackbar.error(kDanger, 'Error', message);
   }
 }

@@ -16,9 +16,10 @@ class BalanceSheetScreen extends StatelessWidget {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
 
-    return Container(
-      color: kBg,
-      child: Obx(() {
+    // ✅ Scaffold for Material context - this fixes the Material error
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Obx(() {
         if (controller.isLoading.value) {
           return Center(
             child: Column(
@@ -42,7 +43,7 @@ class BalanceSheetScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header for all devices
+  // Custom Header for all devices - ✅ Fixed IconButton to InkWell
   Widget _buildHeader(BalanceSheetController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -82,74 +83,83 @@ class BalanceSheetScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Period Dropdown
-          Container(
-            margin: EdgeInsets.only(right: isWeb ? 8 : 4),
-            padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
-            ),
-            child: Obx(() => DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: controller.selectedPeriod.value,
-                icon: Icon(Icons.arrow_drop_down,
-                    color: Colors.white, size: isWeb ? 24 : 20),
-                style: TextStyle(
-                  fontSize: isWeb ? 14 : 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-                dropdownColor: kCardBg,
-                items: controller.periodOptions.map((period) {
-                  return DropdownMenuItem(
-                    value: period,
-                    child: Text(
-                      period,
-                      style: TextStyle(
-                        fontSize: isWeb ? 14 : 12,
-                        color: kText,
-                      ),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    controller.changePeriod(value);
-                  }
-                },
+          // Period Dropdown - ✅ Wrapped in Material
+          Material(
+            color: Colors.transparent,
+            child: Container(
+              margin: EdgeInsets.only(right: isWeb ? 8 : 4),
+              padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8, vertical: isWeb ? 6 : 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(isWeb ? 10 : 8),
               ),
-            )),
+              child: Obx(() => DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: controller.selectedPeriod.value,
+                  icon: Icon(Icons.arrow_drop_down,
+                      color: Colors.white, size: isWeb ? 24 : 20),
+                  style: TextStyle(
+                    fontSize: isWeb ? 14 : 12,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  dropdownColor: kCardBg,
+                  items: controller.periodOptions.map((period) {
+                    return DropdownMenuItem(
+                      value: period,
+                      child: Text(
+                        period,
+                        style: TextStyle(
+                          fontSize: isWeb ? 14 : 12,
+                          color: kText,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      controller.changePeriod(value);
+                    }
+                  },
+                ),
+              )),
+            ),
           ),
           const SizedBox(width: 8),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportToExcel(),
-            ),
-          ),
-          if (!isMobile) const SizedBox(width: 8),
-          // Print Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.printBalanceSheet(),
-            ),
+          // Export Button - ✅ Using InkWell instead of IconButton
+          _headerIconBtn(
+            icon: Icons.download_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportToExcel(),
           ),
         ],
+      ),
+    );
+  }
+
+  // ✅ New helper method for header icons
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.white, size: size),
       ),
     );
   }
@@ -503,6 +513,7 @@ class BalanceSheetScreen extends StatelessWidget {
                       color: entry.value < 0 ? kDanger : kText,
                     ),
                     textAlign: TextAlign.right,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -527,12 +538,16 @@ class BalanceSheetScreen extends StatelessWidget {
               color: kText,
             ),
           ),
-          Text(
-            _formatAmount(amount),
-            style: TextStyle(
-              fontSize: isWeb ? (isBold ? 15 : 14) : (isBold ? 14 : 13),
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-              color: kText,
+          Flexible(
+            child: Text(
+              _formatAmount(amount),
+              style: TextStyle(
+                fontSize: isWeb ? (isBold ? 15 : 14) : (isBold ? 14 : 13),
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: kText,
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -575,12 +590,16 @@ class BalanceSheetScreen extends StatelessWidget {
                         color: kText,
                       ),
                     ),
-                    Obx(() => Text(
-                      controller.formatAmount(controller.totalLiabilities.value),
-                      style: TextStyle(
-                        fontSize: isWeb ? 14 : 13,
-                        fontWeight: FontWeight.w800,
-                        color: kText,
+                    Obx(() => Flexible(
+                      child: Text(
+                        controller.formatAmount(controller.totalLiabilities.value),
+                        style: TextStyle(
+                          fontSize: isWeb ? 14 : 13,
+                          fontWeight: FontWeight.w800,
+                          color: kText,
+                        ),
+                        textAlign: TextAlign.right,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     )),
                   ],
@@ -609,12 +628,16 @@ class BalanceSheetScreen extends StatelessWidget {
                         color: kText,
                       ),
                     ),
-                    Obx(() => Text(
-                      controller.formatAmount(controller.totalAssets.value),
-                      style: TextStyle(
-                        fontSize: isWeb ? 14 : 13,
-                        fontWeight: FontWeight.w800,
-                        color: kText,
+                    Obx(() => Flexible(
+                      child: Text(
+                        controller.formatAmount(controller.totalAssets.value),
+                        style: TextStyle(
+                          fontSize: isWeb ? 14 : 13,
+                          fontWeight: FontWeight.w800,
+                          color: kText,
+                        ),
+                        textAlign: TextAlign.right,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     )),
                   ],
@@ -652,12 +675,16 @@ class BalanceSheetScreen extends StatelessWidget {
                   color: kText,
                 ),
               ),
-              Text(
-                _formatAmount(controller.totalAssets.value),
-                style: TextStyle(
-                  fontSize: isWeb ? 15 : 14,
-                  fontWeight: FontWeight.w700,
-                  color: kText,
+              Flexible(
+                child: Text(
+                  _formatAmount(controller.totalAssets.value),
+                  style: TextStyle(
+                    fontSize: isWeb ? 15 : 14,
+                    fontWeight: FontWeight.w700,
+                    color: kText,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -674,12 +701,16 @@ class BalanceSheetScreen extends StatelessWidget {
                   color: kText,
                 ),
               ),
-              Text(
-                _formatAmount(controller.totalLiabilities.value),
-                style: TextStyle(
-                  fontSize: isWeb ? 15 : 14,
-                  fontWeight: FontWeight.w700,
-                  color: kText,
+              Flexible(
+                child: Text(
+                  _formatAmount(controller.totalLiabilities.value),
+                  style: TextStyle(
+                    fontSize: isWeb ? 15 : 14,
+                    fontWeight: FontWeight.w700,
+                    color: kText,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -698,11 +729,15 @@ class BalanceSheetScreen extends StatelessWidget {
                   color: balanceColor,
                 ),
               ),
-              Text(
-                'Difference: ${_formatAmount((controller.totalAssets.value - controller.totalLiabilities.value).abs())}',
-                style: TextStyle(
-                  fontSize: isWeb ? 13 : 12,
-                  color: balanceColor,
+              Flexible(
+                child: Text(
+                  'Difference: ${_formatAmount((controller.totalAssets.value - controller.totalLiabilities.value).abs())}',
+                  style: TextStyle(
+                    fontSize: isWeb ? 13 : 12,
+                    color: balanceColor,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -714,6 +749,6 @@ class BalanceSheetScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

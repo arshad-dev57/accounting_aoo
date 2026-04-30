@@ -1,9 +1,9 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/responsive_utils.dart';
 import 'package:LedgerPro_app/core/transfer/controller/transfer_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:sizer/sizer.dart';
 
 class TransferScreen extends StatelessWidget {
   const TransferScreen({super.key});
@@ -11,75 +11,90 @@ class TransferScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(TransferController());
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
 
     return Scaffold(
       backgroundColor: kBg,
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context),
       body: Obx(() {
         if (controller.isLoading.value) {
           return Center(
             child: CircularProgressIndicator(
               color: kPrimary,
-              strokeWidth: 3.w,
+              strokeWidth: ResponsiveUtils.isWeb(context) ? 3 : 2,
             ),
           );
         }
 
         return SingleChildScrollView(
-          padding: EdgeInsets.all(4.w),
-          child: Column(
-            children: [
-              _buildHeader(),
-              SizedBox(height: 2.h),
-              _buildFromAccountCard(controller),
-              SizedBox(height: 2.h),
-              _buildArrowIcon(),
-              SizedBox(height: 2.h),
-              _buildToAccountCard(controller),
-              SizedBox(height: 3.h),
-              _buildAmountField(controller),
-              SizedBox(height: 2.h),
-              _buildDateField(controller),
-              SizedBox(height: 2.h),
-              _buildReferenceField(controller),
-              SizedBox(height: 2.h),
-              _buildDescriptionField(controller),
-              SizedBox(height: 3.h),
-              _buildTransferButton(controller),
-              SizedBox(height: 2.h),
-              _buildExchangeRateInfo(controller),
-            ],
+          padding: ResponsiveUtils.getScreenPadding(context),
+          child: Center(
+            child: SizedBox(
+              width: ResponsiveUtils.getFormWidth(context),
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildFromAccountCard(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildArrowIcon(context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildToAccountCard(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 20 : 24),
+                  _buildAmountField(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildDateField(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildReferenceField(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildDescriptionField(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 24 : 32),
+                  _buildTransferButton(controller, context),
+                  SizedBox(height: ResponsiveUtils.isMobile(context) ? 16 : 20),
+                  _buildExchangeRateInfo(controller, context),
+                ],
+              ),
+            ),
           ),
         );
       }),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return AppBar(
       title: Text(
         'Transfer Money',
         style: TextStyle(
-          fontSize: 16.sp,
+          fontSize: ResponsiveUtils.getHeadingFontSize(context),
           fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
       ),
       backgroundColor: kPrimary,
       elevation: 0,
+      centerTitle: isMobile,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.white, size: 5.5.w),
+        icon: Icon(Icons.arrow_back, color: Colors.white, size: ResponsiveUtils.getIconSize(context)),
         onPressed: () => Get.back(),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -91,19 +106,19 @@ class TransferScreen extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 10.w,
-            height: 10.w,
+            width: isWeb ? 50 : isTablet ? 45 : 40,
+            height: isWeb ? 50 : isTablet ? 45 : 40,
             decoration: BoxDecoration(
               color: kPrimary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(2.5.w),
+              borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
             ),
             child: Icon(
               Icons.swap_horiz,
-              size: 5.w,
+              size: isWeb ? 28 : isTablet ? 24 : 20,
               color: kPrimary,
             ),
           ),
-          SizedBox(width: 3.w),
+          SizedBox(width: isWeb ? 16 : isTablet ? 12 : 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,15 +126,16 @@ class TransferScreen extends StatelessWidget {
                 Text(
                   'Transfer Between Accounts',
                   style: TextStyle(
-                    fontSize: 14.sp,
+                    fontSize: isWeb ? 18 : isTablet ? 16 : 14,
                     fontWeight: FontWeight.w700,
                     color: kText,
                   ),
                 ),
+                SizedBox(height: isWeb ? 4 : 2),
                 Text(
                   'Move money from one bank account to another',
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                     color: kSubText,
                   ),
                 ),
@@ -131,12 +147,16 @@ class TransferScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFromAccountCard(TransferController controller) {
+  Widget _buildFromAccountCard(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -150,33 +170,36 @@ class TransferScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.arrow_upward, size: 4.w, color: kDanger),
-              SizedBox(width: 2.w),
+              Icon(Icons.arrow_upward, size: isWeb ? 20 : isTablet ? 18 : 16, color: kDanger),
+              SizedBox(width: isWeb ? 8 : isTablet ? 6 : 4),
               Text(
                 'From Account',
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                   fontWeight: FontWeight.w600,
                   color: kDanger,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 16 : isTablet ? 12 : 10),
           Obx(() => DropdownButtonFormField<String>(
             value: controller.fromAccountId.value.isEmpty 
                 ? null 
                 : controller.fromAccountId.value,
             decoration: InputDecoration(
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isWeb ? 16 : isTablet ? 12 : 10,
+                vertical: isWeb ? 14 : isTablet ? 12 : 10,
+              ),
             ),
-            style: TextStyle(fontSize: 13.sp),
+            style: TextStyle(fontSize: isWeb ? 14 : isTablet ? 13 : 12),
             hint: Text(
               'Select account to transfer from',
-              style: TextStyle(fontSize: 12.sp, color: kSubText),
+              style: TextStyle(fontSize: ResponsiveUtils.getSubheadingFontSize(context), color: kSubText),
             ),
             items: controller.bankAccounts.map((account) {
               return DropdownMenuItem(
@@ -187,14 +210,14 @@ class TransferScreen extends StatelessWidget {
                     Text(
                       account.name,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: isWeb ? 14 : isTablet ? 13 : 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       '${account.number} • Balance: ${_formatAmount(account.balance)} ${account.currency}',
                       style: TextStyle(
-                        fontSize: 10.sp,
+                        fontSize: isWeb ? 12 : isTablet ? 11 : 10,
                         color: kSubText,
                       ),
                     ),
@@ -208,20 +231,24 @@ class TransferScreen extends StatelessWidget {
           )),
           if (controller.fromAccountId.value.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 1.5.h),
-              child: _buildAccountBalance(controller.getFromAccount()),
+              padding: EdgeInsets.only(top: isWeb ? 12 : isTablet ? 10 : 8),
+              child: _buildAccountBalance(controller.getFromAccount(), context),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildToAccountCard(TransferController controller) {
+  Widget _buildToAccountCard(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -235,33 +262,36 @@ class TransferScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.arrow_downward, size: 4.w, color: kSuccess),
-              SizedBox(width: 2.w),
+              Icon(Icons.arrow_downward, size: isWeb ? 20 : isTablet ? 18 : 16, color: kSuccess),
+              SizedBox(width: isWeb ? 8 : isTablet ? 6 : 4),
               Text(
                 'To Account',
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: ResponsiveUtils.getSubheadingFontSize(context),
                   fontWeight: FontWeight.w600,
                   color: kSuccess,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: isWeb ? 16 : isTablet ? 12 : 10),
           Obx(() => DropdownButtonFormField<String>(
             value: controller.toAccountId.value.isEmpty 
                 ? null 
                 : controller.toAccountId.value,
             decoration: InputDecoration(
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isWeb ? 16 : isTablet ? 12 : 10,
+                vertical: isWeb ? 14 : isTablet ? 12 : 10,
+              ),
             ),
-            style: TextStyle(fontSize: 13.sp),
+            style: TextStyle(fontSize: isWeb ? 14 : isTablet ? 13 : 12),
             hint: Text(
               'Select account to transfer to',
-              style: TextStyle(fontSize: 12.sp, color: kSubText),
+              style: TextStyle(fontSize: ResponsiveUtils.getSubheadingFontSize(context), color: kSubText),
             ),
             items: controller.bankAccounts
                 .where((account) => account.id != controller.fromAccountId.value)
@@ -274,14 +304,14 @@ class TransferScreen extends StatelessWidget {
                     Text(
                       account.name,
                       style: TextStyle(
-                        fontSize: 13.sp,
+                        fontSize: isWeb ? 14 : isTablet ? 13 : 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       '${account.number} • Balance: ${_formatAmount(account.balance)} ${account.currency}',
                       style: TextStyle(
-                        fontSize: 10.sp,
+                        fontSize: isWeb ? 12 : isTablet ? 11 : 10,
                         color: kSubText,
                       ),
                     ),
@@ -295,22 +325,25 @@ class TransferScreen extends StatelessWidget {
           )),
           if (controller.toAccountId.value.isNotEmpty)
             Padding(
-              padding: EdgeInsets.only(top: 1.5.h),
-              child: _buildAccountBalance(controller.getToAccount()),
+              padding: EdgeInsets.only(top: isWeb ? 12 : isTablet ? 10 : 8),
+              child: _buildAccountBalance(controller.getToAccount(), context),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildAccountBalance(BankAccountForTransfer? account) {
+  Widget _buildAccountBalance(BankAccountForTransfer? account, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     if (account == null) return const SizedBox.shrink();
     
     return Container(
-      padding: EdgeInsets.all(2.w),
+      padding: EdgeInsets.all(isWeb ? 12 : isTablet ? 10 : 8),
       decoration: BoxDecoration(
         color: kBg,
-        borderRadius: BorderRadius.circular(2.w),
+        borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -318,14 +351,14 @@ class TransferScreen extends StatelessWidget {
           Text(
             'Available Balance',
             style: TextStyle(
-              fontSize: 11.sp,
+              fontSize: isWeb ? 12 : isTablet ? 11 : 10,
               color: kSubText,
             ),
           ),
           Text(
             _formatAmount(account.balance),
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: isWeb ? 13 : isTablet ? 12 : 11,
               fontWeight: FontWeight.w700,
               color: kSuccess,
             ),
@@ -335,10 +368,13 @@ class TransferScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildArrowIcon() {
+  Widget _buildArrowIcon(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Container(
-      width: 8.w,
-      height: 8.w,
+      width: isWeb ? 48 : isTablet ? 40 : 32,
+      height: isWeb ? 48 : isTablet ? 40 : 32,
       decoration: BoxDecoration(
         color: kCardBg,
         shape: BoxShape.circle,
@@ -352,18 +388,22 @@ class TransferScreen extends StatelessWidget {
       ),
       child: Icon(
         Icons.arrow_downward,
-        size: 4.w,
+        size: isWeb ? 24 : isTablet ? 20 : 16,
         color: kPrimary,
       ),
     );
   }
 
-  Widget _buildAmountField(TransferController controller) {
+  Widget _buildAmountField(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -378,28 +418,34 @@ class TransferScreen extends StatelessWidget {
           Text(
             'Amount',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: ResponsiveUtils.getSubheadingFontSize(context),
               fontWeight: FontWeight.w600,
               color: kText,
             ),
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : isTablet ? 10 : 8),
           TextFormField(
             onChanged: (value) => controller.setAmount(value),
             keyboardType: TextInputType.number,
-            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              fontSize: isWeb ? 22 : isTablet ? 20 : 18,
+              fontWeight: FontWeight.w800,
+            ),
             decoration: InputDecoration(
-              prefixText: '₨ ',
+              prefixText: '\$ ',
               prefixStyle: TextStyle(
-                fontSize: 16.sp,
+                fontSize: isWeb ? 22 : isTablet ? 20 : 18,
                 fontWeight: FontWeight.w800,
                 color: kPrimary,
               ),
               hintText: '0.00',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isWeb ? 16 : isTablet ? 12 : 10,
+                vertical: isWeb ? 14 : isTablet ? 12 : 10,
+              ),
             ),
           ),
           Obx(() {
@@ -407,11 +453,11 @@ class TransferScreen extends StatelessWidget {
               final fromAccount = controller.getFromAccount();
               if (fromAccount != null && controller.amount.value > fromAccount.balance) {
                 return Padding(
-                  padding: EdgeInsets.only(top: 1.h),
+                  padding: EdgeInsets.only(top: isWeb ? 8 : isTablet ? 6 : 4),
                   child: Text(
                     'Insufficient balance! Available: ${_formatAmount(fromAccount.balance)}',
                     style: TextStyle(
-                      fontSize: 10.sp,
+                      fontSize: isWeb ? 11 : isTablet ? 10 : 9,
                       color: kDanger,
                     ),
                   ),
@@ -425,12 +471,16 @@ class TransferScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDateField(TransferController controller) {
+  Widget _buildDateField(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -445,20 +495,20 @@ class TransferScreen extends StatelessWidget {
           Text(
             'Transfer Date',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: ResponsiveUtils.getSubheadingFontSize(context),
               fontWeight: FontWeight.w600,
               color: kText,
             ),
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : isTablet ? 10 : 8),
           Obx(() => ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.calendar_today, size: 5.w, color: kPrimary),
+            leading: Icon(Icons.calendar_today, size: isWeb ? 24 : isTablet ? 20 : 18, color: kPrimary),
             title: Text(
               DateFormat('EEEE, MMMM d, yyyy').format(controller.selectedDate.value),
-              style: TextStyle(fontSize: 13.sp),
+              style: TextStyle(fontSize: isWeb ? 14 : isTablet ? 13 : 12),
             ),
-            trailing: Icon(Icons.arrow_forward_ios, size: 4.w, color: kSubText),
+            trailing: Icon(Icons.arrow_forward_ios, size: isWeb ? 18 : isTablet ? 16 : 14, color: kSubText),
             onTap: () async {
               final picked = await showDatePicker(
                 context: Get.context!,
@@ -476,12 +526,15 @@ class TransferScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReferenceField(TransferController controller) {
+  Widget _buildReferenceField(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -496,34 +549,40 @@ class TransferScreen extends StatelessWidget {
           Text(
             'Reference (Optional)',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: ResponsiveUtils.getSubheadingFontSize(context),
               fontWeight: FontWeight.w600,
               color: kText,
             ),
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : isTablet ? 10 : 8),
           TextFormField(
             onChanged: (value) => controller.setReference(value),
             decoration: InputDecoration(
               hintText: 'e.g., TRANS-001, Salary Transfer',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isWeb ? 16 : isTablet ? 12 : 10,
+                vertical: isWeb ? 14 : isTablet ? 12 : 10,
+              ),
             ),
-            style: TextStyle(fontSize: 13.sp),
+            style: TextStyle(fontSize: isWeb ? 14 : isTablet ? 13 : 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDescriptionField(TransferController controller) {
+  Widget _buildDescriptionField(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Container(
-      padding: EdgeInsets.all(4.w),
+      padding: EdgeInsets.all(isWeb ? 20 : isTablet ? 16 : 12),
       decoration: BoxDecoration(
         color: kCardBg,
-        borderRadius: BorderRadius.circular(4.w),
+        borderRadius: BorderRadius.circular(isWeb ? 16 : isTablet ? 14 : 12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -538,54 +597,60 @@ class TransferScreen extends StatelessWidget {
           Text(
             'Description (Optional)',
             style: TextStyle(
-              fontSize: 12.sp,
+              fontSize: ResponsiveUtils.getSubheadingFontSize(context),
               fontWeight: FontWeight.w600,
               color: kText,
             ),
           ),
-          SizedBox(height: 1.5.h),
+          SizedBox(height: isWeb ? 12 : isTablet ? 10 : 8),
           TextFormField(
             onChanged: (value) => controller.setDescription(value),
             maxLines: 2,
             decoration: InputDecoration(
               hintText: 'Add a note about this transfer',
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(2.w),
+                borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.5.h),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isWeb ? 16 : isTablet ? 12 : 10,
+                vertical: isWeb ? 14 : isTablet ? 12 : 10,
+              ),
             ),
-            style: TextStyle(fontSize: 13.sp),
+            style: TextStyle(fontSize: isWeb ? 14 : isTablet ? 13 : 12),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTransferButton(TransferController controller) {
+  Widget _buildTransferButton(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Obx(() => SizedBox(
       width: double.infinity,
+      height: ResponsiveUtils.getButtonHeight(context),
       child: ElevatedButton(
         onPressed: controller.isTransferring.value ? null : controller.transfer,
         style: ElevatedButton.styleFrom(
           backgroundColor: kPrimary,
-          padding: EdgeInsets.symmetric(vertical: 1.8.h),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(2.w),
+            borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
           ),
         ),
         child: controller.isTransferring.value
             ? SizedBox(
-                width: 5.w,
-                height: 5.w,
+                width: isWeb ? 24 : isTablet ? 20 : 18,
+                height: isWeb ? 24 : isTablet ? 20 : 18,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2.w,
+                  strokeWidth: isWeb ? 2.5 : 2,
                   color: Colors.white,
                 ),
               )
             : Text(
                 'Transfer Money',
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: isWeb ? 16 : isTablet ? 15 : 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -593,7 +658,10 @@ class TransferScreen extends StatelessWidget {
     ));
   }
 
-  Widget _buildExchangeRateInfo(TransferController controller) {
+  Widget _buildExchangeRateInfo(TransferController controller, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isTablet = ResponsiveUtils.isTablet(context);
+    
     return Obx(() {
       final fromAccount = controller.getFromAccount();
       final toAccount = controller.getToAccount();
@@ -602,20 +670,20 @@ class TransferScreen extends StatelessWidget {
           fromAccount.currency != toAccount.currency && 
           controller.amount.value > 0) {
         return Container(
-          padding: EdgeInsets.all(3.w),
+          padding: EdgeInsets.all(isWeb ? 16 : isTablet ? 12 : 10),
           decoration: BoxDecoration(
             color: kWarning.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(2.w),
+            borderRadius: BorderRadius.circular(isWeb ? 12 : isTablet ? 10 : 8),
           ),
           child: Row(
             children: [
-              Icon(Icons.info_outline, size: 4.w, color: kWarning),
-              SizedBox(width: 2.w),
+              Icon(Icons.info_outline, size: isWeb ? 20 : isTablet ? 18 : 16, color: kWarning),
+              SizedBox(width: isWeb ? 8 : isTablet ? 6 : 4),
               Expanded(
                 child: Text(
                   'Different currencies detected. Exchange rate will be applied at current market rate.',
                   style: TextStyle(
-                    fontSize: 10.sp,
+                    fontSize: isWeb ? 11 : isTablet ? 10 : 9,
                     color: kWarning,
                   ),
                 ),
@@ -630,6 +698,6 @@ class TransferScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/loanBorrowing/models/loan_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -76,7 +79,7 @@ class LoanController extends GetxController {
   
   // ==================== HELPER: FORMAT AMOUNT ====================
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   // ==================== LOAD LOANS FROM API ====================
@@ -205,14 +208,7 @@ class LoanController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
-            'Success',
-            'Loan created successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          AppSnackbar.success(kSuccess, 'Success', 'Loan created successfully\nJournal entry created');
           loadLoans();
           loadSummary();
         } else {
@@ -263,14 +259,7 @@ class LoanController extends GetxController {
         if (responseData['success'] == true) {
           final data = responseData['data'];
           Get.back();
-          Get.snackbar(
-            'Payment Recorded',
-            'Payment of ${formatAmount(amount)} recorded\nPrincipal: ${formatAmount(data['payment']['principal'])}\nInterest: ${formatAmount(data['payment']['interest'])}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-          );
+          AppSnackbar.success(kSuccess, 'Payment Recorded', 'Payment of ${formatAmount(amount)} recorded\nPrincipal: ${formatAmount(data['payment']['principal'])}\nInterest: ${formatAmount(data['payment']['interest'])}');
           loadLoans();
           loadSummary();
         } else {
@@ -369,14 +358,7 @@ class LoanController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
-            'Prepayment Successful',
-            'Prepayment of ${formatAmount(prepaymentAmount)} recorded\n${responseData['data']['prepayment']['netSaving'] > 0 ? 'Savings' : 'Loss'}: ${formatAmount(responseData['data']['prepayment']['netSaving'].abs())}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 4),
-          );
+          AppSnackbar.success(kSuccess, 'Prepayment Successful', 'Prepayment of ${formatAmount(prepaymentAmount)} recorded\n${responseData['data']['prepayment']['netSaving'] > 0 ? 'Savings' : 'Loss'}: ${formatAmount(responseData['data']['prepayment']['netSaving'].abs())}');
           loadLoans();
           loadSummary();
         } else {
@@ -441,9 +423,10 @@ class LoanController extends GetxController {
       ),
     );
   }
-  
   Future<void> exportToPdf() async {
-    try {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -458,42 +441,56 @@ class LoanController extends GetxController {
         ),
         barrierDismissible: false,
       );
-      
-      final pdf = pw.Document();
-      
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfLoansSection(),
-          ],
-        ),
-      );
-      
-      final dir = await getTemporaryDirectory();
-      final fileName = 'loans_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfLoansSection(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'loans_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', '${loans.length} loans exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', '${loans.length} loans exported to PDF');
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(kSuccess, 'Success', '${loans.length} loans exported to PDF');
       
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
   }
-  
+}
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -790,7 +787,7 @@ class LoanController extends GetxController {
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -823,14 +820,7 @@ class LoanController extends GetxController {
   }
   
   void printLoans() {
-    Get.snackbar(
-      'Print',
-      'Preparing loans report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
+    AppSnackbar.info('Print', 'Preparing loans report...');
   }
   
   // ==================== CALCULATE EMI ====================
@@ -860,7 +850,7 @@ class LoanController extends GetxController {
                         TextFormField(
                           decoration: InputDecoration(
                             labelText: 'Loan Amount',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -1141,7 +1131,7 @@ class LoanController extends GetxController {
                           initialValue: amount.toString(),
                           decoration: InputDecoration(
                             labelText: 'Payment Amount',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -1299,7 +1289,7 @@ class LoanController extends GetxController {
                           initialValue: prepaymentAmount.toString(),
                           decoration: InputDecoration(
                             labelText: 'Prepayment Amount',
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             fillColor: kCardBg,
                             filled: true,
@@ -1453,7 +1443,7 @@ class LoanController extends GetxController {
                             SizedBox(height: 2.h),
                             _buildTextField('Lender/Bank Name', (v) => lenderName = v, validator: true),
                             SizedBox(height: 2.h),
-                            _buildTextField('Loan Amount', (v) => loanAmount = double.tryParse(v) ?? 0, prefix: '₨ ', isNumber: true, validator: true),
+                            _buildTextField('Loan Amount', (v) => loanAmount = double.tryParse(v) ?? 0, prefix: '\$ ', isNumber: true, validator: true),
                             SizedBox(height: 2.h),
                             _buildDatePicker('Disbursement Date', disbursementDate, (date) => disbursementDate = date),
                             SizedBox(height: 2.h),
@@ -1852,10 +1842,10 @@ class LoanController extends GetxController {
   // ==================== HELPER METHODS ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void _showError(String message) {
-    Get.snackbar('Error', message, snackPosition: SnackPosition.BOTTOM, backgroundColor: kWarning, colorText: Colors.white, duration: Duration(seconds: 3));
+    AppSnackbar.error(kWarning, 'Error', message);
   }
 }

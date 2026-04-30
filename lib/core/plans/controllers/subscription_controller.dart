@@ -1,5 +1,7 @@
 import 'package:LedgerPro_app/Services/subscription_service.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
+import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -110,18 +112,7 @@ void updateFromUserData(Map<String, dynamic> userData) {
   void _showTrialExpiryWarning() {
     if (isTrialActive.value && trialDaysRemaining.value <= 3 && trialDaysRemaining.value > 0) {
       Future.delayed(const Duration(seconds: 1), () {
-        Get.snackbar(
-          '⚠️ Trial Expiring Soon',
-          'Your ${trialDaysRemaining.value} day trial will end soon. Subscribe now!',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 5),
-          mainButton: TextButton(
-            onPressed: () => Get.to(() => const SelectPlanScreen()),
-            child:Text('Subscribe', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        );
+        AppSnackbar.error(kWarning, '⚠️ Trial Expiring Soon', 'Your ${trialDaysRemaining.value} day trial will end soon. Subscribe now!');
       });
     }
   }
@@ -158,26 +149,14 @@ Future<bool> subscribe(String plan, double amount) async {
         return true;
       } else {
         justSubscribed.value = false;
-        Get.snackbar(
-          'Error',
-          response['message'] ?? 'Failed to start payment',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', response['message'] ?? 'Failed to start payment');
         isLoading.value = false;
         return false;
       }
     }
 
     // ❌ Android/iOS par Stripe nahi — yeh show karo
-    Get.snackbar(
-      'Web Only',
-      'Stripe payment is only available on web version',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange,
-      colorText: Colors.white,
-    );
+    AppSnackbar.error(kWarning, 'Web Only', 'Stripe payment is only available on web version');
     justSubscribed.value = false;
     isLoading.value = false;
     return false;
@@ -185,13 +164,7 @@ Future<bool> subscribe(String plan, double amount) async {
   } catch (e) {
     justSubscribed.value = false;
     isLoading.value = false;
-    Get.snackbar(
-      'Error',
-      'Network error. Please try again.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
+    AppSnackbar.error(kDanger, 'Error', 'Network error. Please try again.');
     return false;
   }
 }  Future<void> cancelSubscription() async {
@@ -203,32 +176,14 @@ Future<bool> subscribe(String plan, double amount) async {
         hasActiveSubscription.value = false;
         subscriptionStatus.value = 'expired';
 
-        Get.snackbar(
-          'Success',
-          'Subscription cancelled successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-        );
+        AppSnackbar.success(kSuccess, 'Success', 'Subscription cancelled successfully');
 
         Get.offAll(() => const SelectPlanScreen());
       } else {
-        Get.snackbar(
-          'Error',
-          response['message'] ?? 'Failed to cancel subscription',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        AppSnackbar.error(kDanger, 'Error', response['message'] ?? 'Failed to cancel subscription');
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Network error. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      AppSnackbar.error(kDanger, 'Error', 'Network error. Please try again.');
     } finally {
       isLoading.value = false;
     }

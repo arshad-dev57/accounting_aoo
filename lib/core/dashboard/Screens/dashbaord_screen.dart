@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/About/about_app_screen.dart';
 import 'package:LedgerPro_app/core/About/privacypolicy_screen.dart';
 import 'package:LedgerPro_app/core/About/termsofservice_screen.dart';
@@ -117,6 +118,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final isMobile = ResponsiveUtils.isMobile(context);
+    
+    // For web, show the web dashboard screen
+    if (isWeb) {
+      return const WebDashboardScreen();
+    }
+    
+    // For mobile/tablet, show the mobile dashboard
     return Scaffold(
       key: _scaffoldKey,
       appBar: _buildAppBar(context),
@@ -1498,7 +1508,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      '${type == 'income' ? '+' : '-'} ₨ ${NumberFormat('#,##0').format(amount)}',
+                                      '${type == 'income' ? '+' : '-'} \$ ${NumberFormat('#,##0').format(amount)}',
                                       style: TextStyle(
                                           fontSize: isWeb ? 16 : 15,
                                           fontWeight: FontWeight.w800,
@@ -1636,10 +1646,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Get.to(CustomersScreen());
                         break;
                       default:
-                        Get.snackbar(label, '$label module coming soon',
-                            snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: kPrimary,
-                            colorText: Colors.white);
+                        AppSnackbar.success(kPrimary, label, '$label module coming soon');
                     }
                   },
                 );
@@ -2055,10 +2062,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ElevatedButton(
             onPressed: () {
               Get.back();
-              Get.snackbar('Success', 'Profile updated successfully',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: kSuccess,
-                  colorText: Colors.white);
+              AppSnackbar.success(kSuccess, 'Success', 'Profile updated successfully');
             },
             style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
             child: const Text('Save'),
@@ -2079,10 +2083,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: () {
               SharedPreferences.getInstance().then((prefs) => prefs.clear());
               Get.offAll(() => const LoginScreen());
-              Get.snackbar('Success', 'Logged out successfully',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: kSuccess,
-                  colorText: Colors.white);
+              AppSnackbar.success(kSuccess, 'Success', 'Logged out successfully');
             },
             style: ElevatedButton.styleFrom(backgroundColor: kDanger),
             child: const Text('Logout'),
@@ -2101,6 +2102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+
 // ============================================================
 // ExpandableSection — Corrected Version
 // ============================================================
@@ -2127,7 +2129,6 @@ class _ExpandableSectionState extends State<ExpandableSection> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Remove the wrong condition from here
     final isWeb = ResponsiveUtils.isWeb(context);
     
     return Column(
@@ -2276,10 +2277,7 @@ class _ExpandableSectionState extends State<ExpandableSection> {
       case 'User Guide': Get.to(() => const UserGuideScreen()); break;
       case 'Feedback': Get.to(() => const FeedbackScreen()); break;
       default:
-        Get.snackbar(item, '$item module coming soon',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kPrimary,
-            colorText: Colors.white);
+        AppSnackbar.success(kPrimary, item, '$item module coming soon');
     }
   }
 
@@ -2321,125 +2319,3 @@ class _ExpandableSectionState extends State<ExpandableSection> {
     }
   }
 }
-
-Widget _buildMenuItem(BuildContext context, String item) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Get.back();
-          _navigateToScreen(item);
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: isWeb ? 60 : 48, vertical: isWeb ? 14 : 12),
-          child: Row(
-            children: [
-              SizedBox(
-                width: isWeb ? 28 : 24,
-                height: isWeb ? 28 : 24,
-                child: Iconify(
-                  _getIconForMenuItem(item),
-                  size: isWeb ? 20 : 18,
-                  color: kSubText,
-                ),
-              ),
-              SizedBox(width: isWeb ? 16 : 12),
-              Expanded(
-                child: Text(
-                  item,
-                  style: TextStyle(
-                      fontSize: isWeb ? 15 : 14,
-                      color: kText,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _navigateToScreen(String item) {
-    switch (item) {
-      case 'Terms of Service': Get.to(() => const TermsOfServiceScreen()); break;
-      case 'Privacy Policy' : Get.to(()=> PrivacyPolicyScreen()); break;
-      case 'About App': Get.to(() => const AboutAppScreen()); break;
-      case 'Change Password': Get.to(() => ChangePasswordScreen()); break;
-      case 'My Profile': Get.to(() => ProfileScreen()); break;
-      case 'Income': Get.to(() => const IncomeScreen()); break;
-      case 'Expense': Get.to(() => const ExpenseScreen()); break;
-      case 'Profit & Loss Statement': Get.to(() => const ProfitLossStatementScreen()); break;
-      case 'Balance Sheet': Get.to(() => const BalanceSheetScreen()); break;
-      case 'Cash Flow Statement': Get.to(() => const CashFlowStatementScreen()); break;
-      case 'Aged Receivables': Get.to(() => const AgedReceivablesScreen()); break;
-      case 'Chart of Accounts': Get.to(() => const ChartOfAccountsScreen()); break;
-      case 'Journal Entries': Get.to(() => const JournalEntriesScreen()); break;
-      case 'General Ledger': Get.to(() => const GeneralLedgerScreen()); break;
-      case 'Trial Balance': Get.to(() => const TrialBalanceScreen()); break;
-      case 'Bank Accounts': Get.to(() => const BankAccountsScreen()); break;
-      case 'Accounts Receivable': Get.to(() => const AccountsReceivableScreen()); break;
-      case 'Accounts Payable': Get.to(() => const AccountsPayableScreen()); break;
-      case 'Customers': Get.to(() => const CustomersScreen()); break;
-      case 'bills': Get.to(() => const BillsScreen()); break;
-      case 'Vendors / Suppliers': Get.to(() => const VendorsScreen()); break;
-      case 'Payments Received': Get.to(() => const PaymentsReceivedScreen()); break;
-      case 'Payments Made': Get.to(() => const PaymentsMadeScreen()); break;
-      case 'Credit Notes': Get.to(() => const CreditNotesScreen()); break;
-      case 'Fixed Assets': Get.to(() => const FixedAssetsScreen()); break;
-      case 'Loans & Borrowings': Get.to(() => const LoansBorrowingsScreen()); break;
-      case 'Capital / Equity': Get.to(() => const CapitalEquityScreen()); break;
-      case 'Contact Support': Get.to(() => const ContactScreen()); break;
-      case 'Report an Issue': Get.to(() => const ReportIssueScreen()); break;
-      case 'subscription': Get.to(() => const SelectPlanScreen()); break;
-      case 'User Guide': Get.to(() => const UserGuideScreen()); break;
-      case 'Feedback': Get.to(() => const FeedbackScreen()); break;
-      default:
-        Get.snackbar(item, '$item module coming soon',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kPrimary,
-            colorText: Colors.white);
-    }
-  }
-
-  String _getIconForMenuItem(String item) {
-    switch (item) {
-      case 'Feedback': return Mdi.feedback;
-      case 'Chart of Accounts': return Mdi.chart_tree;
-      case 'Journal Entries': return Mdi.book_open_page_variant;
-      case 'General Ledger': return Mdi.book_open_blank_variant;
-      case 'Trial Balance': return Mdi.scale_balance;
-      case 'Bank Accounts': return Mdi.bank;
-      case 'Accounts Receivable': return Mdi.cash_plus;
-      case 'Accounts Payable': return Mdi.cash_minus;
-      case 'Income': return Mdi.trending_up;
-      case 'Expense': return Mdi.trending_down;
-      case 'bills': return Mdi.file_document_outline;
-      case 'Profit & Loss Statement': return Mdi.chart_line;
-      case 'Balance Sheet': return Mdi.clipboard_list_outline;
-      case 'Cash Flow Statement': return Mdi.cash;
-      case 'Aged Receivables': return Mdi.account_clock;
-      case 'Customers': return Mdi.account_group;
-      case 'Vendors / Suppliers': return Mdi.truck_delivery_outline;
-      case 'Payments Received': return Mdi.credit_card_outline;
-      case 'Payments Made': return Mdi.cash_check;
-      case 'Credit Notes': return Mdi.file_undo_outline;
-      case 'Fixed Assets': return Mdi.office_building_outline;
-      case 'Loans & Borrowings': return Mdi.hand_coin_outline;
-      case 'Capital / Equity': return Mdi.chart_donut;
-      case 'subscription': return Mdi.crown;
-      case 'My Profile': return Mdi.account_circle_outline;
-      case 'Change Password': return Mdi.lock_reset;
-      case 'User Guide': return Mdi.book_information_variant;
-      case 'Contact Support': return Mdi.headset;
-      case 'Report an Issue': return Mdi.bug_outline;
-      case 'About App': return Mdi.information_outline;
-      case 'Terms of Service': return Mdi.file_sign;
-      case 'Privacy Policy': return Mdi.shield_lock_outline;
-      default: return Mdi.circle_outline;
-    }
-  }
-
-

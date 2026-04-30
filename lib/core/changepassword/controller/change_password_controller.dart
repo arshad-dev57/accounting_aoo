@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/login/screen/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -182,23 +183,20 @@ class ChangePasswordController extends GetxController {
   }
   
   void _showError(String message) {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Error',
       message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
+      
       duration: const Duration(seconds: 3),
     );
   }
   
   void _showSuccess(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
+      AppSnackbar.success(
+        Colors.green,
+        'Success',
+        message,
       duration: const Duration(seconds: 2),
     );
   }

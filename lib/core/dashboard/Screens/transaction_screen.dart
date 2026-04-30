@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/dashboard/controllers/transaction_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -369,11 +370,11 @@ Widget _buildTransactionCard(TransactionController controller, Map<String, dynam
   final title = controller.getTransactionTitle(transaction);
   final subtitle = controller.getTransactionSubtitle(transaction);
   
-  // ✅ SAFE DATE PARSING
+  // SAFE DATE PARSING
   final dateStr = transaction['date'] as String?;
   final date = dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
   
-  // ✅ FIX: Safe amount parsing with null check
+  // FIX: Safe amount parsing with null check
   dynamic amountValue = transaction['amount'];
   double amount = 0.0;
   if (amountValue is num) {
@@ -384,7 +385,7 @@ Widget _buildTransactionCard(TransactionController controller, Map<String, dynam
     amount = 0.0;
   }
   
-  // ✅ SAFE OUTSTANDING PARSING
+  // SAFE OUTSTANDING PARSING
   dynamic outstandingValue = transaction['outstanding'];
   double? outstanding;
   if (outstandingValue is num) {
@@ -393,7 +394,7 @@ Widget _buildTransactionCard(TransactionController controller, Map<String, dynam
     outstanding = double.tryParse(outstandingValue);
   }
   
-  // ✅ SAFE STRING FIELDS
+  // SAFE STRING FIELDS
   final paymentMethod = transaction['paymentMethod'] as String? ?? 'Cash';
   final description = transaction['description'] as String? ?? '';
   final reference = transaction['reference'] as String? ?? '';
@@ -658,13 +659,11 @@ Widget _buildTransactionCard(TransactionController controller, Map<String, dynam
             SizedBox(height: 1.h),
             _buildQuickActionListItem('Transfer', Icons.swap_horiz, kPrimary, () {
               Navigator.pop(context);
-              Get.snackbar('Transfer', 'Transfer feature coming soon',
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+              AppSnackbar.info('Transfer', 'Transfer feature coming soon');
             }),
             _buildQuickActionListItem('Import Transactions', Icons.import_export, kPrimary, () {
               Navigator.pop(context);
-              Get.snackbar('Import', 'Import feature coming soon',
-                  snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+              AppSnackbar.info('Import', 'Import feature coming soon');
             }),
           ],
         ),
@@ -764,7 +763,7 @@ Widget _buildTransactionCard(TransactionController controller, Map<String, dynam
                             TextFormField(
                               decoration: InputDecoration(
                                 labelText: 'Amount *',
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 fillColor: kCardBg,
                                 filled: true,
@@ -949,7 +948,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
   final amountColor = isIncome ? kSuccess : kDanger;
   final date = DateTime.parse(transaction['date']);
   
-  // ✅ FIX: Use getIconForTransaction instead of getIconForCategory
+  // FIX: Use getIconForTransaction instead of getIconForCategory
   final icon = controller.getIconForTransaction(transaction);
   final color = controller.getColorForTransaction(transaction);
   final title = controller.getTransactionTitle(transaction);
@@ -1038,8 +1037,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Get.back();
-                    Get.snackbar('Print', 'Printing receipt...',
-                        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+                    AppSnackbar.info('Print', 'Printing receipt...');
                   },
                   icon: Icon(Icons.print, size: 4.5.w),
                   label: Text('Print', style: TextStyle(fontSize: 12.sp)),
@@ -1101,8 +1099,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
               trailing: Icon(Icons.chevron_right, size: 5.w),
               onTap: () {
                 Navigator.pop(context);
-                Get.snackbar('Filter', 'Category filter coming soon',
-                    snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+                AppSnackbar.info('Filter', 'Category filter coming soon');
               },
             ),
             ListTile(
@@ -1111,8 +1108,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
               trailing: Icon(Icons.chevron_right, size: 5.w),
               onTap: () {
                 Navigator.pop(context);
-                Get.snackbar('Filter', 'Amount filter coming soon',
-                    snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+                AppSnackbar.info('Filter', 'Amount filter coming soon');
               },
             ),
             ListTile(
@@ -1121,8 +1117,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
               trailing: Icon(Icons.chevron_right, size: 5.w),
               onTap: () {
                 Navigator.pop(context);
-                Get.snackbar('Filter', 'Payment method filter coming soon',
-                    snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+                AppSnackbar.info('Filter', 'Payment method filter coming soon');
               },
             ),
             const Divider(),
@@ -1132,8 +1127,7 @@ void _showTransactionDetails(TransactionController controller, Map<String, dynam
               onTap: () {
                 Navigator.pop(context);
                 controller.clearFilters();
-                Get.snackbar('Filters Cleared', 'All filters have been cleared',
-                    snackPosition: SnackPosition.BOTTOM, backgroundColor: kSuccess, colorText: Colors.white);
+                AppSnackbar.success(kSuccess, 'Filters Cleared', 'All filters have been cleared');
               },
             ),
           ],

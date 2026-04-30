@@ -1,13 +1,21 @@
 import 'dart:convert';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/Expense/model/expense_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sizer/sizer.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:excel/excel.dart';
 
 class ExpenseController extends GetxController {
   // Observable variables
@@ -105,118 +113,110 @@ class ExpenseController extends GetxController {
       'Authorization': 'Bearer $token',
     };
   }
-  // ==================== LOAD EXPENSES WITH PAGINATION ====================
-// ==================== LOAD EXPENSES WITH PAGINATION ====================
-Future<void> loadExpenses() async {
-  try {
-    isLoading.value = true;
-    
-    // ✅ FIX: Convert all values to String
-    Map<String, String> params = {};  // ← Change to String, String
-    
-    params['page'] = currentPage.value.toString();  // ← toString()
-    params['limit'] = pageSize.toString();          // ← toString()
-    
-    if (selectedFilter.value != 'All') {
-      params['status'] = selectedFilter.value;
-    }
-    if (selectedType.value != 'All') {
-      params['expenseType'] = selectedType.value;
-    }
-    if (startDate.value != null && endDate.value != null) {
-      params['startDate'] = DateFormat('yyyy-MM-dd').format(startDate.value!);
-      params['endDate'] = DateFormat('yyyy-MM-dd').format(endDate.value!);
-    }
-    if (searchQuery.value.isNotEmpty) {
-      params['search'] = searchQuery.value;
-    }
-    
-    final headers = await _getHeaders();
-    final uri = Uri.parse('$baseUrl/api/expenses').replace(queryParameters: params);
-    final response = await http.get(uri, headers: headers);
-    
-    print("load expenses");
-    print("Response Status Code: ${response.statusCode}");
-    print("Response Body: ${response.body}");
-    
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      if (responseData['success'] == true) {
-        
-        // ✅ Check if data is List
-        if (responseData['data'] is List) {
-          List<dynamic> expensesData = responseData['data'];
-          expenses.value = expensesData.map((json) => Expense.fromJson(json)).toList();
-          totalPages.value = responseData['pages'] ?? 1;
-          hasMore.value = currentPage.value < totalPages.value;
-        } else {
-          // No data or empty
-          expenses.clear();
-          totalPages.value = 1;
-          hasMore.value = false;
-        }
-      } else {
-        _showError('Failed to load expenses');
-      }
-    }
-  } catch (e, stackTrace) {
-    print('Error loading expenses: $e');
-    print('StackTrace: $stackTrace');
-    _showError('Error loading expenses');
-  } finally {
-    isLoading.value = false;
-  }
-}  // ==================== LOAD MORE EXPENSES (LAZY LOADING) ====================
-  // ==================== LOAD MORE EXPENSES (LAZY LOADING) ====================
-Future<void> loadMoreExpenses() async {
-  if (!hasMore.value || isLoadingMore.value) return;
   
-  try {
-    isLoadingMore.value = true;
-    currentPage.value++;
-    
-    // ✅ FIX: Convert all values to String
-    Map<String, String> params = {};  // ← Change to String, String
-    
-    params['page'] = currentPage.value.toString();  // ← toString()
-    params['limit'] = pageSize.toString();          // ← toString()
-    
-    if (selectedFilter.value != 'All') {
-      params['status'] = selectedFilter.value;
-    }
-    if (selectedType.value != 'All') {
-      params['expenseType'] = selectedType.value;
-    }
-    if (startDate.value != null && endDate.value != null) {
-      params['startDate'] = DateFormat('yyyy-MM-dd').format(startDate.value!);
-      params['endDate'] = DateFormat('yyyy-MM-dd').format(endDate.value!);
-    }
-    if (searchQuery.value.isNotEmpty) {
-      params['search'] = searchQuery.value;
-    }
-    
-    final headers = await _getHeaders();
-    final uri = Uri.parse('$baseUrl/api/expenses').replace(queryParameters: params);
-    final response = await http.get(uri, headers: headers);
-    
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      if (responseData['success'] == true) {
-        if (responseData['data'] is List) {
-          List<dynamic> expensesData = responseData['data'];
-          List<Expense> newExpenses = expensesData.map((json) => Expense.fromJson(json)).toList();
-          expenses.addAll(newExpenses);
-          totalPages.value = responseData['pages'] ?? 1;
-          hasMore.value = currentPage.value < totalPages.value;
+  // ==================== LOAD EXPENSES WITH PAGINATION ====================
+  Future<void> loadExpenses() async {
+    try {
+      isLoading.value = true;
+      
+      Map<String, String> params = {};
+      
+      params['page'] = currentPage.value.toString();
+      params['limit'] = pageSize.toString();
+      
+      if (selectedFilter.value != 'All') {
+        params['status'] = selectedFilter.value;
+      }
+      if (selectedType.value != 'All') {
+        params['expenseType'] = selectedType.value;
+      }
+      if (startDate.value != null && endDate.value != null) {
+        params['startDate'] = DateFormat('yyyy-MM-dd').format(startDate.value!);
+        params['endDate'] = DateFormat('yyyy-MM-dd').format(endDate.value!);
+      }
+      if (searchQuery.value.isNotEmpty) {
+        params['search'] = searchQuery.value;
+      }
+      
+      final headers = await _getHeaders();
+      final uri = Uri.parse('$baseUrl/api/expenses').replace(queryParameters: params);
+      final response = await http.get(uri, headers: headers);
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          if (responseData['data'] is List) {
+            List<dynamic> expensesData = responseData['data'];
+            expenses.value = expensesData.map((json) => Expense.fromJson(json)).toList();
+            totalPages.value = responseData['pages'] ?? 1;
+            hasMore.value = currentPage.value < totalPages.value;
+          } else {
+            expenses.clear();
+            totalPages.value = 1;
+            hasMore.value = false;
+          }
+        } else {
+          _showError('Failed to load expenses');
         }
       }
+    } catch (e) {
+      print('Error loading expenses: $e');
+      _showError('Error loading expenses');
+    } finally {
+      isLoading.value = false;
     }
-  } catch (e) {
-    print('Error loading more expenses: $e');
-  } finally {
-    isLoadingMore.value = false;
   }
-}
+  
+  // ==================== LOAD MORE EXPENSES ====================
+  Future<void> loadMoreExpenses() async {
+    if (!hasMore.value || isLoadingMore.value) return;
+    
+    try {
+      isLoadingMore.value = true;
+      currentPage.value++;
+      
+      Map<String, String> params = {};
+      
+      params['page'] = currentPage.value.toString();
+      params['limit'] = pageSize.toString();
+      
+      if (selectedFilter.value != 'All') {
+        params['status'] = selectedFilter.value;
+      }
+      if (selectedType.value != 'All') {
+        params['expenseType'] = selectedType.value;
+      }
+      if (startDate.value != null && endDate.value != null) {
+        params['startDate'] = DateFormat('yyyy-MM-dd').format(startDate.value!);
+        params['endDate'] = DateFormat('yyyy-MM-dd').format(endDate.value!);
+      }
+      if (searchQuery.value.isNotEmpty) {
+        params['search'] = searchQuery.value;
+      }
+      
+      final headers = await _getHeaders();
+      final uri = Uri.parse('$baseUrl/api/expenses').replace(queryParameters: params);
+      final response = await http.get(uri, headers: headers);
+      
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = json.decode(response.body);
+        if (responseData['success'] == true) {
+          if (responseData['data'] is List) {
+            List<dynamic> expensesData = responseData['data'];
+            List<Expense> newExpenses = expensesData.map((json) => Expense.fromJson(json)).toList();
+            expenses.addAll(newExpenses);
+            totalPages.value = responseData['pages'] ?? 1;
+            hasMore.value = currentPage.value < totalPages.value;
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading more expenses: $e');
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+  
   // ==================== LOAD VENDORS ====================
   Future<void> loadVendors() async {
     try {
@@ -225,9 +225,6 @@ Future<void> loadMoreExpenses() async {
         Uri.parse('$baseUrl/api/accounts-payable/vendors'),
         headers: headers,
       );
-      print("load vendors");
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
@@ -247,9 +244,6 @@ Future<void> loadMoreExpenses() async {
         Uri.parse('$baseUrl/api/bank-accounts'),
         headers: headers,
       );
-      print("load bank accounts");
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
@@ -273,9 +267,7 @@ Future<void> loadMoreExpenses() async {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/api/expenses/summary').replace(queryParameters: params);
       final response = await http.get(uri, headers: headers);
-      print("load summary");
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
@@ -327,27 +319,19 @@ Future<void> loadMoreExpenses() async {
         'paymentMethod': paymentMethod,
         'bankAccountId': bankAccountId,
       };
-      print(expenseData);
+      
       final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/api/expenses'),
         headers: headers,
         body: json.encode(expenseData),
       );
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      
       if (response.statusCode == 201) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back();
-          Get.snackbar(
-            'Success',
-            'Expense recorded successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          AppSnackbar.success(kSuccess, 'Success', 'Expense recorded successfully\nJournal entry created');
           _resetAndReload();
           loadSummary();
         } else {
@@ -375,13 +359,7 @@ Future<void> loadMoreExpenses() async {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
-          'Success',
-          'Expense $expenseNumber deleted successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-        );
+        AppSnackbar.success(kSuccess, 'Success', 'Expense $expenseNumber deleted successfully');
         _resetAndReload();
         loadSummary();
       } else {
@@ -406,13 +384,7 @@ Future<void> loadMoreExpenses() async {
       );
       
       if (response.statusCode == 200) {
-        Get.snackbar(
-          'Success',
-          'Expense posted successfully\nJournal entry created',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: kSuccess,
-          colorText: Colors.white,
-        );
+        AppSnackbar.success(kSuccess, 'Success', 'Expense posted successfully\nJournal entry created');
         _resetAndReload();
         loadSummary();
       } else {
@@ -463,21 +435,414 @@ Future<void> loadMoreExpenses() async {
     loadSummary();
   }
   
-  // ==================== EXPORT & PRINT ====================
+  // ==================== EXPORT FUNCTIONS ====================
+  
   void exportExpenses() {
-    Get.snackbar('Export', 'Exporting expenses to Excel...', 
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Export Expenses',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Choose export format',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Icon(Icons.picture_as_pdf, color: Color(0xFFE53935)),
+              title: Text('Export as PDF'),
+              onTap: () {
+                Get.back();
+                exportToPdf();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.table_chart, color: Color(0xFF2E7D32)),
+              title: Text('Export as Excel'),
+              onTap: () {
+                Get.back();
+                exportToExcel();
+              },
+            ),
+          ],
+        ),
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+    );
+  }
+  
+  Future<void> exportToPdf() async {
+    try {
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+      
+      final pdf = pw.Document();
+      
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          header: (ctx) => _pdfHeader(),
+          footer: (ctx) => _pdfFooter(ctx),
+          build: (ctx) => [
+            _pdfSummarySection(),
+            pw.SizedBox(height: 16),
+            _pdfExpensesTable(),
+          ],
+        ),
+      );
+      
+      final bytes = await pdf.save();
+      final fileName = 'expenses_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+      
+      if (kIsWeb) {
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(kSuccess, 'Success', '${expenses.length} expenses exported to PDF');
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(kSuccess, 'Success', '${expenses.length} expenses exported to PDF');
+        await OpenFile.open(file.path);
+      }
+    } catch (e) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
+    }
+  }
+  
+  Future<void> exportToExcel() async {
+    try {
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+      
+      final excel = Excel.createExcel();
+      
+      // Summary Sheet
+      final summarySheet = excel['Summary'];
+      excel.setDefaultSheet('Summary');
+      
+      _excelSetCell(summarySheet, 0, 0, 'Expense Report',
+          bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+      _excelSetCell(summarySheet, 1, 0,
+          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+          fontSize: 9, fontColor: '757575');
+      _excelSetCell(summarySheet, 2, 0,
+          'Filter: ${selectedFilter.value} | Type: ${selectedType.value}',
+          fontSize: 10, fontColor: '1A237E');
+      
+      _excelSetCell(summarySheet, 4, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
+      
+      final summaryRows = [
+        ['Total Expense', formatAmount(totalExpense.value)],
+        ['Total Tax', formatAmount(totalTax.value)],
+        ['Total Records', totalCount.value.toString()],
+        ['This Month', formatAmount(thisMonthTotal.value)],
+        ['This Week', formatAmount(thisWeekTotal.value)],
+      ];
+      
+      for (int r = 0; r < summaryRows.length; r++) {
+        for (int c = 0; c < 2; c++) {
+          _excelSetCell(summarySheet, 5 + r, c, summaryRows[r][c],
+              bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
+        }
+      }
+      summarySheet.setColumnWidth(0, 25);
+      summarySheet.setColumnWidth(1, 20);
+      
+      // Expense Details Sheet
+      final expenseSheet = excel['Expense Details'];
+      final headers = [
+        'Expense #', 'Date', 'Type', 'Vendor', 'Description',
+        'Reference', 'Subtotal', 'Tax', 'Total', 'Status', 'Payment Method'
+      ];
+      
+      for (int i = 0; i < headers.length; i++) {
+        _excelSetCell(expenseSheet, 0, i, headers[i],
+            bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
+      }
+      
+      int row = 1;
+      for (final expense in expenses) {
+        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+        _excelSetCell(expenseSheet, row, 0, expense.expenseNumber, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 1, DateFormat('dd/MM/yyyy').format(expense.date), bgColor: bg);
+        _excelSetCell(expenseSheet, row, 2, expense.expenseType, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 3, expense.vendorName.isEmpty ? '-' : expense.vendorName, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 4, expense.description, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 5, expense.reference.isEmpty ? '-' : expense.reference, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 6, expense.subtotal, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 7, expense.taxAmount, bgColor: bg);
+        _excelSetCell(expenseSheet, row, 8, expense.totalAmount, bgColor: bg, fontColor: 'C62828');
+        _excelSetCell(expenseSheet, row, 9, expense.status, 
+            bgColor: expense.status == 'Posted' ? 'E8F5E9' : 'FFF8E1',
+            fontColor: expense.status == 'Posted' ? '2E7D32' : 'F39C12');
+        _excelSetCell(expenseSheet, row, 10, expense.paymentMethod, bgColor: bg);
+        row++;
+      }
+      
+      final colWidths = [14.0, 12.0, 15.0, 25.0, 30.0, 15.0, 12.0, 12.0, 12.0, 10.0, 15.0];
+      for (int i = 0; i < colWidths.length; i++) {
+        expenseSheet.setColumnWidth(i, colWidths[i]);
+      }
+      
+      excel.delete('Sheet1');
+      
+      final bytes = excel.save();
+      if (bytes == null) throw Exception('Excel save failed');
+      
+      final fileName = 'expenses_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+      
+      if (kIsWeb) {
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(kSuccess, 'Success', '${expenses.length} expenses exported to Excel');
+      } else {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(kSuccess, 'Success', '${expenses.length} expenses exported to Excel');
+        await OpenFile.open(file.path);
+      }
+    } catch (e) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
+    }
+  }
+  
+  // ==================== PDF HELPER METHODS ====================
+  
+  pw.Widget _pdfHeader() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(bottom: 12),
+      decoration: const pw.BoxDecoration(
+          border: pw.Border(
+              bottom: pw.BorderSide(color: PdfColors.grey300, width: 1))),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+            pw.Text('Expense Report',
+                style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.indigo800)),
+            pw.Text(
+                'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+                style: const pw.TextStyle(
+                    fontSize: 9, color: PdfColors.grey600)),
+          ]),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: pw.BoxDecoration(
+                color: PdfColors.indigo800,
+                borderRadius: pw.BorderRadius.circular(6)),
+            child: pw.Text('LedgerPro',
+                style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  pw.Widget _pdfFooter(pw.Context ctx) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(top: 8),
+      decoration: const pw.BoxDecoration(
+          border: pw.Border(
+              top: pw.BorderSide(color: PdfColors.grey300, width: 1))),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('Confidential - For Internal Use Only',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+          pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+        ],
+      ),
+    );
+  }
+  
+  pw.Widget _pdfSummarySection() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+          color: PdfColors.indigo50,
+          borderRadius: pw.BorderRadius.circular(8),
+          border: pw.Border.all(color: PdfColors.indigo200)),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+        children: [
+          _pdfSummaryItem('Total Expense', formatAmount(totalExpense.value), PdfColors.red700),
+          _pdfSummaryItem('Total Tax', formatAmount(totalTax.value), PdfColors.orange700),
+          _pdfSummaryItem('Total Records', totalCount.value.toString(), PdfColors.indigo700),
+          _pdfSummaryItem('This Month', formatAmount(thisMonthTotal.value), PdfColors.blue700),
+          _pdfSummaryItem('This Week', formatAmount(thisWeekTotal.value), PdfColors.purple700),
+        ],
+      ),
+    );
+  }
+  
+  pw.Widget _pdfSummaryItem(String label, String value, PdfColor color) {
+    return pw.Column(children: [
+      pw.Text(label,
+          style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+      pw.SizedBox(height: 4),
+      pw.Text(value,
+          style: pw.TextStyle(
+              fontSize: 11, fontWeight: pw.FontWeight.bold, color: color)),
+    ]);
+  }
+  
+  pw.Widget _pdfExpensesTable() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text('Expense Details',
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 8),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 8),
+          decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 1))),
+          child: pw.Row(children: [
+            pw.Expanded(flex: 2, child: pw.Text('Expense #', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Type', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Vendor', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Date', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Amount', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text('Status', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+          ]),
+        ),
+        ...expenses.map((expense) => pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 6),
+          decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                  bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5))),
+          child: pw.Row(children: [
+            pw.Expanded(flex: 2, child: pw.Text(expense.expenseNumber, style: const pw.TextStyle(fontSize: 9))),
+            pw.Expanded(flex: 2, child: pw.Text(expense.expenseType, style: const pw.TextStyle(fontSize: 9))),
+            pw.Expanded(flex: 2, child: pw.Text(expense.vendorName.isEmpty ? '-' : expense.vendorName, style: const pw.TextStyle(fontSize: 9))),
+            pw.Expanded(flex: 2, child: pw.Text(DateFormat('dd MMM yyyy').format(expense.date), style: const pw.TextStyle(fontSize: 9))),
+            pw.Expanded(flex: 2, child: pw.Text(formatAmount(expense.totalAmount), textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9))),
+            pw.Expanded(flex: 2, child: pw.Text(expense.status, textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 9))),
+          ]),
+        )).toList(),
+        pw.Divider(),
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 8),
+          child: pw.Row(children: [
+            pw.Expanded(flex: 8, child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+            pw.Expanded(flex: 2, child: pw.Text(formatAmount(totalExpense.value),
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red700))),
+            pw.Expanded(flex: 2, child: pw.Text('', textAlign: pw.TextAlign.center)),
+          ]),
+        ),
+      ],
+    );
+  }
+  
+  // ==================== EXCEL HELPER ====================
+  
+  void _excelSetCell(
+    Sheet sheet,
+    int row,
+    int col,
+    dynamic value, {
+    bool bold = false,
+    double fontSize = 10,
+    String? bgColor,
+    String fontColor = '000000',
+  }) {
+    final cell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
+    cell.value = value is double
+        ? DoubleCellValue(value)
+        : value is int
+            ? IntCellValue(value)
+            : TextCellValue(value.toString());
+
+    cell.cellStyle = CellStyle(
+      bold: bold,
+      fontSize: fontSize.toInt(),
+      fontColorHex: ExcelColor.fromHexString('#$fontColor'),
+      backgroundColorHex: bgColor != null
+          ? ExcelColor.fromHexString('#$bgColor')
+          : ExcelColor.fromHexString('#FFFFFF'),
+    );
   }
   
   void printExpenses() {
-    Get.snackbar('Print', 'Preparing expense report...', 
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.success(kPrimary, 'Print', 'Preparing expense report...');
   }
   
   // ==================== HELPER METHODS ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   String getTypeColor(String type) {
@@ -519,7 +884,6 @@ Future<void> loadMoreExpenses() async {
   }
   
   void _showError(String message) {
-    Get.snackbar('Error', message, 
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kWarning, colorText: Colors.white);
+    AppSnackbar.error(kWarning, 'Error', message);
   }
 }

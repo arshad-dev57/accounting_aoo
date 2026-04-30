@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/CreditNote/models/credit_note_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -87,7 +90,7 @@ class CreditNoteController extends GetxController {
   
   // ==================== HELPER: FORMAT AMOUNT ====================
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   // ==================== LOAD CREDIT NOTES FROM API ====================
@@ -259,14 +262,7 @@ class CreditNoteController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back(); // Close dialog
-          Get.snackbar(
-            'Success',
-            'Credit note created successfully\nJournal entry created',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          AppSnackbar.success(kSuccess, 'Success', 'Credit note created successfully\nJournal entry created');
           
           // Refresh data
           loadCreditNotesData();
@@ -312,14 +308,7 @@ class CreditNoteController extends GetxController {
         final Map<String, dynamic> responseData = json.decode(response.body);
         if (responseData['success'] == true) {
           Get.back(); // Close any open dialogs
-          Get.snackbar(
-            'Success',
-            'Credit note applied successfully\nInvoice updated',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: kSuccess,
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
+          AppSnackbar.success(kSuccess, 'Success', 'Credit note applied successfully\nInvoice updated');
           
           // Refresh data
           loadCreditNotesData();
@@ -386,14 +375,7 @@ class CreditNoteController extends GetxController {
   }
   
   void printCreditNote(CreditNote creditNote) {
-    Get.snackbar(
-      'Print',
-      'Printing credit note ${creditNote.creditNoteNumber}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
+    AppSnackbar.info('Print', 'Printing credit note ${creditNote.creditNoteNumber}');
   }
   
   // ─────────────────────── EXPORT FUNCTIONS ───────────────────────
@@ -443,9 +425,12 @@ class CreditNoteController extends GetxController {
       ),
     );
   }
-  
-  Future<void> exportToPdf() async {
-    try {
+  // ==================== REPLACE THESE TWO METHODS ONLY ====================
+
+Future<void> exportToPdf() async {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -460,42 +445,231 @@ class CreditNoteController extends GetxController {
         ),
         barrierDismissible: false,
       );
-      
-      final pdf = pw.Document();
-      
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(24),
-          header: (ctx) => _pdfHeader(),
-          footer: (ctx) => _pdfFooter(ctx),
-          build: (ctx) => [
-            _pdfSummarySection(),
-            pw.SizedBox(height: 16),
-            _pdfCreditNotesSection(),
-          ],
-        ),
-      );
-      
-      final dir = await getTemporaryDirectory();
-      final fileName = 'credit_notes_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+    }
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (ctx) => _pdfHeader(),
+        footer: (ctx) => _pdfFooter(ctx),
+        build: (ctx) => [
+          _pdfSummarySection(),
+          pw.SizedBox(height: 16),
+          _pdfCreditNotesSection(),
+        ],
+      ),
+    );
+    
+    final bytes = await pdf.save();
+    final fileName = 'credit_notes_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    
+    if (kIsWeb) {
+      // WEB: Download using HTML anchor tag
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', '${creditNotes.length} credit notes exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', '${creditNotes.length} credit notes exported to PDF');
+    } else {
+      // MOBILE: Save to file and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(kSuccess, 'Success', '${creditNotes.length} credit notes exported to PDF');
       
       await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
     }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
   }
-  
+}
+
+Future<void> exportToExcel() async {
+  try {
+    // Show loading only on mobile
+    if (!kIsWeb) {
+      Get.dialog(
+        AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Building Excel...', style: TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        barrierDismissible: false,
+      );
+    }
+    
+    final excel = Excel.createExcel();
+    
+    // Summary Sheet
+    final summarySheet = excel['Summary'];
+    excel.setDefaultSheet('Summary');
+    
+    _excelSetCell(summarySheet, 0, 0, 'Credit Notes Report',
+        bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
+    _excelSetCell(summarySheet, 1, 0,
+        'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
+        fontSize: 9, fontColor: '757575');
+    _excelSetCell(summarySheet, 2, 0,
+        'Filter: ${selectedFilter.value}',
+        fontSize: 10, fontColor: '1A237E');
+    if (selectedDateRange.value != null) {
+      _excelSetCell(summarySheet, 3, 0,
+        'Period: ${DateFormat('dd MMM yyyy').format(selectedDateRange.value!.start)} - ${DateFormat('dd MMM yyyy').format(selectedDateRange.value!.end)}',
+        fontSize: 10, fontColor: '1A237E');
+    }
+    if (searchQuery.value.isNotEmpty) {
+      _excelSetCell(summarySheet, 4, 0,
+        'Search: ${searchQuery.value}',
+        fontSize: 10, fontColor: '1A237E');
+    }
+    
+    _excelSetCell(summarySheet, 6, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
+    
+    final summaryRows = [
+      ['Total Credit Notes', totalCount.value.toString()],
+      ['Total Amount', _formatAmount(totalAmount.value)],
+      ['Applied Amount', _formatAmount(appliedAmount.value)],
+      ['Remaining Amount', _formatAmount(remainingAmount.value)],
+      ['Expired Amount', _formatAmount(expiredAmount.value)],
+      ['This Month', _formatAmount(thisMonthTotal.value)],
+      ['This Week', _formatAmount(thisWeekTotal.value)],
+    ];
+    
+    for (int r = 0; r < summaryRows.length; r++) {
+      for (int c = 0; c < 2; c++) {
+        _excelSetCell(summarySheet, 7 + r, c, summaryRows[r][c],
+            bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
+      }
+    }
+    summarySheet.setColumnWidth(0, 25);
+    summarySheet.setColumnWidth(1, 20);
+    
+    // Credit Notes Sheet
+    final notesSheet = excel['Credit Notes'];
+    final headers = [
+      'Credit Note #', 'Date', 'Customer', 'Invoice #', 'Invoice Amount',
+      'Credit Amount', 'Applied Amount', 'Remaining Amount', 'Reason Type',
+      'Reason', 'Expiry Date', 'Status', 'Notes'
+    ];
+    
+    for (int i = 0; i < headers.length; i++) {
+      _excelSetCell(notesSheet, 0, i, headers[i],
+          bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
+    }
+    
+    int row = 1;
+    for (final note in creditNotes) {
+      final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
+      _excelSetCell(notesSheet, row, 0, note.creditNoteNumber, bgColor: bg);
+      _excelSetCell(notesSheet, row, 1, DateFormat('dd MMM yyyy').format(note.date), bgColor: bg);
+      _excelSetCell(notesSheet, row, 2, note.customerName, bgColor: bg);
+      _excelSetCell(notesSheet, row, 3, note.originalInvoiceNumber, bgColor: bg);
+      _excelSetCell(notesSheet, row, 4, note.originalInvoiceAmount, bgColor: bg);
+      _excelSetCell(notesSheet, row, 5, note.amount, bgColor: bg, fontColor: '1A237E');
+      _excelSetCell(notesSheet, row, 6, note.appliedAmount, bgColor: bg, fontColor: '2E7D32');
+      _excelSetCell(notesSheet, row, 7, note.remainingAmount, bgColor: bg, fontColor: note.remainingAmount > 0 ? 'F39C12' : '2E7D32');
+      _excelSetCell(notesSheet, row, 8, note.reasonType, bgColor: bg);
+      _excelSetCell(notesSheet, row, 9, note.reason, bgColor: bg);
+      _excelSetCell(notesSheet, row, 10, note.expiryDate != null ? DateFormat('dd MMM yyyy').format(note.expiryDate!) : '-', bgColor: bg);
+      _excelSetCell(notesSheet, row, 11, note.status, 
+          bgColor: note.status == 'Issued' ? 'FFF8E1' : (note.status == 'Applied' ? 'E8F5E9' : 'FFEBEE'),
+          fontColor: note.status == 'Issued' ? 'F39C12' : (note.status == 'Applied' ? '2E7D32' : 'C62828'));
+      _excelSetCell(notesSheet, row, 12, note.notes.isEmpty ? '-' : note.notes, bgColor: bg);
+      row++;
+    }
+    
+    // Totals row
+    _excelSetCell(notesSheet, row, 4, 'TOTAL', bold: true, bgColor: 'E8EAF6');
+    _excelSetCell(notesSheet, row, 5, totalAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: '1A237E');
+    _excelSetCell(notesSheet, row, 6, appliedAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: '2E7D32');
+    _excelSetCell(notesSheet, row, 7, remainingAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: 'F39C12');
+    
+    final colWidths = [18.0, 12.0, 25.0, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0, 25.0, 12.0, 12.0, 30.0];
+    for (int i = 0; i < colWidths.length; i++) {
+      notesSheet.setColumnWidth(i, colWidths[i]);
+    }
+    
+    // Items Sheet (if there are items)
+    final itemsSheet = excel['Credit Note Items'];
+    final itemHeaders = ['Credit Note #', 'Description', 'Quantity', 'Unit Price', 'Amount'];
+    
+    for (int i = 0; i < itemHeaders.length; i++) {
+      _excelSetCell(itemsSheet, 0, i, itemHeaders[i],
+          bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
+    }
+    
+    int itemRow = 1;
+    for (final note in creditNotes) {
+      for (final item in note.items) {
+        final bg = itemRow.isEven ? 'F5F5F5' : 'FFFFFF';
+        _excelSetCell(itemsSheet, itemRow, 0, note.creditNoteNumber, bgColor: bg);
+        _excelSetCell(itemsSheet, itemRow, 1, item.description, bgColor: bg);
+        _excelSetCell(itemsSheet, itemRow, 2, item.quantity, bgColor: bg);
+        _excelSetCell(itemsSheet, itemRow, 3, item.unitPrice, bgColor: bg);
+        _excelSetCell(itemsSheet, itemRow, 4, item.amount, bgColor: bg);
+        itemRow++;
+      }
+    }
+    
+    final itemColWidths = [18.0, 40.0, 10.0, 15.0, 15.0];
+    for (int i = 0; i < itemColWidths.length; i++) {
+      itemsSheet.setColumnWidth(i, itemColWidths[i]);
+    }
+    
+    excel.delete('Sheet1');
+    
+    final bytes = excel.save();
+    if (bytes == null) throw Exception('Excel save failed');
+    
+    final fileName = 'credit_notes_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+    
+    if (kIsWeb) {
+      // WEB: Download Excel
+      final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(kSuccess, 'Success', '${creditNotes.length} credit notes exported to Excel');
+    } else {
+      // MOBILE: Save and open
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (Get.isDialogOpen ?? false) Get.back();
+      
+      AppSnackbar.success(kSuccess, 'Success', '${creditNotes.length} credit notes exported to Excel');
+      
+      await OpenFile.open(file.path);
+    }
+  } catch (e) {
+    if (Get.isDialogOpen ?? false) Get.back();
+    AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
+  }
+}
   pw.Widget _pdfHeader() {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
@@ -651,165 +825,6 @@ class CreditNoteController extends GetxController {
     );
   }
   
-  Future<void> exportToExcel() async {
-    try {
-      Get.dialog(
-        AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text('Building Excel...', style: TextStyle(fontSize: 14)),
-            ],
-          ),
-        ),
-        barrierDismissible: false,
-      );
-      
-      final excel = Excel.createExcel();
-      
-      // Summary Sheet
-      final summarySheet = excel['Summary'];
-      excel.setDefaultSheet('Summary');
-      
-      _excelSetCell(summarySheet, 0, 0, 'Credit Notes Report',
-          bold: true, fontSize: 14, bgColor: '1A237E', fontColor: 'FFFFFF');
-      _excelSetCell(summarySheet, 1, 0,
-          'Generated: ${DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())}',
-          fontSize: 9, fontColor: '757575');
-      _excelSetCell(summarySheet, 2, 0,
-          'Filter: ${selectedFilter.value}',
-          fontSize: 10, fontColor: '1A237E');
-      if (selectedDateRange.value != null) {
-        _excelSetCell(summarySheet, 3, 0,
-          'Period: ${DateFormat('dd MMM yyyy').format(selectedDateRange.value!.start)} - ${DateFormat('dd MMM yyyy').format(selectedDateRange.value!.end)}',
-          fontSize: 10, fontColor: '1A237E');
-      }
-      if (searchQuery.value.isNotEmpty) {
-        _excelSetCell(summarySheet, 4, 0,
-          'Search: ${searchQuery.value}',
-          fontSize: 10, fontColor: '1A237E');
-      }
-      
-      _excelSetCell(summarySheet, 6, 0, 'SUMMARY', bold: true, fontSize: 11, bgColor: 'E8EAF6');
-      
-      final summaryRows = [
-        ['Total Credit Notes', totalCount.value.toString()],
-        ['Total Amount', _formatAmount(totalAmount.value)],
-        ['Applied Amount', _formatAmount(appliedAmount.value)],
-        ['Remaining Amount', _formatAmount(remainingAmount.value)],
-        ['Expired Amount', _formatAmount(expiredAmount.value)],
-        ['This Month', _formatAmount(thisMonthTotal.value)],
-        ['This Week', _formatAmount(thisWeekTotal.value)],
-      ];
-      
-      for (int r = 0; r < summaryRows.length; r++) {
-        for (int c = 0; c < 2; c++) {
-          _excelSetCell(summarySheet, 7 + r, c, summaryRows[r][c],
-              bgColor: r.isEven ? 'FFFFFF' : 'F5F5F5');
-        }
-      }
-      summarySheet.setColumnWidth(0, 25);
-      summarySheet.setColumnWidth(1, 20);
-      
-      // Credit Notes Sheet
-      final notesSheet = excel['Credit Notes'];
-      final headers = [
-        'Credit Note #', 'Date', 'Customer', 'Invoice #', 'Invoice Amount',
-        'Credit Amount', 'Applied Amount', 'Remaining Amount', 'Reason Type',
-        'Reason', 'Expiry Date', 'Status', 'Notes'
-      ];
-      
-      for (int i = 0; i < headers.length; i++) {
-        _excelSetCell(notesSheet, 0, i, headers[i],
-            bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
-      }
-      
-      int row = 1;
-      for (final note in creditNotes) {
-        final bg = row.isEven ? 'F5F5F5' : 'FFFFFF';
-        _excelSetCell(notesSheet, row, 0, note.creditNoteNumber, bgColor: bg);
-        _excelSetCell(notesSheet, row, 1, DateFormat('dd MMM yyyy').format(note.date), bgColor: bg);
-        _excelSetCell(notesSheet, row, 2, note.customerName, bgColor: bg);
-        _excelSetCell(notesSheet, row, 3, note.originalInvoiceNumber, bgColor: bg);
-        _excelSetCell(notesSheet, row, 4, note.originalInvoiceAmount, bgColor: bg);
-        _excelSetCell(notesSheet, row, 5, note.amount, bgColor: bg, fontColor: '1A237E');
-        _excelSetCell(notesSheet, row, 6, note.appliedAmount, bgColor: bg, fontColor: '2E7D32');
-        _excelSetCell(notesSheet, row, 7, note.remainingAmount, bgColor: bg, fontColor: note.remainingAmount > 0 ? 'F39C12' : '2E7D32');
-        _excelSetCell(notesSheet, row, 8, note.reasonType, bgColor: bg);
-        _excelSetCell(notesSheet, row, 9, note.reason, bgColor: bg);
-        _excelSetCell(notesSheet, row, 10, note.expiryDate != null ? DateFormat('dd MMM yyyy').format(note.expiryDate!) : '-', bgColor: bg);
-        _excelSetCell(notesSheet, row, 11, note.status, 
-            bgColor: note.status == 'Issued' ? 'FFF8E1' : (note.status == 'Applied' ? 'E8F5E9' : 'FFEBEE'),
-            fontColor: note.status == 'Issued' ? 'F39C12' : (note.status == 'Applied' ? '2E7D32' : 'C62828'));
-        _excelSetCell(notesSheet, row, 12, note.notes.isEmpty ? '-' : note.notes, bgColor: bg);
-        row++;
-      }
-      
-      // Totals row
-      _excelSetCell(notesSheet, row, 4, 'TOTAL', bold: true, bgColor: 'E8EAF6');
-      _excelSetCell(notesSheet, row, 5, totalAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: '1A237E');
-      _excelSetCell(notesSheet, row, 6, appliedAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: '2E7D32');
-      _excelSetCell(notesSheet, row, 7, remainingAmount.value, bold: true, bgColor: 'E8EAF6', fontColor: 'F39C12');
-      
-      final colWidths = [18.0, 12.0, 25.0, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0, 25.0, 12.0, 12.0, 30.0];
-      for (int i = 0; i < colWidths.length; i++) {
-        notesSheet.setColumnWidth(i, colWidths[i]);
-      }
-      
-      // Items Sheet (if there are items)
-      final itemsSheet = excel['Credit Note Items'];
-      final itemHeaders = ['Credit Note #', 'Description', 'Quantity', 'Unit Price', 'Amount'];
-      
-      for (int i = 0; i < itemHeaders.length; i++) {
-        _excelSetCell(itemsSheet, 0, i, itemHeaders[i],
-            bold: true, bgColor: '1A237E', fontColor: 'FFFFFF', fontSize: 10);
-      }
-      
-      int itemRow = 1;
-      for (final note in creditNotes) {
-        for (final item in note.items) {
-          final bg = itemRow.isEven ? 'F5F5F5' : 'FFFFFF';
-          _excelSetCell(itemsSheet, itemRow, 0, note.creditNoteNumber, bgColor: bg);
-          _excelSetCell(itemsSheet, itemRow, 1, item.description, bgColor: bg);
-          _excelSetCell(itemsSheet, itemRow, 2, item.quantity, bgColor: bg);
-          _excelSetCell(itemsSheet, itemRow, 3, item.unitPrice, bgColor: bg);
-          _excelSetCell(itemsSheet, itemRow, 4, item.amount, bgColor: bg);
-          itemRow++;
-        }
-      }
-      
-      final itemColWidths = [18.0, 40.0, 10.0, 15.0, 15.0];
-      for (int i = 0; i < itemColWidths.length; i++) {
-        itemsSheet.setColumnWidth(i, itemColWidths[i]);
-      }
-      
-      excel.delete('Sheet1');
-      
-      final bytes = excel.save();
-      if (bytes == null) throw Exception('Excel save failed');
-      
-      final dir = await getTemporaryDirectory();
-      final fileName = 'credit_notes_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
-      
-      if (Get.isDialogOpen ?? false) Get.back();
-      
-      Get.snackbar('Success', '${creditNotes.length} credit notes exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-          
-      await OpenFile.open(file.path);
-    } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
-    }
-  }
-  
   void _excelSetCell(
     Sheet sheet,
     int row,
@@ -839,14 +854,7 @@ class CreditNoteController extends GetxController {
   }
   
   void printCreditNotes() {
-    Get.snackbar(
-      'Print',
-      'Preparing credit notes report...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 2),
-    );
+    AppSnackbar.info('Print', 'Preparing credit notes report...');
   }
   
   // ==================== DIALOG METHODS ====================
@@ -1026,7 +1034,7 @@ class CreditNoteController extends GetxController {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 labelStyle: TextStyle(fontSize: 12.sp),
-                                prefixText: '₨ ',
+                                prefixText: '\$ ',
                               ),
                               style: TextStyle(fontSize: 14.sp, color: kText),
                               keyboardType: TextInputType.number,
@@ -1229,7 +1237,7 @@ class CreditNoteController extends GetxController {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             labelStyle: TextStyle(fontSize: 12.sp),
-                            prefixText: '₨ ',
+                            prefixText: '\$ ',
                           ),
                           style: TextStyle(fontSize: 14.sp, color: kText),
                           keyboardType: TextInputType.number,
@@ -1511,17 +1519,10 @@ class CreditNoteController extends GetxController {
   // ==================== HELPER METHODS ====================
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void _showError(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kWarning,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 3),
-    );
+    AppSnackbar.error(kDanger, 'Error', message);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -58,7 +59,7 @@ class TrialBalanceController extends GetxController {
   }
   
   String _formatAmount(double amount) {
-    return 'Rs. ${amount.toStringAsFixed(2)}';
+    return '\$. ${amount.toStringAsFixed(2)}';
   }
   
   @override
@@ -109,7 +110,7 @@ class TrialBalanceController extends GetxController {
         _handleSessionExpired();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load trial balance: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to load trial balance: $e');
     } finally {
       isLoading(false);
     }
@@ -131,13 +132,7 @@ class TrialBalanceController extends GetxController {
   }
   
   void _handleSessionExpired() {
-    Get.snackbar(
-      'Session Expired',
-      'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFE74C3C),
-      colorText: Colors.white,
-    );
+    AppSnackbar.error(kDanger, 'Session Expired', 'Please login again');
   }
   
   // ─────────────────────── EXPORT FUNCTIONS ───────────────────────
@@ -183,15 +178,12 @@ class TrialBalanceController extends GetxController {
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', 'PDF exported successfully',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', 'PDF exported successfully');
       
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export PDF: $e');
     }
   }
   
@@ -448,15 +440,12 @@ class TrialBalanceController extends GetxController {
       
       if (Get.isDialogOpen ?? false) Get.back();
       
-      Get.snackbar('Success', 'Excel exported successfully',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
+      AppSnackbar.success(kSuccess, 'Success', 'Excel exported successfully');
           
       await OpenFile.open(file.path);
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      AppSnackbar.error(kDanger, 'Error', 'Failed to export Excel: $e');
     }
   }
   
@@ -527,13 +516,7 @@ class TrialBalanceController extends GetxController {
   }
   
   void printTrialBalance() {
-    Get.snackbar(
-      'Print',
-      'Preparing Trial Balance for printing...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kPrimary,
-      colorText: Colors.white,
-    );
+    AppSnackbar.info('Print', 'Preparing Trial Balance for printing...');
   }
 }
 

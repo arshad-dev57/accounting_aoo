@@ -64,4 +64,12 @@ class ResponsiveUtils {
     if (isTablet(context)) return 12.w;
     return 18.w;
   }
+  // ResponsiveUtils class mein add karo
+
+// ── Icon size ────────────────────────────────────────────────────
+static double getIconSize(BuildContext context) {
+  if (isWeb(context)) return 24;
+  if (isTablet(context)) return 20;
+  return 18;
+}
 }

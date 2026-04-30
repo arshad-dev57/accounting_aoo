@@ -1,5 +1,6 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
 import 'package:LedgerPro_app/Utils/responsive_utils.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/core/CapitalEquity/controller/equity_controller.dart';
 import 'package:LedgerPro_app/core/CapitalEquity/models/equity_model.dart';
 import 'package:LedgerPro_app/core/chartofaccounts/screens/chart_of_account_screen.dart';
@@ -15,6 +16,7 @@ class CapitalEquityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(EquityController());
 
+    // ✅ Scaffold already at root, just need Material in TabBarView
     return Scaffold(
       backgroundColor: kBg,
       body: Obx(() {
@@ -57,7 +59,7 @@ class CapitalEquityScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header without AppBar
+  // ==================== HEADER ====================
   Widget _buildHeader(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -69,9 +71,9 @@ class CapitalEquityScreen extends StatelessWidget {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -97,76 +99,77 @@ class CapitalEquityScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Calculate Equity Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.calculate_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.calculateEquity(),
-            ),
+          _headerIconBtn(
+            icon: Icons.calculate_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.calculateEquity(),
           ),
           if (!isMobile) const SizedBox(width: 8),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportEquity(),
-            ),
+          _headerIconBtn(
+            icon: Icons.download_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportEquity(),
           ),
           if (!isMobile) const SizedBox(width: 8),
-          // Print Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.print_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.printEquity(),
-            ),
+          _headerIconBtn(
+            icon: Icons.print_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.printEquity(),
           ),
           if (!isMobile) const SizedBox(width: 8),
           if (!isMobile)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.add, color: kPrimary, size: isWeb ? 22 : 20),
-                onPressed: () {
-                  if (controller.equityAccounts.isEmpty) {
-                    Get.snackbar(
-                      'No Equity Account',
-                      'Please add an Equity account from Chart of Accounts first',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: kWarning,
-                      colorText: Colors.white,
-                      duration: const Duration(seconds: 3),
-                    );
-                    Get.to(() => const ChartOfAccountsScreen());
-                  } else {
-                    controller.showAddTransactionDialog();
-                  }
-                },
-              ),
+            _headerIconBtn(
+              icon: Icons.add,
+              size: isWeb ? 22 : 20,
+              onTap: () {
+                if (controller.equityAccounts.isEmpty) {
+                  AppSnackbar.error(
+                    Colors.yellow,
+                    'No Equity Account',
+                    'Please add an Equity account from Chart of Accounts first',
+                    duration: const Duration(seconds: 3),
+                  );
+                  Get.to(() => const ChartOfAccountsScreen());
+                } else {
+                  controller.showAddTransactionDialog();
+                }
+              },
+              isWhiteBg: true,
+              iconColor: kPrimary,
             ),
         ],
       ),
     );
   }
 
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+    bool isWhiteBg = false,
+    Color? iconColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isWhiteBg ? Colors.white : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor ?? Colors.white, size: size),
+      ),
+    );
+  }
+
+  // ==================== SUMMARY CARDS ====================
   Widget _buildSummaryCards(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -209,72 +212,76 @@ class CapitalEquityScreen extends StatelessWidget {
             children: [
               Icon(icon, size: isWeb ? 24 : 20, color: color),
               SizedBox(width: isWeb ? 8 : 6),
-              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
             ],
           ),
           SizedBox(height: isWeb ? 8 : 6),
-          Text(amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color), overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 
+  // ==================== FILTER BAR ====================
   Widget _buildFilterBar(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+    return Material(
       color: kCardBg,
-      child: Row(
-        children: [
-          Expanded(
-            flex: isWeb ? 3 : 2,
-            child: Container(
-              height: isWeb ? 45 : 40,
-              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-              child: TextField(
-                controller: controller.searchController,
-                style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
-                decoration: InputDecoration(
-                  hintText: isWeb ? 'Search by account name or code...' : 'Search...',
-                  hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
-                  prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+        child: Row(
+          children: [
+            Expanded(
+              flex: isWeb ? 3 : 2,
+              child: Container(
+                height: isWeb ? 45 : 40,
+                decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                child: TextField(
+                  controller: controller.searchController,
+                  style: TextStyle(fontSize: isWeb ? 14 : 12, color: kText),
+                  decoration: InputDecoration(
+                    hintText: isWeb ? 'Search by account name or code...' : 'Search...',
+                    hintStyle: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
+                    prefixIcon: Icon(Icons.search, size: isWeb ? 20 : 18, color: kSubText),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: isWeb ? 12 : 10),
+                  ),
                 ),
               ),
             ),
-          ),
-          SizedBox(width: isWeb ? 16 : 12),
-          Expanded(
-            flex: isWeb ? 2 : 1,
-            child: Container(
+            SizedBox(width: isWeb ? 16 : 12),
+            SizedBox(
+              width: isWeb ? 150 : 120,
               height: isWeb ? 45 : 40,
-              decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
-              child: Obx(() => DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: controller.selectedFilter.value,
-                  icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
-                  padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-                  isExpanded: true,
-                  style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
-                  dropdownColor: kCardBg,
-                  items: controller.filterOptions.map((filter) {
-                    return DropdownMenuItem(value: filter, child: Text(filter, style: TextStyle(color: kText, fontSize: isWeb ? 13 : 12)));
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) controller.applyFilter(value);
-                  },
-                ),
-              )),
+              child: Container(
+                decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+                child: Obx(() => DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: controller.selectedFilter.value,
+                    icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20, color: kText),
+                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                    isExpanded: true,
+                    style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                    dropdownColor: kCardBg,
+                    items: controller.filterOptions.map((filter) {
+                      return DropdownMenuItem(value: filter, child: Text(filter, overflow: TextOverflow.ellipsis));
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) controller.applyFilter(value);
+                    },
+                  ),
+                )),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  // ==================== TAB SECTION ====================
   Widget _buildTabSection(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -298,7 +305,7 @@ class CapitalEquityScreen extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: 500,
+            height: isWeb ? 600 : 500,
             child: TabBarView(
               children: [
                 _buildEquityAccountsList(controller, context),
@@ -311,6 +318,7 @@ class CapitalEquityScreen extends StatelessWidget {
     );
   }
 
+  // ==================== EQUITY ACCOUNTS LIST ====================
   Widget _buildEquityAccountsList(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -327,158 +335,278 @@ class CapitalEquityScreen extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      padding: EdgeInsets.all(isWeb ? 20 : 12),
-      itemCount: controller.equityAccounts.length,
-      itemBuilder: (context, index) {
-        final account = controller.equityAccounts[index];
-        return Padding(
-          padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-          child: _buildEquityCard(controller, account, context),
-        );
-      },
+    if (isWeb) {
+      return _buildWebEquityAccountsTable(controller, context);
+    } else {
+      return ListView.builder(
+        padding: EdgeInsets.all(12),
+        itemCount: controller.equityAccounts.length,
+        itemBuilder: (context, index) {
+          final account = controller.equityAccounts[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildEquityCard(controller, account, context),
+          );
+        },
+      );
+    }
+  }
+
+  // ==================== WEB TABLE ====================
+  Widget _buildWebEquityAccountsTable(EquityController controller, BuildContext context) {
+    final accounts = controller.equityAccounts;
+    
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: [
+                // Header - Fixed widths
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  color: kPrimary.withOpacity(0.06),
+                  child: Row(
+                    children: [
+                      Container(width: 60, child: const Text('', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 120, child: const Text('Account Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 220, child: const Text('Account Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 140, child: const Text('Type', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Opening Balance', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Additions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Withdrawals', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Current Balance', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 80, child: const Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                    ],
+                  ),
+                ),
+                ...accounts.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final account = entry.value;
+                  final isEven = index.isEven;
+                  final typeColor = account.accountType == 'Capital' ? kPrimary :
+                                    account.accountType == 'Retained Earnings' ? kSuccess :
+                                    account.accountType == 'Reserves' ? kWarning : kDanger;
+                  
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isEven ? Colors.transparent : kPrimary.withOpacity(0.01),
+                      border: Border(top: BorderSide(color: kBorder.withOpacity(0.5))),
+                    ),
+                    child: Row(
+                      children: [
+                        // Icon
+                        Container(
+                          width: 60,
+                          height: 44,
+                          decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                          child: Icon(
+                            account.accountType == 'Capital' ? Icons.account_balance :
+                            account.accountType == 'Retained Earnings' ? Icons.trending_up :
+                            account.accountType == 'Reserves' ? Icons.savings : Icons.remove_circle,
+                            size: 22,
+                            color: typeColor,
+                          ),
+                        ),
+                        // Account Code
+                        Container(
+                          width: 120,
+                          child: Text(account.accountCode, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kText)),
+                        ),
+                        // Account Name
+                        Container(
+                          width: 220,
+                          child: Text(account.accountName, style:  TextStyle(fontSize: 13, color: kText), overflow: TextOverflow.ellipsis),
+                        ),
+                        // Type
+                        Container(
+                          width: 140,
+                          child: Text(account.accountType, style:  TextStyle(fontSize: 13, color: kText), overflow: TextOverflow.ellipsis),
+                        ),
+                        // Opening Balance
+                        Container(
+                          width: 150,
+                          child: Text(controller.formatAmount(account.openingBalance), textAlign: TextAlign.right, style:  TextStyle(fontSize: 13, color: kText)),
+                        ),
+                        // Additions
+                        Container(
+                          width: 150,
+                          child: Text(controller.formatAmount(account.additions), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: kSuccess)),
+                        ),
+                        // Withdrawals
+                        Container(
+                          width: 150,
+                          child: Text(controller.formatAmount(account.withdrawals), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: kDanger)),
+                        ),
+                        // Current Balance
+                        Container(
+                          width: 150,
+                          child: Text(controller.formatAmount(account.currentBalance), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kPrimary)),
+                        ),
+                        // Actions
+                        Container(
+                          width: 80,
+                          child: IconButton(
+                            onPressed: () => controller.showAccountDetails(account),
+                            icon: const Icon(Icons.remove_red_eye, size: 18),
+                            padding: EdgeInsets.zero,
+                            color: kPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                // Footer
+                _buildEquityTableFooter(controller, accounts),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildEquityCard(EquityController controller, EquityAccount account, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    Color typeColor = account.accountType == 'Capital' ? kPrimary :
-                      account.accountType == 'Retained Earnings' ? kSuccess :
-                      account.accountType == 'Reserves' ? kWarning : kDanger;
-    
-    IconData typeIcon = account.accountType == 'Capital' ? Icons.account_balance :
-                        account.accountType == 'Retained Earnings' ? Icons.trending_up :
-                        account.accountType == 'Reserves' ? Icons.savings : Icons.remove_circle;
+  Widget _buildEquityTableFooter(EquityController controller, List<EquityAccount> accounts) {
+    final totalOpening = accounts.fold(0.0, (sum, a) => sum + a.openingBalance);
+    final totalAdditions = accounts.fold(0.0, (sum, a) => sum + a.additions);
+    final totalWithdrawals = accounts.fold(0.0, (sum, a) => sum + a.withdrawals);
+    final totalCurrent = accounts.fold(0.0, (sum, a) => sum + a.currentBalance);
     
     return Container(
-      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        color: kPrimary.withOpacity(0.06),
+        border:  Border(top: BorderSide(color: kBorder)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => controller.showAccountDetails(account),
-          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-          child: Padding(
-            padding: EdgeInsets.all(isWeb ? 16 : 12),
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: isWeb ? 50 : 40,
-                      height: isWeb ? 50 : 40,
-                      decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
-                      child: Icon(typeIcon, size: isWeb ? 24 : 20, color: typeColor),
-                    ),
-                    SizedBox(width: isWeb ? 16 : 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(child: Text(account.accountName, style: TextStyle(fontSize: isWeb ? 15 : 13, fontWeight: FontWeight.w800, color: kText))),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                                decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 6 : 4)),
-                                child: Text(account.accountType, style: TextStyle(fontSize: isWeb ? 11 : 10, color: typeColor, fontWeight: FontWeight.w600)),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: isWeb ? 4 : 2),
-                          Text(account.accountCode, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+      child: Row(
+        children: [
+          Container(width: 60, child: const Text('')),
+          Container(width: 120, child: const Text('TOTALS', style: TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 220, child: const SizedBox()),
+          Container(width: 140, child: const SizedBox()),
+          Container(width: 150, child: Text(controller.formatAmount(totalOpening), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 150, child: Text(controller.formatAmount(totalAdditions), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: kSuccess))),
+          Container(width: 150, child: Text(controller.formatAmount(totalWithdrawals), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: kDanger))),
+          Container(width: 150, child: Text(controller.formatAmount(totalCurrent), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: kPrimary))),
+          Container(width: 80, child: const SizedBox()),
+        ],
+      ),
+    );
+  }
+
+  // ==================== EQUITY CARD (MOBILE) ====================
+  Widget _buildEquityCard(EquityController controller, EquityAccount account, BuildContext context) {
+    final isWeb = ResponsiveUtils.isWeb(context);
+    final Color typeColor = account.accountType == 'Capital' ? kPrimary :
+                            account.accountType == 'Retained Earnings' ? kSuccess :
+                            account.accountType == 'Reserves' ? kWarning : kDanger;
+    
+    final IconData typeIcon = account.accountType == 'Capital' ? Icons.account_balance :
+                              account.accountType == 'Retained Earnings' ? Icons.trending_up :
+                              account.accountType == 'Reserves' ? Icons.savings : Icons.remove_circle;
+    
+    return Card(
+      color: kCardBg,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => controller.showAccountDetails(account),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Icon(typeIcon, size: 20, color: typeColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Balance', style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText, fontWeight: FontWeight.w500)),
-                        SizedBox(height: isWeb ? 4 : 2),
-                        Text(controller.formatAmount(account.currentBalance), style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: typeColor)),
+                        Row(
+                          children: [
+                            Expanded(child: Text(account.accountName, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kText), overflow: TextOverflow.ellipsis)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                              child: Text(account.accountType, style: TextStyle(fontSize: 9, color: typeColor, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(account.accountCode, style:  TextStyle(fontSize: 10, color: kSubText)),
                       ],
                     ),
-                  ],
-                ),
-                SizedBox(height: isWeb ? 16 : 12),
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                  child: Row(
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Expanded(child: _buildInfoItem('Opening Balance', controller.formatAmount(account.openingBalance), Icons.account_balance, isWeb)),
-                      Container(width: 1, height: isWeb ? 32 : 24, color: kBorder),
-                      Expanded(child: _buildInfoItem('Additions', controller.formatAmount(account.additions), Icons.add_circle, isWeb)),
-                      Container(width: 1, height: isWeb ? 32 : 24, color: kBorder),
-                      Expanded(child: _buildInfoItem('Withdrawals', controller.formatAmount(account.withdrawals), Icons.remove_circle, isWeb)),
+                       Text('Balance', style: TextStyle(fontSize: 9, color: kSubText)),
+                      const SizedBox(height: 2),
+                      Text(controller.formatAmount(account.currentBalance), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: typeColor)),
                     ],
                   ),
-                ),
-                SizedBox(height: isWeb ? 8 : 6),
-                Container(
-                  padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildInfoItem('Current Balance', controller.formatAmount(account.currentBalance), Icons.attach_money, isWeb)),
-                      Container(width: 1, height: isWeb ? 32 : 24, color: kBorder),
-                      Expanded(child: _buildInfoItem('Last Updated', DateFormat('dd MMM yyyy').format(account.lastUpdated), Icons.calendar_today, isWeb)),
-                    ],
-                  ),
-                ),
-                if (account.notes.isNotEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: isWeb ? 8 : 6),
-                    child: Container(
-                      padding: EdgeInsets.all(isWeb ? 12 : 10),
-                      decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 10 : 8)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, size: isWeb ? 18 : 14, color: kSubText),
-                          SizedBox(width: isWeb ? 8 : 6),
-                          Expanded(child: Text(account.notes, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText))),
-                        ],
-                      ),
-                    ),
-                  ),
-                SizedBox(height: isWeb ? 16 : 12),
-                Row(
-                  children: [
-                    if (account.accountType == 'Capital')
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => controller.showAddCapitalDialog(account),
-                          icon: Icon(Icons.add_circle, size: isWeb ? 18 : 14, color: kSuccess),
-                          label: Text('Add Capital', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kSuccess)),
-                          style: _buttonStyle(kSuccess, isWeb),
-                        ),
-                      ),
-                    if (account.accountType == 'Drawings')
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => controller.showRecordDrawingsDialog(account),
-                          icon: Icon(Icons.remove_circle, size: isWeb ? 18 : 14, color: kDanger),
-                          label: Text('Record Drawings', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kDanger)),
-                          style: _buttonStyle(kDanger, isWeb),
-                        ),
-                      ),
-                    if (account.accountType == 'Retained Earnings' || account.accountType == 'Reserves')
-                      SizedBox(width: isWeb ? 12 : 8),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildInfoItem('Opening', controller.formatAmount(account.openingBalance), Icons.account_balance, false)),
+                  Expanded(child: _buildInfoItem('Additions', controller.formatAmount(account.additions), Icons.add_circle, false)),
+                  Expanded(child: _buildInfoItem('Withdrawals', controller.formatAmount(account.withdrawals), Icons.remove_circle, false)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (account.accountType == 'Capital')
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => controller.showTransactionHistory(account),
-                        icon: Icon(Icons.history, size: isWeb ? 18 : 14, color: kPrimary),
-                        label: Text('History', style: TextStyle(fontSize: isWeb ? 12 : 10, color: kPrimary)),
-                        style: _buttonStyle(kPrimary, isWeb),
+                        onPressed: () => controller.showAddCapitalDialog(account),
+                        icon: Icon(Icons.add_circle, size: 14, color: kSuccess),
+                        label: const Text('Add', style: TextStyle(fontSize: 10)),
+                        style: _buttonStyle(kSuccess, false),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  if (account.accountType == 'Drawings')
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => controller.showRecordDrawingsDialog(account),
+                        icon: Icon(Icons.remove_circle, size: 14, color: kDanger),
+                        label: const Text('Draw', style: TextStyle(fontSize: 10)),
+                        style: _buttonStyle(kDanger, false),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => controller.showTransactionHistory(account),
+                      icon: const Icon(Icons.history, size: 14),
+                      label: const Text('History', style: TextStyle(fontSize: 10)),
+                      style: _buttonStyle(kPrimary, false),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -495,8 +623,8 @@ class CapitalEquityScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: isWeb ? 11 : 9, color: kSubText)),
-              Text(value, style: TextStyle(fontSize: isWeb ? 11 : 9, fontWeight: FontWeight.w600, color: kText), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(label, style: TextStyle(fontSize: isWeb ? 11 : 8, color: kSubText)),
+              Text(value, style: TextStyle(fontSize: isWeb ? 11 : 9, fontWeight: FontWeight.w600, color: kText), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -504,6 +632,7 @@ class CapitalEquityScreen extends StatelessWidget {
     );
   }
 
+  // ==================== TRANSACTION HISTORY ====================
   Widget _buildTransactionHistory(EquityController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -521,12 +650,12 @@ class CapitalEquityScreen extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.all(isWeb ? 20 : 12),
+      padding: EdgeInsets.all(12),
       itemCount: controller.transactions.length,
       itemBuilder: (context, index) {
         final transaction = controller.transactions[index];
         return Padding(
-          padding: EdgeInsets.only(bottom: isWeb ? 12 : 8),
+          padding: const EdgeInsets.only(bottom: 8),
           child: _buildTransactionCard(controller, transaction, context),
         );
       },
@@ -535,83 +664,22 @@ class CapitalEquityScreen extends StatelessWidget {
 
   Widget _buildTransactionCard(EquityController controller, OwnerTransaction transaction, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
-    final isMobile = ResponsiveUtils.isMobile(context);
     
-    Color typeColor = transaction.type == 'Additional Capital' ? kSuccess :
-                      transaction.type == 'Retained Earnings' ? kPrimary :
-                      transaction.type == 'Reserve Transfer' ? kWarning : kDanger;
+    final Color typeColor = transaction.type == 'Additional Capital' ? kSuccess :
+                            transaction.type == 'Retained Earnings' ? kPrimary :
+                            transaction.type == 'Reserve Transfer' ? kWarning : kDanger;
     
-    IconData typeIcon = transaction.type == 'Additional Capital' ? Icons.add_circle :
-                        transaction.type == 'Retained Earnings' ? Icons.trending_up :
-                        transaction.type == 'Reserve Transfer' ? Icons.swap_horiz : Icons.remove_circle;
+    final IconData typeIcon = transaction.type == 'Additional Capital' ? Icons.add_circle :
+                              transaction.type == 'Retained Earnings' ? Icons.trending_up :
+                              transaction.type == 'Reserve Transfer' ? Icons.swap_horiz : Icons.remove_circle;
     
-    return Container(
-      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-      decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(isWeb ? 14 : 10),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Container(
-        padding: EdgeInsets.all(isWeb ? 16 : 12),
-        child: isMobile
-            ? _buildMobileTransactionCard(controller, transaction, typeColor, typeIcon, context)
-            : _buildDesktopTransactionCard(controller, transaction, typeColor, typeIcon, context),
-      ),
-    );
-  }
-
-  Widget _buildDesktopTransactionCard(EquityController controller, OwnerTransaction transaction, Color typeColor, IconData typeIcon, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    
-    return Row(
-      children: [
-        Container(
-          width: isWeb ? 50 : 44,
-          height: isWeb ? 50 : 44,
-          decoration: BoxDecoration(color: typeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
-          child: Icon(typeIcon, size: isWeb ? 24 : 20, color: typeColor),
-        ),
-        SizedBox(width: isWeb ? 16 : 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(transaction.type, style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w700, color: kText)),
-                  SizedBox(width: isWeb ? 8 : 6),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                    decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(isWeb ? 6 : 4)),
-                    child: Text(transaction.status, style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSuccess, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-              SizedBox(height: isWeb ? 4 : 2),
-              Text(transaction.accountName, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-              SizedBox(height: isWeb ? 4 : 2),
-              Text(transaction.description, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-            ],
-          ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(controller.formatAmount(transaction.amount), style: TextStyle(fontSize: isWeb ? 16 : 14, fontWeight: FontWeight.w800, color: typeColor)),
-            SizedBox(height: isWeb ? 4 : 2),
-            Text(DateFormat('dd MMM yyyy').format(transaction.date), style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-            Text('Ref: ${transaction.reference}', style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMobileTransactionCard(EquityController controller, OwnerTransaction transaction, Color typeColor, IconData typeIcon, BuildContext context) {
-    return Column(
-      children: [
-        Row(
+    return Card(
+      color: kCardBg,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           children: [
             Container(
               width: 40,
@@ -624,30 +692,35 @@ class CapitalEquityScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(transaction.type, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText)),
-                  Text(transaction.accountName, style:  TextStyle(fontSize: 10, color: kSubText)),
+                  Row(
+                    children: [
+                      Text(transaction.type, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                        child: Text(transaction.status, style: TextStyle(fontSize: 9, color: kSuccess, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(transaction.accountName, style:  TextStyle(fontSize: 10, color: kSubText), overflow: TextOverflow.ellipsis),
+                  Text(transaction.description, style:  TextStyle(fontSize: 10, color: kSubText), overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
-            Text(controller.formatAmount(transaction.amount), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: typeColor)),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(transaction.description, style:  TextStyle(fontSize: 10, color: kSubText)),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(DateFormat('dd MMM yyyy').format(transaction.date), style:  TextStyle(fontSize: 9, color: kSubText)),
-            Text('Ref: ${transaction.reference}', style:  TextStyle(fontSize: 9, color: kSubText)),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-              child: Text(transaction.status, style: TextStyle(fontSize: 8, color: kSuccess, fontWeight: FontWeight.w600)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(controller.formatAmount(transaction.amount), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: typeColor)),
+                const SizedBox(height: 2),
+                Text(DateFormat('dd MMM yyyy').format(transaction.date), style:  TextStyle(fontSize: 9, color: kSubText)),
+                Text('Ref: ${transaction.reference}', style:  TextStyle(fontSize: 9, color: kSubText)),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -655,7 +728,7 @@ class CapitalEquityScreen extends StatelessWidget {
     return OutlinedButton.styleFrom(
       foregroundColor: color,
       side: BorderSide(color: color),
-      padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 6),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
     );
   }

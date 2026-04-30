@@ -1,6 +1,7 @@
 
 
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -139,7 +140,7 @@ class GeneralLedgerController extends GetxController {
         _handleSessionExpired();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load account summaries: $e');
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to load account summaries: $e');
     } finally {
       isLoading(false);
     }
@@ -201,7 +202,7 @@ class GeneralLedgerController extends GetxController {
         }
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load ledger entries: $e');
+      AppSnackbar.error(Colors.red,'Error', 'Failed to load ledger entries: $e');
     } finally {
       isLoading(false);
     }
@@ -275,24 +276,28 @@ class GeneralLedgerController extends GetxController {
   }
   
   void _handleSessionExpired() {
-    Get.snackbar(
+    AppSnackbar.error(
+      Colors.red,
       'Session Expired',
       'Please login again',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFFE74C3C),
-      colorText: Colors.white,
+    
     );
   }
   
   // Export functions
   void exportLedger() {
-    Get.snackbar('Export', 'Exporting General Ledger to Excel...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.success(
+      kPrimary,
+      'Export',
+      'Exporting General Ledger to Excel...',
+    );
   }
   
   void printLedger() {
-    Get.snackbar('Print', 'Preparing General Ledger for printing...',
-        snackPosition: SnackPosition.BOTTOM, backgroundColor: kPrimary, colorText: Colors.white);
+    AppSnackbar.success(
+      kPrimary,
+      'Print',
+      'Preparing General Ledger for printing...');
   }
 }
 

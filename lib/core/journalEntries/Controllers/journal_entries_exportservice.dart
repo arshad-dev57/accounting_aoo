@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -10,14 +12,33 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart';
 import 'package:LedgerPro_app/core/journalEntries/Controllers/journal_entry_controller.dart';
+import 'dart:html' as html;
 
 class JournalExportService {
   static String _formatAmount(double amount) =>
-      'Rs. ${amount.toStringAsFixed(2)}';
+      '\$. ${amount.toStringAsFixed(2)}';
 
   static Future<void> exportToPdf(
       List<JournalEntry> entries, Map<String, dynamic> summary) async {
     try {
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Generating PDF...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+      
       final pdf = pw.Document();
 
       pdf.addPage(
@@ -38,33 +59,37 @@ class JournalExportService {
         ),
       );
 
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf');
-      await file.writeAsBytes(await pdf.save());
+      final bytes = await pdf.save();
+      final fileName = 'journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
 
-      // Close loading dialog FIRST
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      // Show success message
-      Get.snackbar('Success', '${entries.length} entries exported to PDF',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-
-      // Open the file
-      final result = await OpenFile.open(file.path);
-      if (result.type != ResultType.done) {
-        Get.snackbar('Error', 'PDF khul nahi saka: ${result.message}');
+      if (kIsWeb) {
+        // WEB: Download using HTML anchor tag
+        final blob = html.Blob([bytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', '${entries.length} entries exported to PDF');
+      } else {
+        // MOBILE: Save to file and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', '${entries.length} entries exported to PDF');
+        
+        final result = await OpenFile.open(file.path);
+        if (result.type != ResultType.done) {
+          AppSnackbar.error(Colors.red, 'Error', 'PDF khul nahi saka: ${result.message}');
+        }
       }
     } catch (e) {
-      // Close loading dialog if open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-      Get.snackbar('Error', 'Failed to export PDF: $e');
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export PDF: $e');
     }
   }
 
@@ -390,10 +415,8 @@ class JournalExportService {
       final boundary =
           repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
-        if (Get.isDialogOpen ?? false) {
-          Get.back();
-        }
-        Get.snackbar('Error', 'Could not capture screen');
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.error(Colors.red, 'Error', 'Could not capture screen');
         return;
       }
 
@@ -401,46 +424,65 @@ class JournalExportService {
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        if (Get.isDialogOpen ?? false) {
-          Get.back();
-        }
-        Get.snackbar('Error', 'Failed to capture image');
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.error(Colors.red, 'Error', 'Failed to capture image');
         return;
       }
 
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.png');
-      await file.writeAsBytes(byteData.buffer.asUint8List());
+      final fileName = 'journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.png';
 
-      // Close loading dialog FIRST
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      // Show success message
-      Get.snackbar('Success', 'Image saved successfully',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-
-      // Open the file
-      final result = await OpenFile.open(file.path);
-      if (result.type != ResultType.done) {
-        Get.snackbar('Error', 'Image khul nahi saka: ${result.message}');
+      if (kIsWeb) {
+        // WEB: Download image
+        final blob = html.Blob([byteData.buffer.asUint8List()], 'image/png');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', 'Image saved successfully');
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(byteData.buffer.asUint8List());
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', 'Image saved successfully');
+        
+        final result = await OpenFile.open(file.path);
+        if (result.type != ResultType.done) {
+          AppSnackbar.error(Colors.red, 'Error', 'Image khul nahi saka: ${result.message}');
+        }
       }
     } catch (e) {
-      // Close loading dialog if open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-      Get.snackbar('Error', 'Failed to export image: $e');
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export image: $e');
     }
   }
 
   static Future<void> exportToExcel(
       List<JournalEntry> entries, Map<String, dynamic> summary) async {
     try {
+      // Show loading only on mobile
+      if (!kIsWeb) {
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text('Building Excel...', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+      
       final excel = Excel.createExcel();
 
       // ── Summary Sheet ──
@@ -577,33 +619,36 @@ class JournalExportService {
       final bytes = excel.save();
       if (bytes == null) throw Exception('Excel save failed');
 
-      final dir = await getTemporaryDirectory();
-      final file = File(
-          '${dir.path}/journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx');
-      await file.writeAsBytes(bytes);
+      final fileName = 'journal_entries_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
 
-      // Close loading dialog FIRST
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-
-      // Show success message
-      Get.snackbar('Success', '${entries.length} entries exported to Excel',
-          backgroundColor: const Color(0xFF2ECC71),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 2));
-
-      // Open the file
-      final result = await OpenFile.open(file.path);
-      if (result.type != ResultType.done) {
-        Get.snackbar('Error', 'Excel khul nahi saka: ${result.message}');
+      if (kIsWeb) {
+        // WEB: Download Excel
+        final blob = html.Blob([bytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', fileName)
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', '${entries.length} entries exported to Excel');
+      } else {
+        // MOBILE: Save and open
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+        
+        if (Get.isDialogOpen ?? false) Get.back();
+        AppSnackbar.success(Colors.green, 'Success', '${entries.length} entries exported to Excel');
+        
+        final result = await OpenFile.open(file.path);
+        if (result.type != ResultType.done) {
+          AppSnackbar.error(Colors.red, 'Error', 'Excel khul nahi saka: ${result.message}');
+        }
       }
     } catch (e) {
-      // Close loading dialog if open
-      if (Get.isDialogOpen ?? false) {
-        Get.back();
-      }
-      Get.snackbar('Error', 'Failed to export Excel: $e');
+      if (Get.isDialogOpen ?? false) Get.back();
+      AppSnackbar.error(Colors.red, 'Error', 'Failed to export Excel: $e');
     }
   }
 

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:sizer/sizer.dart';
 
 class CustomersScreen extends StatelessWidget {
   const CustomersScreen({super.key});
@@ -14,9 +13,10 @@ class CustomersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(CustomerController());
 
-    return Container(
-      color: kBg,
-      child: Obx(() {
+    // ✅ Scaffold for Material context
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Obx(() {
         if (controller.isLoading.value) {
           return Center(
             child: LoadingAnimationWidget.waveDots(
@@ -26,7 +26,6 @@ class CustomersScreen extends StatelessWidget {
           );
         }
 
-        // Single ScrollView that scrolls everything together
         return SingleChildScrollView(
           padding: EdgeInsets.zero,
           physics: const BouncingScrollPhysics(),
@@ -45,7 +44,7 @@ class CustomersScreen extends StatelessWidget {
     );
   }
 
-  // Custom Header without AppBar
+  // ==================== HEADER ====================
   Widget _buildHeader(CustomerController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final isMobile = ResponsiveUtils.isMobile(context);
@@ -57,9 +56,9 @@ class CustomersScreen extends StatelessWidget {
         isWeb ? 24 : 16,
         isWeb ? 16 : 12,
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: kPrimary,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -85,62 +84,65 @@ class CustomersScreen extends StatelessWidget {
                     fontSize: isWeb ? 13 : 11,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          // Search Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.search, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => _showSearchDialog(controller, context),
-            ),
+          _headerIconBtn(
+            icon: Icons.search,
+            size: isWeb ? 22 : 20,
+            onTap: () => _showSearchDialog(controller, context),
           ),
           const SizedBox(width: 8),
-          // Filter Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.filter_alt_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => _showFilterDialog(controller, context),
-            ),
+          _headerIconBtn(
+            icon: Icons.filter_alt_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => _showFilterDialog(controller, context),
           ),
           const SizedBox(width: 8),
-          // Export Button
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(Icons.download_outlined, color: Colors.white, size: isWeb ? 22 : 20),
-              onPressed: () => controller.exportCustomers(),
-            ),
+          _headerIconBtn(
+            icon: Icons.download_outlined,
+            size: isWeb ? 22 : 20,
+            onTap: () => controller.exportCustomers(),
           ),
           if (!isMobile) const SizedBox(width: 8),
           if (!isMobile)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.add, color: kPrimary, size: isWeb ? 22 : 20),
-                onPressed: () => _showAddCustomerDialog(controller, context),
-              ),
+            _headerIconBtn(
+              icon: Icons.add,
+              size: isWeb ? 22 : 20,
+              onTap: () => _showAddCustomerDialog(controller, context),
+              isWhiteBg: true,
+              iconColor: kPrimary,
             ),
         ],
       ),
     );
   }
 
+  Widget _headerIconBtn({
+    required IconData icon,
+    required double size,
+    required VoidCallback onTap,
+    bool isWhiteBg = false,
+    Color? iconColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isWhiteBg ? Colors.white : Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: iconColor ?? Colors.white, size: size),
+      ),
+    );
+  }
+
+  // ==================== SUMMARY CARDS ====================
   Widget _buildSummaryCards(CustomerController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -150,58 +152,20 @@ class CustomersScreen extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildSummaryCard(
-              'Total Customers',
-              controller.totalCustomers.value.toString(),
-              kPrimary,
-              Icons.people,
-              context,
-              width: isWeb ? 220 : 160,
-              isNumber: true,
-            ),
+            _buildSummaryCard('Total Customers', controller.totalCustomers.value.toString(), kPrimary, Icons.people, context, width: isWeb ? 220 : 160, isNumber: true),
             SizedBox(width: isWeb ? 16 : 12),
-            _buildSummaryCard(
-              'Active',
-              controller.activeCustomers.value.toString(),
-              kSuccess,
-              Icons.check_circle,
-              context,
-              width: isWeb ? 200 : 150,
-              isNumber: true,
-            ),
+            _buildSummaryCard('Active', controller.activeCustomers.value.toString(), kSuccess, Icons.check_circle, context, width: isWeb ? 200 : 150, isNumber: true),
             SizedBox(width: isWeb ? 16 : 12),
-            _buildSummaryCard(
-              'Total Outstanding',
-              _formatAmount(controller.totalOutstanding.value),
-              kDanger,
-              Icons.payment,
-              context,
-              width: isWeb ? 230 : 170,
-            ),
+            _buildSummaryCard('Total Outstanding', _formatAmount(controller.totalOutstanding.value), kDanger, Icons.payment, context, width: isWeb ? 230 : 170),
             SizedBox(width: isWeb ? 16 : 12),
-            _buildSummaryCard(
-              'Total Sales',
-              _formatAmount(controller.totalSales.value),
-              kPrimary,
-              Icons.trending_up,
-              context,
-              width: isWeb ? 220 : 160,
-            ),
+            _buildSummaryCard('Total Sales', _formatAmount(controller.totalSales.value), kPrimary, Icons.trending_up, context, width: isWeb ? 220 : 160),
           ],
         ),
       ),
     ));
   }
 
-  Widget _buildSummaryCard(
-    String title,
-    String amount,
-    Color color,
-    IconData icon,
-    BuildContext context, {
-    double width = 160,
-    bool isNumber = false,
-  }) {
+  Widget _buildSummaryCard(String title, String amount, Color color, IconData icon, BuildContext context, {double width = 160, bool isNumber = false}) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
     return Container(
@@ -210,13 +174,7 @@ class CustomersScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: kCardBg,
         borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,73 +183,53 @@ class CustomersScreen extends StatelessWidget {
             children: [
               Icon(icon, size: isWeb ? 24 : 20, color: color),
               SizedBox(width: isWeb ? 8 : 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: isWeb ? 12 : 11,
-                    color: kSubText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              Expanded(child: Text(title, style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
             ],
           ),
           SizedBox(height: isWeb ? 8 : 6),
-          Text(
-            isNumber ? amount : amount,
-            style: TextStyle(
-              fontSize: isWeb ? 18 : 14,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          Text(isNumber ? amount : amount, style: TextStyle(fontSize: isWeb ? 18 : 14, fontWeight: FontWeight.w800, color: color), overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 
+  // ==================== FILTER BAR ====================
   Widget _buildFilterBar(CustomerController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     final List<String> filterOptions = ['All', 'Active', 'Inactive', 'With Balance'];
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+    return Material(
       color: kCardBg,
       child: Container(
-        height: isWeb ? 45 : 40,
-        padding: EdgeInsets.symmetric(horizontal: isWeb ? 16 : 12),
-        decoration: BoxDecoration(
-          color: kBg,
-          borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-          border: Border.all(color: kBorder),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: Obx(() => DropdownButton<String>(
-            value: controller.selectedFilter.value,
-            icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
-            isExpanded: true,
-            style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
-            items: filterOptions.map((filter) {
-              return DropdownMenuItem(
-                value: filter,
-                child: Text(filter, style: TextStyle(fontSize: isWeb ? 13 : 12)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) controller.changeFilter(value);
-            },
-          )),
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
+        child: SizedBox(
+          width: isWeb ? 200 : double.infinity,
+          height: isWeb ? 45 : 40,
+          child: Container(
+            decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10), border: Border.all(color: kBorder)),
+            child: DropdownButtonHideUnderline(
+              child: Obx(() => DropdownButton<String>(
+                value: controller.selectedFilter.value,
+                icon: Icon(Icons.arrow_drop_down, size: isWeb ? 24 : 20),
+                padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 8),
+                isExpanded: true,
+                style: TextStyle(fontSize: isWeb ? 13 : 12, color: kText),
+                items: filterOptions.map((filter) {
+                  return DropdownMenuItem(value: filter, child: Text(filter, overflow: TextOverflow.ellipsis));
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) controller.changeFilter(value);
+                },
+              )),
+            ),
+          ),
         ),
       ),
     );
   }
 
+  // ==================== CUSTOMERS LIST ====================
   Widget _buildCustomersList(CustomerController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
@@ -307,24 +245,12 @@ class CustomersScreen extends StatelessWidget {
               children: [
                 Icon(Icons.people_outline, size: isWeb ? 80 : 64, color: kSubText.withOpacity(0.5)),
                 SizedBox(height: isWeb ? 20 : 16),
-                Text(
-                  'No customers found',
-                  style: TextStyle(fontSize: isWeb ? 18 : 16, color: kSubText),
-                ),
+                Text('No customers found', style: TextStyle(fontSize: isWeb ? 18 : 16, color: kSubText)),
                 SizedBox(height: isWeb ? 20 : 16),
                 ElevatedButton(
                   onPressed: () => _showAddCustomerDialog(controller, context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
-                    ),
-                  ),
-                  child: Text(
-                    'Add Customer',
-                    style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w600),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                  child: Text('Add Customer', style: TextStyle(fontSize: isWeb ? 14 : 12, fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
@@ -332,398 +258,290 @@ class CustomersScreen extends StatelessWidget {
         );
       }
 
-      return Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: isWeb ? 24 : 16, vertical: isWeb ? 12 : 8),
-            child: Text(
-              'Customers',
-              style: TextStyle(
-                fontSize: isWeb ? 18 : 16,
-                fontWeight: FontWeight.w700,
-                color: kText,
-              ),
-            ),
-          ),
-          ...customers.map((customer) => Padding(
-            padding: EdgeInsets.symmetric(horizontal: isWeb ? 20 : 12, vertical: isWeb ? 8 : 6),
-            child: _buildCustomerCard(customer, controller, context),
-          )).toList(),
-        ],
-      );
+      if (isWeb) {
+        return _buildWebCustomersTable(customers, controller, context);
+      } else {
+        return _buildMobileCustomersList(customers, controller, context);
+      }
     });
   }
 
-  Widget _buildCustomerCard(Customer customer, CustomerController controller, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
-    final isMobile = ResponsiveUtils.isMobile(context);
-    
-    bool hasOutstanding = customer.outstandingAmount > 0;
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: isWeb ? 12 : 8),
-      decoration: BoxDecoration(
-        color: kCardBg,
-        borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showCustomerDetails(customer, controller, context),
-          borderRadius: BorderRadius.circular(isWeb ? 16 : 12),
-          child: Padding(
-            padding: EdgeInsets.all(isWeb ? 16 : 12),
-            child: isMobile
-                ? _buildMobileCustomerCard(customer, controller, hasOutstanding, context)
-                : _buildDesktopCustomerCard(customer, controller, hasOutstanding, context),
+  // ==================== WEB TABLE ====================
+  Widget _buildWebCustomersTable(List<Customer> customers, CustomerController controller, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Column(
+              children: [
+                // Header - Fixed widths
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  color: kPrimary.withOpacity(0.06),
+                  child: Row(
+                    children: [
+                      Container(width: 60, child: const Text('', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 220, child: const Text('Customer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 200, child: const Text('Contact', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Total', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Paid', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 150, child: const Text('Due', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                      Container(width: 80, child: const Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                    ],
+                  ),
+                ),
+                ...customers.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final customer = entry.value;
+                  final isEven = index.isEven;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isEven ? Colors.transparent : kPrimary.withOpacity(0.01),
+                      border: Border(top: BorderSide(color: kBorder.withOpacity(0.5))),
+                    ),
+                    child: Row(
+                      children: [
+                        // Avatar
+                        Container(
+                          width: 60,
+                          height: 44,
+                          decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                          child: Center(child: Text(customer.name[0].toUpperCase(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kPrimary))),
+                        ),
+                        // Name + Email
+                        Container(
+                          width: 220,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(customer.name, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText)),
+                              const SizedBox(height: 2),
+                              Text(customer.email.isEmpty ? '-' : customer.email, style: TextStyle(fontSize: 11, color: kSubText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                        // Phone
+                        Container(
+                          width: 200,
+                          child: Text(customer.phone.isEmpty ? '-' : customer.phone, style:  TextStyle(fontSize: 13, color: kText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                        // Total
+                        Container(
+                          width: 150,
+                          child: Text(_formatAmount(customer.totalAmount), textAlign: TextAlign.right, style:  TextStyle(fontSize: 13, color: kText)),
+                        ),
+                        // Paid
+                        Container(
+                          width: 150,
+                          child: Text(_formatAmount(customer.paidAmount), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: kSuccess)),
+                        ),
+                        // Due
+                        Container(
+                          width: 150,
+                          child: Text(_formatAmount(customer.outstandingAmount), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kDanger)),
+                        ),
+                        // Actions
+                        Container(
+                          width: 80,
+                          child: IconButton(
+                            onPressed: () => _showCustomerDetails(customer, controller, context),
+                            icon: const Icon(Icons.remove_red_eye, size: 18),
+                            padding: EdgeInsets.zero,
+                            color: kPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                // Footer
+                _buildTableFooter(customers),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildDesktopCustomerCard(Customer customer, CustomerController controller, bool hasOutstanding, BuildContext context) {
-    final isWeb = ResponsiveUtils.isWeb(context);
+  Widget _buildTableFooter(List<Customer> customers) {
+    final totalAmount = customers.fold(0.0, (s, c) => s + c.totalAmount);
+    final totalPaid = customers.fold(0.0, (s, c) => s + c.paidAmount);
+    final totalOutstanding = customers.fold(0.0, (s, c) => s + c.outstandingAmount);
     
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: kPrimary.withOpacity(0.06),
+        border:  Border(top: BorderSide(color: kBorder)),
+      ),
+      child: Row(
+        children: [
+          Container(width: 60, child: const Text('')),
+          Container(width: 220, child: const Text('TOTALS', style: TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 200, child: const SizedBox()),
+          Container(width: 150, child: Text(_formatAmount(totalAmount), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold))),
+          Container(width: 150, child: Text(_formatAmount(totalPaid), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: kSuccess))),
+          Container(width: 150, child: Text(_formatAmount(totalOutstanding), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold, color: kDanger))),
+          Container(width: 80, child: const SizedBox()),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MOBILE LIST ====================
+  Widget _buildMobileCustomersList(List<Customer> customers, CustomerController controller, BuildContext context) {
     return Column(
       children: [
-        Row(
-          children: [
-            Container(
-              width: isWeb ? 50 : 44,
-              height: isWeb ? 50 : 44,
-              decoration: BoxDecoration(
-                color: kPrimary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(isWeb ? 12 : 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Text('Customers', style:  TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kText)),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                child: Text('${customers.length} customers', style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w600)),
               ),
-              child: Center(
-                child: Text(
-                  customer.name[0].toUpperCase(),
-                  style: TextStyle(
-                    fontSize: isWeb ? 20 : 16,
-                    fontWeight: FontWeight.w800,
-                    color: kPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        customer.name,
-                        style: TextStyle(
-                          fontSize: isWeb ? 15 : 13,
-                          fontWeight: FontWeight.w700,
-                          color: kText,
-                        ),
-                      ),
-                      if (!customer.isActive)
-                        Container(
-                          margin: EdgeInsets.only(left: isWeb ? 8 : 6),
-                          padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                          decoration: BoxDecoration(
-                            color: kDanger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Inactive',
-                            style: TextStyle(
-                              fontSize: isWeb ? 11 : 10,
-                              color: kDanger,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: isWeb ? 4 : 2),
-                  Text(
-                    customer.email,
-                    style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
-                  ),
-                  Text(
-                    customer.phone,
-                    style: TextStyle(fontSize: isWeb ? 12 : 11, color: kSubText),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (hasOutstanding) ...[
-                  Text(
-                    'Outstanding',
-                    style: TextStyle(fontSize: isWeb ? 11 : 10, color: kSubText),
-                  ),
-                  Text(
-                    _formatAmount(customer.outstandingAmount),
-                    style: TextStyle(
-                      fontSize: isWeb ? 16 : 14,
-                      fontWeight: FontWeight.w800,
-                      color: kDanger,
-                    ),
-                  ),
-                ] else ...[
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: isWeb ? 8 : 6, vertical: isWeb ? 4 : 2),
-                    decoration: BoxDecoration(
-                      color: kSuccess.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, size: isWeb ? 16 : 12, color: kSuccess),
-                        SizedBox(width: isWeb ? 4 : 2),
-                        Text(
-                          'Paid',
-                          style: TextStyle(
-                            fontSize: isWeb ? 11 : 10,
-                            color: kSuccess,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
-        SizedBox(height: isWeb ? 16 : 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatItem('Invoices', customer.invoiceCount.toString(), Icons.receipt, isWeb),
-            ),
-            Container(width: 1, height: isWeb ? 32 : 24, color: kBorder),
-            Expanded(
-              child: _buildStatItem('Total', _formatAmount(customer.totalAmount), Icons.attach_money, isWeb),
-            ),
-            Container(width: 1, height: isWeb ? 32 : 24, color: kBorder),
-            Expanded(
-              child: _buildStatItem('Paid', _formatAmount(customer.paidAmount), Icons.check_circle, isWeb),
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 16 : 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _viewInvoices(customer, controller, context),
-                icon: Icon(Icons.receipt, size: isWeb ? 18 : 14),
-                label: Text('Invoices', style: TextStyle(fontSize: isWeb ? 12 : 10)),
-                style: _buttonStyle(kPrimary, isWeb),
-              ),
-            ),
-            SizedBox(width: isWeb ? 12 : 8),
-            if (hasOutstanding)
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _recordPayment(customer, controller, context),
-                  icon: Icon(Icons.payment, size: isWeb ? 18 : 14, color: Colors.white),
-                  label: Text('Record Payment', style: TextStyle(fontSize: isWeb ? 12 : 10)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kSuccess,
-                    padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
-                    ),
-                  ),
-                ),
-              ),
-            if (!hasOutstanding)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _editCustomer(customer, controller, context),
-                  icon: Icon(Icons.edit, size: isWeb ? 18 : 14),
-                  label: Text('Edit', style: TextStyle(fontSize: isWeb ? 12 : 10)),
-                  style: _buttonStyle(kPrimary, isWeb),
-                ),
-              ),
-          ],
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          itemCount: customers.length,
+          itemBuilder: (context, index) {
+            final customer = customers[index];
+            final hasOutstanding = customer.outstandingAmount > 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildMobileCustomerCard(customer, controller, hasOutstanding, context),
+            );
+          },
         ),
       ],
     );
   }
 
   Widget _buildMobileCustomerCard(Customer customer, CustomerController controller, bool hasOutstanding, BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: kPrimary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(
-                  customer.name[0].toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: kPrimary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      color: kCardBg,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _showCustomerDetails(customer, controller, context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          customer.name,
-                          style:  TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: kText,
-                          ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    child: Center(child: Text(customer.name[0].toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kPrimary))),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: Text(customer.name, style:  TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kText), overflow: TextOverflow.ellipsis)),
+                            if (!customer.isActive)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                child: Text('Inactive', style: TextStyle(fontSize: 9, color: kDanger, fontWeight: FontWeight.w600)),
+                              ),
+                          ],
                         ),
+                        const SizedBox(height: 2),
+                        Text(customer.email, style:  TextStyle(fontSize: 10, color: kSubText), overflow: TextOverflow.ellipsis),
+                        Text(customer.phone, style:  TextStyle(fontSize: 10, color: kSubText), overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  if (hasOutstanding)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                         Text('Outstanding', style: TextStyle(fontSize: 9, color: kSubText)),
+                        Text(_formatAmount(customer.outstandingAmount), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: kDanger)),
+                      ],
+                    ),
+                  if (!hasOutstanding)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: kSuccess.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.check_circle, size: 12, color: kSuccess),
+                        const SizedBox(width: 2),
+                        const Text('Paid', style: TextStyle(fontSize: 9, color: kSuccess, fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildStatItem('Invoices', customer.invoiceCount.toString(), Icons.receipt, false)),
+                  Expanded(child: _buildStatItem('Total', _formatAmount(customer.totalAmount), Icons.attach_money, false)),
+                  Expanded(child: _buildStatItem('Paid', _formatAmount(customer.paidAmount), Icons.check_circle, false)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _viewInvoices(customer, controller, context),
+                      icon: const Icon(Icons.receipt, size: 14),
+                      label: const Text('Invoices', style: TextStyle(fontSize: 10)),
+                      style: _buttonStyle(kPrimary, false),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (hasOutstanding)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _recordPayment(customer, controller, context),
+                        icon: const Icon(Icons.payment, size: 14, color: Colors.white),
+                        label: const Text('Record Payment', style: TextStyle(fontSize: 10)),
+                        style: ElevatedButton.styleFrom(backgroundColor: kSuccess, padding: const EdgeInsets.symmetric(vertical: 8)),
                       ),
-                      if (!customer.isActive)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: kDanger.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Inactive',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: kDanger,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    customer.email,
-                    style:  TextStyle(fontSize: 10, color: kSubText),
-                  ),
-                  Text(
-                    customer.phone,
-                    style:  TextStyle(fontSize: 10, color: kSubText),
-                  ),
+                    ),
+                  if (!hasOutstanding)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _editCustomer(customer, controller, context),
+                        icon: const Icon(Icons.edit, size: 14),
+                        label: const Text('Edit', style: TextStyle(fontSize: 10)),
+                        style: _buttonStyle(kPrimary, false),
+                      ),
+                    ),
                 ],
               ),
-            ),
-            if (hasOutstanding)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                   Text(
-                    'Outstanding',
-                    style: TextStyle(fontSize: 9, color: kSubText),
-                  ),
-                  Text(
-                    _formatAmount(customer.outstandingAmount),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: kDanger,
-                    ),
-                  ),
-                ],
-              ),
-            if (!hasOutstanding)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: kSuccess.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle, size: 12, color: kSuccess),
-                    const SizedBox(width: 2),
-                    const Text(
-                      'Paid',
-                      style: TextStyle(fontSize: 9, color: kSuccess, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatItem('Invoices', customer.invoiceCount.toString(), Icons.receipt, false),
-            ),
-            Expanded(
-              child: _buildStatItem('Total', _formatAmount(customer.totalAmount), Icons.attach_money, false),
-            ),
-            Expanded(
-              child: _buildStatItem('Paid', _formatAmount(customer.paidAmount), Icons.check_circle, false),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _viewInvoices(customer, controller, context),
-                icon: Icon(Icons.receipt, size: 14),
-                label: const Text('Invoices', style: TextStyle(fontSize: 9)),
-                style: _buttonStyle(kPrimary, false),
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (hasOutstanding)
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _recordPayment(customer, controller, context),
-                  icon: Icon(Icons.payment, size: 14, color: Colors.white),
-                  label: const Text('Record Payment', style: TextStyle(fontSize: 9)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kSuccess,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                ),
-              ),
-            if (!hasOutstanding)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _editCustomer(customer, controller, context),
-                  icon: Icon(Icons.edit, size: 14),
-                  label: const Text('Edit', style: TextStyle(fontSize: 9)),
-                  style: _buttonStyle(kPrimary, false),
-                ),
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
@@ -732,7 +550,7 @@ class CustomersScreen extends StatelessWidget {
       children: [
         Icon(icon, size: isWeb ? 20 : 16, color: kSubText),
         SizedBox(height: isWeb ? 4 : 2),
-        Text(value, style: TextStyle(fontSize: isWeb ? 12 : 11, fontWeight: FontWeight.w700, color: kText)),
+        Text(value, style: TextStyle(fontSize: isWeb ? 12 : 11, fontWeight: FontWeight.w700, color: kText), overflow: TextOverflow.ellipsis),
         Text(label, style: TextStyle(fontSize: isWeb ? 11 : 9, color: kSubText)),
       ],
     );
@@ -742,11 +560,12 @@ class CustomersScreen extends StatelessWidget {
     return OutlinedButton.styleFrom(
       foregroundColor: color,
       side: BorderSide(color: color),
-      padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 6),
+      padding: EdgeInsets.symmetric(vertical: isWeb ? 10 : 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isWeb ? 8 : 6)),
     );
   }
 
+  // ==================== DIALOGS ====================
   void _showAddCustomerDialog(CustomerController controller, BuildContext ctx) {
     final isWeb = ResponsiveUtils.isWeb(ctx);
     final formKey = GlobalKey<FormState>();
@@ -793,10 +612,7 @@ class CustomersScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-          ),
+          TextButton(onPressed: () => Get.back(), child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12))),
           ElevatedButton(
             onPressed: () {
               if (formKey.currentState!.validate()) {
@@ -885,10 +701,7 @@ class CustomersScreen extends StatelessWidget {
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: () => Get.back(),
-                child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-              ),
+              TextButton(onPressed: () => Get.back(), child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12))),
               ElevatedButton(
                 onPressed: () {
                   if (formKey.currentState!.validate()) {
@@ -917,156 +730,98 @@ class CustomersScreen extends StatelessWidget {
   void _showCustomerDetails(Customer customer, CustomerController controller, BuildContext context) {
     final isWeb = ResponsiveUtils.isWeb(context);
     
-    if (isWeb) {
-      showDialog(
-        context: context,
-        builder: (ctx) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
-            width: 500,
-            padding: const EdgeInsets.all(24),
-            child: _buildCustomerDetailsContent(customer, controller, ctx),
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (ctx) => Container(
-          padding: const EdgeInsets.all(20),
-          constraints: BoxConstraints(maxHeight: 85.h),
-          child: _buildCustomerDetailsContent(customer, controller, ctx),
-        ),
-      );
-    }
-  }
-
-  Widget _buildCustomerDetailsContent(Customer customer, CustomerController controller, BuildContext ctx) {
-    final isWeb = ResponsiveUtils.isWeb(ctx);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: isWeb ? 60 : 50,
-              height: isWeb ? 60 : 50,
-              decoration: BoxDecoration(
-                color: kPrimary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(isWeb ? 14 : 10),
-              ),
-              child: Center(
-                child: Text(
-                  customer.name[0].toUpperCase(),
-                  style: TextStyle(
-                    fontSize: isWeb ? 24 : 18,
-                    fontWeight: FontWeight.w800,
-                    color: kPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: isWeb ? 16 : 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: isWeb ? 500 : MediaQuery.of(ctx).size.width * 0.9,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(customer.name, style: TextStyle(fontSize: isWeb ? 18 : 16, fontWeight: FontWeight.w800)),
-                  Text(customer.email, style: TextStyle(fontSize: isWeb ? 13 : 12, color: kSubText)),
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(color: kPrimary.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+                    child: Center(child: Text(customer.name[0].toUpperCase(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: kPrimary))),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(customer.name, style:  TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: kText)),
+                      Text(customer.email, style:  TextStyle(fontSize: 13, color: kSubText)),
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: customer.isActive ? kSuccess.withOpacity(0.1) : kDanger.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: Text(customer.isActive ? 'Active' : 'Inactive', style: TextStyle(fontSize: 13, color: customer.isActive ? kSuccess : kDanger)),
+                  ),
                 ],
               ),
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: isWeb ? 12 : 10, vertical: isWeb ? 6 : 4),
-              decoration: BoxDecoration(
-                color: customer.isActive ? kSuccess.withOpacity(0.1) : kDanger.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(isWeb ? 8 : 6),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  children: [
+                    _detailRow('Phone', customer.phone, isWeb),
+                    _detailRow('Address', customer.address, isWeb),
+                    _detailRow('Tax ID', customer.taxId, isWeb),
+                    _detailRow('Payment Terms', customer.paymentTerms, isWeb),
+                    _detailRow('Total Invoices', customer.invoiceCount.toString(), isWeb),
+                    _detailRow('Total Amount', _formatAmount(customer.totalAmount), isWeb),
+                    _detailRow('Paid Amount', _formatAmount(customer.paidAmount), isWeb),
+                    _detailRow('Outstanding', _formatAmount(customer.outstandingAmount), isWeb, isImportant: true),
+                    if (customer.lastPaymentDate != null)
+                      _detailRow('Last Payment', DateFormat('dd MMM yyyy').format(customer.lastPaymentDate!), isWeb),
+                  ],
+                ),
               ),
-              child: Text(
-                customer.isActive ? 'Active' : 'Inactive',
-                style: TextStyle(fontSize: isWeb ? 13 : 12, color: customer.isActive ? kSuccess : kDanger),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () { Navigator.pop(ctx); _viewInvoices(customer, controller, ctx); },
+                      icon: const Icon(Icons.receipt, size: 18),
+                      label: const Text('View Invoices', style: TextStyle(fontSize: 12)),
+                      style: _buttonStyle(kPrimary, isWeb),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  if (customer.outstandingAmount > 0)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () { Navigator.pop(ctx); _recordPayment(customer, controller, ctx); },
+                        icon: const Icon(Icons.payment, size: 18),
+                        label: const Text('Record Payment', style: TextStyle(fontSize: 12)),
+                        style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
+                      ),
+                    ),
+                  if (customer.outstandingAmount == 0)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () { Navigator.pop(ctx); _editCustomer(customer, controller, ctx); },
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                        style: _buttonStyle(kPrimary, isWeb),
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: isWeb ? 20 : 16),
-        Container(
-          padding: EdgeInsets.all(isWeb ? 16 : 12),
-          decoration: BoxDecoration(color: kBg, borderRadius: BorderRadius.circular(isWeb ? 12 : 10)),
-          child: Column(
-            children: [
-              _detailRow('Phone', customer.phone, isWeb),
-              _detailRow('Address', customer.address, isWeb),
-              _detailRow('Tax ID', customer.taxId, isWeb),
-              _detailRow('Payment Terms', customer.paymentTerms, isWeb),
-              _detailRow('Total Invoices', customer.invoiceCount.toString(), isWeb),
-              _detailRow('Total Amount', _formatAmount(customer.totalAmount), isWeb),
-              _detailRow('Paid Amount', _formatAmount(customer.paidAmount), isWeb),
-              _detailRow('Outstanding', _formatAmount(customer.outstandingAmount), isWeb, isImportant: true),
-              if (customer.lastPaymentDate != null)
-                _detailRow('Last Payment', DateFormat('dd MMM yyyy').format(customer.lastPaymentDate!), isWeb),
             ],
           ),
         ),
-        SizedBox(height: isWeb ? 20 : 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _viewInvoices(customer, controller, ctx);
-                },
-                icon: Icon(Icons.receipt, size: isWeb ? 20 : 16),
-                label: Text('View Invoices', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-                style: _buttonStyle(kPrimary, isWeb),
-              ),
-            ),
-            SizedBox(width: isWeb ? 12 : 8),
-            if (customer.outstandingAmount > 0)
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _recordPayment(customer, controller, ctx);
-                  },
-                  icon: Icon(Icons.payment, size: isWeb ? 20 : 16),
-                  label: Text('Record Payment', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-                  style: ElevatedButton.styleFrom(backgroundColor: kSuccess),
-                ),
-              ),
-            if (customer.outstandingAmount == 0)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _editCustomer(customer, controller, ctx);
-                  },
-                  icon: Icon(Icons.edit, size: isWeb ? 20 : 16),
-                  label: Text('Edit', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-                  style: _buttonStyle(kPrimary, isWeb),
-                ),
-              ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
-  TextFormField _buildTextField(
-    String label,
-    Function(String) onChanged, {
-    bool isWeb = false,
-    String? initialValue,
-    bool validator = false,
-    int maxLines = 1,
-  }) {
+  TextFormField _buildTextField(String label, Function(String) onChanged, {bool isWeb = false, String? initialValue, bool validator = false, int maxLines = 1}) {
     return TextFormField(
       initialValue: initialValue,
       decoration: InputDecoration(
@@ -1099,12 +854,16 @@ class CustomersScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(fontSize: isWeb ? 13 : 11, color: kSubText)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isWeb ? 13 : 12,
-              fontWeight: isImportant ? FontWeight.w700 : FontWeight.w600,
-              color: isImportant ? kDanger : kText,
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: isWeb ? 13 : 12,
+                fontWeight: isImportant ? FontWeight.w700 : FontWeight.w600,
+                color: isImportant ? kDanger : kText,
+              ),
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -1136,17 +895,8 @@ class CustomersScreen extends StatelessWidget {
           },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.searchCustomers(searchController.text);
-              Navigator.pop(context);
-            },
-            child: Text('Search', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(fontSize: isWeb ? 14 : 12))),
+          TextButton(onPressed: () { controller.searchCustomers(searchController.text); Navigator.pop(context); }, child: Text('Search', style: TextStyle(fontSize: isWeb ? 14 : 12))),
         ],
       ),
     );
@@ -1167,10 +917,7 @@ class CustomersScreen extends StatelessWidget {
               title: Text('Show Active Only', style: TextStyle(fontSize: isWeb ? 14 : 12)),
               trailing: Obx(() => Switch(
                 value: controller.selectedFilter.value == 'Active',
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  controller.changeFilter(value ? 'Active' : 'All');
-                },
+                onChanged: (value) { Navigator.pop(context); controller.changeFilter(value ? 'Active' : 'All'); },
                 activeColor: kSuccess,
               )),
             ),
@@ -1179,10 +926,7 @@ class CustomersScreen extends StatelessWidget {
               title: Text('Show With Balance Only', style: TextStyle(fontSize: isWeb ? 14 : 12)),
               trailing: Obx(() => Switch(
                 value: controller.selectedFilter.value == 'With Balance',
-                onChanged: (value) {
-                  Navigator.pop(context);
-                  controller.changeFilter(value ? 'With Balance' : 'All');
-                },
+                onChanged: (value) { Navigator.pop(context); controller.changeFilter(value ? 'With Balance' : 'All'); },
                 activeColor: kPrimary,
               )),
             ),
@@ -1190,19 +934,11 @@ class CustomersScreen extends StatelessWidget {
             ListTile(
               leading: Icon(Icons.clear, size: isWeb ? 24 : 20),
               title: Text('Clear Filters', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-              onTap: () {
-                Navigator.pop(context);
-                controller.changeFilter('All');
-              },
+              onTap: () { Navigator.pop(context); controller.changeFilter('All'); },
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(fontSize: isWeb ? 14 : 12)),
-          ),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Close', style: TextStyle(fontSize: isWeb ? 14 : 12)))],
       ),
     );
   }
@@ -1217,6 +953,6 @@ class CustomersScreen extends StatelessWidget {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0.00', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
 }

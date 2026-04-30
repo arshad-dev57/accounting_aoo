@@ -1,4 +1,5 @@
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -38,13 +39,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   Future<void> _submitIssue() async {
     if (_titleController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please enter issue title',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Please enter issue title');
       return;
     }
     if (_descriptionController.text.trim().isEmpty) {
-      Get.snackbar('Error', 'Please describe the issue',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Please describe the issue');
       return;
     }
 
@@ -73,15 +72,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       final response = await request.send();
       
       if (response.statusCode == 200) {
-        Get.snackbar('Success', 'Issue reported successfully!',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.success(kSuccess, 'Success', 'Issue reported successfully!');
         Future.delayed(const Duration(seconds: 2), () => Get.back());
       } else {
         throw Exception('Failed to report');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to report issue. Please try again.',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.error(kDanger, 'Error', 'Failed to report issue. Please try again.');
     } finally {
       setState(() => _isSubmitting = false);
     }

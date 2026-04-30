@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:LedgerPro_app/Utils/colors.dart';
+import 'package:LedgerPro_app/Utils/toast_utils.dart';
 import 'package:LedgerPro_app/config/apiconfig.dart';
 import 'package:LedgerPro_app/core/plans/views/Subscription_plans.dart';
 import 'package:flutter/material.dart';
@@ -17,22 +18,22 @@ class DashboardController extends GetxController {
   
   // KPI Data
   var totalRevenue = 0.0.obs;
-  var totalRevenueFormatted = '₨ 0'.obs;
+  var totalRevenueFormatted = '\$ 0'.obs;
   var revenueChange = 0.0.obs;
   var isRevenuePositive = true.obs;
   
   var totalExpenses = 0.0.obs;
-  var totalExpensesFormatted = '₨ 0'.obs;
+  var totalExpensesFormatted = '\$ 0'.obs;
   var expenseChange = 0.0.obs;
   var isExpensePositive = false.obs;
   
   var outstanding = 0.0.obs;
-  var outstandingFormatted = '₨ 0'.obs;
+  var outstandingFormatted = '\$ 0'.obs;
   var outstandingChange = 0.0.obs;
   var outstandingCount = 0.obs;
   
   var cashBalance = 0.0.obs;
-  var cashBalanceFormatted = '₨ 0'.obs;
+  var cashBalanceFormatted = '\$ 0'.obs;
   var cashChange = 0.0.obs;
   var isCashPositive = true.obs;
   
@@ -47,6 +48,18 @@ class DashboardController extends GetxController {
    var companyName = ''.obs;
   var userEmail = ''.obs;
 
+
+  var currentRoute = 'dashboard'.obs;
+  var currentScreen = Rx<Widget?>(null);
+void navigateTo(Widget screen, {String route = 'dashboard'}) {
+  print('🖱️ Navigating to: $route');  // Debug print
+  currentScreen.value = screen;
+  currentRoute.value = route;
+}
+  
+  bool isActive(String route) {
+    return currentRoute.value == route;
+  }
   // Chart Data
   var chartData = <Map<String, dynamic>>[].obs;
   var expenseCategories = <Map<String, dynamic>>[].obs;
@@ -149,25 +162,25 @@ class DashboardController extends GetxController {
           
           // Revenue
           totalRevenue.value = (kpi['totalRevenue']['amount'] ?? 0).toDouble();
-          totalRevenueFormatted.value = kpi['totalRevenue']['formatted'] ?? '₨ 0';
+          totalRevenueFormatted.value = kpi['totalRevenue']['formatted'] ?? '\$ 0';
           revenueChange.value = (kpi['totalRevenue']['change'] ?? 0).toDouble();
           isRevenuePositive.value = kpi['totalRevenue']['isPositive'] ?? true;
           
           // Expenses
           totalExpenses.value = (kpi['totalExpenses']['amount'] ?? 0).toDouble();
-          totalExpensesFormatted.value = kpi['totalExpenses']['formatted'] ?? '₨ 0';
+          totalExpensesFormatted.value = kpi['totalExpenses']['formatted'] ?? '\$ 0';
           expenseChange.value = (kpi['totalExpenses']['change'] ?? 0).toDouble();
           isExpensePositive.value = kpi['totalExpenses']['isPositive'] ?? false;
           
           // Outstanding
           outstanding.value = (kpi['outstanding']['amount'] ?? 0).toDouble();
-          outstandingFormatted.value = kpi['outstanding']['formatted'] ?? '₨ 0';
+          outstandingFormatted.value = kpi['outstanding']['formatted'] ?? '\$ 0';
           outstandingChange.value = (kpi['outstanding']['change'] ?? 0).toDouble();
           outstandingCount.value = kpi['outstanding']['count'] ?? 0;
           
           // Cash Balance
           cashBalance.value = (kpi['cashBalance']['amount'] ?? 0).toDouble();
-          cashBalanceFormatted.value = kpi['cashBalance']['formatted'] ?? '₨ 0';
+          cashBalanceFormatted.value = kpi['cashBalance']['formatted'] ?? '\$ 0';
           cashChange.value = (kpi['cashBalance']['change'] ?? 0).toDouble();
           isCashPositive.value = kpi['cashBalance']['isPositive'] ?? true;
           
@@ -382,7 +395,7 @@ class DashboardController extends GetxController {
   
   String formatAmount(double amount) {
     final formatter = NumberFormat('#,##0', 'en_US');
-    return '₨ ${formatter.format(amount)}';
+    return '\$ ${formatter.format(amount)}';
   }
   
   void refreshData() {
@@ -390,12 +403,11 @@ class DashboardController extends GetxController {
   }
   
   void _showError(String message) {
-    Get.snackbar(
+    AppSnackbar.error(
+      kDanger,
       'Error',
       message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: kDanger,
-      colorText: Colors.white,
+    
       duration: const Duration(seconds: 3),
     );
   }

@@ -1,6 +1,7 @@
   import 'dart:ui';
 
-  import 'package:LedgerPro_app/config/apiconfig.dart';
+  import 'package:LedgerPro_app/Utils/toast_utils.dart';
+import 'package:LedgerPro_app/config/apiconfig.dart';
   import 'package:flutter/material.dart';
   import 'package:get/get.dart';
   import 'package:http/http.dart' as http;
@@ -96,12 +97,11 @@
         final token = await _getToken();
         
         if (token == null || token.isEmpty) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Authentication Error',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
+        
           );
           isLoading(false);
           return;
@@ -130,18 +130,20 @@
             }
           }
         } else if (response.statusCode == 401) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Session Expired',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         } else {
           _handleError(response);
         }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to load accounts: $e');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          'Failed to load accounts: $e',
+        );
       } finally {
         isLoading(false);
       }
@@ -156,12 +158,10 @@
         final token = await _getToken();
         
         if (token == null || token.isEmpty) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Authentication Error',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
           isLoading(false);
           return;
@@ -176,35 +176,34 @@
         if (response.statusCode == 201) {
           final data = jsonDecode(response.body);
           if (data['success']) {
-            Get.snackbar(
+            AppSnackbar.success(
+              Colors.green,
               'Success',
               'Account "${accountData['name']}" added successfully',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: const Color(0xFF2ECC71),
-              colorText: Colors.white,
             );
             await fetchAccounts(); // Refresh list
           }
         } else if (response.statusCode == 401) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Session Expired',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         } else {
           final data = jsonDecode(response.body);
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Error',
             data['message'] ?? 'Failed to create account',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
+           
           );
         }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to create account: $e');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          'Failed to create account: $e',
+        );
       } finally {
         isLoading(false);
       }
@@ -219,12 +218,10 @@
         final token = await _getToken();
         
         if (token == null || token.isEmpty) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Authentication Error',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
           isLoading(false);
           return;
@@ -239,35 +236,33 @@
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           if (data['success']) {
-            Get.snackbar(
+            AppSnackbar.success(
+              Colors.green,
               'Success',
               'Account updated successfully',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: const Color(0xFF2ECC71),
-              colorText: Colors.white,
             );
             await fetchAccounts();
           }
         } else if (response.statusCode == 401) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Session Expired',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         } else {
           final data = jsonDecode(response.body);
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Error',
             data['message'] ?? 'Failed to update account',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to update account: $e');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          'Failed to update account: $e',
+        );
       } finally {
         isLoading(false);
       }
@@ -280,12 +275,10 @@
         final token = await _getToken();
         
         if (token == null || token.isEmpty) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Authentication Error',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
           return;
         }
@@ -296,34 +289,32 @@
         );
         
         if (response.statusCode == 200) {
-          Get.snackbar(
+          AppSnackbar.success(
+            Colors.green,
             'Success',
             'Account "$accountName" deleted successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFF2ECC71),
-            colorText: Colors.white,
           );
           await fetchAccounts();
         } else if (response.statusCode == 401) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Session Expired',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         } else {
           final data = jsonDecode(response.body);
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Error',
             data['message'] ?? 'Failed to delete account',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to delete account: $e');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          'Failed to delete account: $e',
+        );
       }
     }
     
@@ -336,12 +327,10 @@
         final token = await _getToken();
         
         if (token == null || token.isEmpty) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Authentication Error',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
           isLoading(false);
           return;
@@ -355,35 +344,33 @@
         if (response.statusCode == 201) {
           final data = jsonDecode(response.body);
           if (data['success']) {
-            Get.snackbar(
+            AppSnackbar.success(
+              Colors.green,
               'Success',
               data['message'] ?? 'Default accounts created',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: const Color(0xFF2ECC71),
-              colorText: Colors.white,
             );
             await fetchAccounts();
           }
         } else if (response.statusCode == 401) {
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Session Expired',
             'Please login again',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         } else {
           final data = jsonDecode(response.body);
-          Get.snackbar(
+          AppSnackbar.error(
+            Colors.red,
             'Error',
             data['message'] ?? 'Failed to create default accounts',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: const Color(0xFFE74C3C),
-            colorText: Colors.white,
           );
         }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to create default accounts: $e');
+        AppSnackbar.error(
+          Colors.red,
+          'Error',
+          'Failed to create default accounts: $e',
+        );
       } finally {
         isLoading(false);
       }
@@ -427,20 +414,16 @@
     void _handleError(http.Response response) {
       try {
         final data = jsonDecode(response.body);
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           data['message'] ?? 'Something went wrong',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFE74C3C),
-          colorText: Colors.white,
         );
       } catch (e) {
-        Get.snackbar(
+        AppSnackbar.error(
+          Colors.red,
           'Error',
           'Server error: ${response.statusCode}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFFE74C3C),
-          colorText: Colors.white,
         );
       }
     }
